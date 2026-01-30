@@ -1,5 +1,31 @@
 extends Control
 
+# GLOBAL VARIABLES FOR FULL MATCH VARIABLES AND CHANGABLES
+var player_hand: Array = []
+var player_deck = []
+var card_scaling: Vector2 = Vector2(100,138)
+var amount_of_cards_to_draw = 3
+
+# I know this code is a bit messy but for testing and just resizing things on the UI it's easier
+# I should delete most of these when done
+var scale0x5: Vector2 = Vector2(50, 69)
+var scale1x0: Vector2 = Vector2(100,138)
+var scale2x0: Vector2 = Vector2(200,276)
+var scale2x5: Vector2 = Vector2(250,345)
+var scale2x6: Vector2 = Vector2(260,360)
+var scale2x7: Vector2 = Vector2(270,372)
+var scale2x8: Vector2 = Vector2(280,386)
+var scale2x9: Vector2 = Vector2(290,400)
+var scale3x0: Vector2 = Vector2(300,414)
+var scale3x1: Vector2 = Vector2(310,428)
+var scale3x5: Vector2 = Vector2(350,483)
+var scale3x75: Vector2 = Vector2(375,518)
+var scale4x0: Vector2 = Vector2(400,552)
+var scale4x25: Vector2 = Vector2(425, 587)
+var scale4x5: Vector2 = Vector2(450,621)
+var scale4x7: Vector2 = Vector2(470,649)
+var scale5x2: Vector2 = Vector2(500,718)
+
 # Main function to get metadata of any card passed to it. Goes off UID to lookup JSON data in game file
 func get_card_metadata(card_uid: String):
 	
@@ -82,7 +108,7 @@ func draw_opening_hand(deck: Array, player_name: String = "") -> Array:
 		# Clear the hand every time this loops otherwise cards would just be continued to be added
 		hand.clear()
 		# Now draw 7 card and put them in the hand
-		for i in range(7):
+		for i in range(amount_of_cards_to_draw):
 			# Pop front removes the same card from the deck so you don't need to do a .remove and a .add at the same time
 			hand.append(deck.pop_front())
 		
@@ -123,7 +149,7 @@ func load_deck_from_file(deck_file_path: String) -> Array:
 	var unparsed_json_text = loaded_deck_from_file.get_as_text()
 	loaded_deck_from_file.close()
 	
-	print("Raw text of deck file is: ", unparsed_json_text)
+	#print("Raw text of deck file is: ", unparsed_json_text)
 	
 	# Parse the JSON
 	var new_json_object = JSON.new()
@@ -136,7 +162,7 @@ func load_deck_from_file(deck_file_path: String) -> Array:
 	
 	# Load the deck as parsed data
 	var deck_data = new_json_object.data
-	print("Parsed deck data: ", deck_data)
+	#print("Parsed deck data: ", deck_data)
 	
 	# As we have the json data containing the ids and count of the cards we now need to make this into a readable deck
 	if deck_data.size() > 0:
@@ -147,16 +173,16 @@ func load_deck_from_file(deck_file_path: String) -> Array:
 			for i in range(card_to_append_to_deck_count):
 				deck.append(card_to_append_to_deck_id)
 	
-	print("Total Cards in deck counted are: ", deck.size())
+	#print("Total Cards in deck counted are: ", deck.size())
 	
 	# Shuffle the deck
 	deck.shuffle()
-	print("Deck shuffled. First card after shuffle: ", deck[0])
+	#print("Deck shuffled. First card after shuffle: ", deck[0])
 	
 	return deck
 
 # Display hand cards in a container
-func display_hand_cards(hand: Array, hand_container, card_width: int = 100, card_height: int = 138):
+func display_array_of_cards(hand: Array, hand_container, card_size: Vector2):
 	var card_display_script = load("res://CardImage.gd")
 	
 	# Clear existing cards from container
@@ -174,7 +200,7 @@ func display_hand_cards(hand: Array, hand_container, card_width: int = 100, card
 		hand_container.add_child(hand_card_to_display)
 		
 		# Load the card image with pixel sizes for hand cards
-		hand_card_to_display.load_card_image(this_card_in_hand, card_width, card_height)
+		hand_card_to_display.load_card_image(this_card_in_hand, card_size)
 
 # Main function to set up the player's deck and hand at match start
 func setup_player():
@@ -182,15 +208,15 @@ func setup_player():
 	var player_hand_container = $player_hand_hbox_container
 	
 	# Load and shuffle deck
-	var player_deck = load_deck_from_file(player_deck_path)
+	player_deck = load_deck_from_file(player_deck_path)
 	
 	# Draw opening hand with mulligan
-	var player_hand = draw_opening_hand(player_deck, "Player")
+	player_hand = draw_opening_hand(player_deck, "Player")
 	
-	print("Player deck size after drawing hand: ", player_deck.size())
+	#print("Player deck size after drawing hand: ", player_deck.size())
 	
 	# Display the hand
-	display_hand_cards(player_hand, player_hand_container, 100, 138)
+	display_array_of_cards(player_hand, player_hand_container, scale1x0)
 
 # Main function to set up the opponents's deck and hand at match start. Looks up the NPC name and finds the corresponding deck file
 func setup_opponent(opponent_id: String):
@@ -200,9 +226,78 @@ func setup_opponent(opponent_id: String):
 	var opponent_deck = load_deck_from_file(opponent_deck_path)
 	var opponent_hand = draw_opening_hand(opponent_deck, "Opponent")
 	
-	display_hand_cards(opponent_hand, opponent_hand_container, 50, 69)
+	display_array_of_cards(opponent_hand, opponent_hand_container, scale0x5)
+
+# Main function to show all hand cards larger when the player's hand is clicked
+func _on_player_hand_clicked(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		show_enlarged_array(player_hand)
+
+# This is a reusable function to display any array passed to it and hide everything else on the screen.
+# Used for any selection of hand discard pile bench etc
+func show_enlarged_array(card_array: Array) -> void:
+	var amount_of_cards_to_show = card_array.size()
+	# I couldn't figure out how to get a scrolling box to be centrally aligned and gave up
+	# So instead, if the card array is OVER 7 then use the scroller box. If it's UNDER 7 then just use a box central aligned
+	if amount_of_cards_to_show > 8:
+		# Hide ALL UI components
+		$player_hand_hbox_container.visible = false
+		$opponent_hand_hbox_container.visible = false
+		$small_selection_mode_container.visible = false
+		
+		# Show only the selection mode container and the button to cancel the view
+		$cancel_selection_mode_view_button.visible = true
+		$selection_mode_scroller.visible = true
+		$selection_mode_scroller/large_selection_mode_container.visible = true
+		
+		# Now display the passed through card array to the selection mode container in large pixel format
+		display_array_of_cards(card_array, $selection_mode_scroller/large_selection_mode_container, scale3x0)
+		
+		# If UNDER 8 cards (small array)	
+	else:
+		#Hide ALL UI components
+		$player_hand_hbox_container.visible = false
+		$opponent_hand_hbox_container.visible = false
+		$selection_mode_scroller/large_selection_mode_container.visible = false
+		
+		# Show only the selection mode container and the button to cancel the view
+		$cancel_selection_mode_view_button.visible = true
+		$selection_mode_scroller.visible = true
+		$small_selection_mode_container.visible = true
+		
+		match amount_of_cards_to_show:
+			1:
+				card_scaling = scale5x2
+			2:
+				card_scaling = scale5x2
+			3:
+				card_scaling = scale5x2
+			4:
+				card_scaling = scale4x7
+			5:
+				card_scaling = scale3x75
+			6:
+				card_scaling = scale3x1
+			7:
+				card_scaling = scale2x7
+		
+		# Now display the passed through card array to the selection mode container in large pixel format
+		display_array_of_cards(card_array, $small_selection_mode_container, card_scaling)
+
+# When teh
+func _on_cancel_selection_mode_button_pressed() -> void:
+	$selection_mode_scroller.visible = false
+	$selection_mode_scroller/large_selection_mode_container.visible = false
+	$cancel_selection_mode_view_button.visible = false
+	$player_hand_hbox_container.visible = true
+	$opponent_hand_hbox_container.visible = true
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	print("TEST 123123")
+	$player_hand_hbox_container.gui_input.connect(_on_player_hand_clicked)
+	$cancel_selection_mode_view_button.pressed.connect(_on_cancel_selection_mode_button_pressed)
 	setup_player()
 	setup_opponent("Fisherman1")
+	show_enlarged_array(player_hand)
+	

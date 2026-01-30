@@ -1,3 +1,6 @@
 res://match_start_load.gd
 res://MatchStart.tscn
 res://CardImage.gd
+res://game_running_main_script.gd
+res://main_match_script.gd
+res://uiresources/kenneyUI-blue.tres

@@ -1,8 +1,9 @@
-[gd_scene load_steps=2 format=3 uid="uid://dqwekyllekveg"]
+[gd_scene load_steps=3 format=3 uid="uid://dqwekyllekveg"]
 
-[ext_resource type="Script" uid="uid://du6jwng7w7fn4" path="res://match_start_load.gd" id="1_c6k6o"]
+[ext_resource type="Script" uid="uid://du6jwng7w7fn4" path="res://main_match_script.gd" id="1_c6k6o"]
+[ext_resource type="Theme" uid="uid://bb6vwl0h1flws" path="res://uiresources/kenneyUI-blue.tres" id="2_h8hhb"]
 
-[node name="Control" type="Control"]
+[node name="MAIN GAME CONTROL NODE" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -30,3 +31,55 @@ offset_top = 161.0
 offset_right = -401.0
 offset_bottom = 201.0
 grow_horizontal = 0
+
+[node name="cancel_selection_mode_view_button" type="Button" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -125.0
+offset_top = -162.0
+offset_right = 125.0
+offset_bottom = -62.0
+grow_horizontal = 2
+grow_vertical = 0
+size_flags_vertical = 8
+theme = ExtResource("2_h8hhb")
+text = "CANCEL"
+
+[node name="small_selection_mode_container" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="selection_mode_scroller" type="ScrollContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -960.0
+offset_top = -240.0
+offset_right = 960.0
+offset_bottom = 260.0
+grow_horizontal = 2
+grow_vertical = 2
+vertical_scroll_mode = 0
+
+[node name="large_selection_mode_container" type="HBoxContainer" parent="selection_mode_scroller"]
+layout_mode = 2
+alignment = 1
