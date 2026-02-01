@@ -2,29 +2,30 @@ extends Control
 
 # GLOBAL VARIABLES FOR FULL MATCH VARIABLES AND CHANGABLES
 var player_hand: Array = []
-var player_deck = []
-var card_scaling: Vector2 = Vector2(100,138)
-var amount_of_cards_to_draw = 3
+var player_deck: Array = []
+
+var opponent_hand: Array = []
+var opponent_deck: Array = []
+
+var amount_of_cards_to_draw = 7
 
 # I know this code is a bit messy but for testing and just resizing things on the UI it's easier
 # I should delete most of these when done
-var scale0x5: Vector2 = Vector2(50, 69)
-var scale1x0: Vector2 = Vector2(100,138)
-var scale2x0: Vector2 = Vector2(200,276)
-var scale2x5: Vector2 = Vector2(250,345)
-var scale2x6: Vector2 = Vector2(260,360)
-var scale2x7: Vector2 = Vector2(270,372)
-var scale2x8: Vector2 = Vector2(280,386)
-var scale2x9: Vector2 = Vector2(290,400)
-var scale3x0: Vector2 = Vector2(300,414)
-var scale3x1: Vector2 = Vector2(310,428)
-var scale3x5: Vector2 = Vector2(350,483)
-var scale3x75: Vector2 = Vector2(375,518)
-var scale4x0: Vector2 = Vector2(400,552)
-var scale4x25: Vector2 = Vector2(425, 587)
-var scale4x5: Vector2 = Vector2(450,621)
-var scale4x7: Vector2 = Vector2(470,649)
-var scale5x2: Vector2 = Vector2(500,718)
+
+var card_scales: Dictionary = {
+	1: Vector2(600, 825),
+	2: Vector2(550, 756),
+	3: Vector2(500, 688),
+	4: Vector2(400, 550),
+	5: Vector2(350, 481),
+	6: Vector2(300, 413),
+	7: Vector2(265, 364),
+	8: Vector2(260, 358),
+	9: Vector2(200, 275),
+	10: Vector2(150,206),
+	11: Vector2(100, 138),
+	12: Vector2(50, 69)
+}
 
 # Main function to get metadata of any card passed to it. Goes off UID to lookup JSON data in game file
 func get_card_metadata(card_uid: String):
@@ -216,22 +217,26 @@ func setup_player():
 	#print("Player deck size after drawing hand: ", player_deck.size())
 	
 	# Display the hand
-	display_array_of_cards(player_hand, player_hand_container, scale1x0)
+	display_array_of_cards(player_hand, player_hand_container, card_scales[11])
 
 # Main function to set up the opponents's deck and hand at match start. Looks up the NPC name and finds the corresponding deck file
 func setup_opponent(opponent_id: String):
 	var opponent_deck_path = "res://opponentdeckdata/"+opponent_id+".json"
 	var opponent_hand_container = $opponent_hand_hbox_container
 	
-	var opponent_deck = load_deck_from_file(opponent_deck_path)
-	var opponent_hand = draw_opening_hand(opponent_deck, "Opponent")
+	opponent_deck = load_deck_from_file(opponent_deck_path)
+	opponent_hand = draw_opening_hand(opponent_deck, "Opponent")
 	
-	display_array_of_cards(opponent_hand, opponent_hand_container, scale0x5)
+	display_array_of_cards(opponent_hand, opponent_hand_container, card_scales[12])
 
 # Main function to show all hand cards larger when the player's hand is clicked
 func _on_player_hand_clicked(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		show_enlarged_array(player_hand)
+		
+func _on_opponent_hand_clicked(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		show_enlarged_array(opponent_hand)
 
 # This is a reusable function to display any array passed to it and hide everything else on the screen.
 # Used for any selection of hand discard pile bench etc
@@ -251,7 +256,7 @@ func show_enlarged_array(card_array: Array) -> void:
 		$selection_mode_scroller/large_selection_mode_container.visible = true
 		
 		# Now display the passed through card array to the selection mode container in large pixel format
-		display_array_of_cards(card_array, $selection_mode_scroller/large_selection_mode_container, scale3x0)
+		display_array_of_cards(card_array, $selection_mode_scroller/large_selection_mode_container, card_scales[2])
 		
 		# If UNDER 8 cards (small array)	
 	else:
@@ -265,30 +270,16 @@ func show_enlarged_array(card_array: Array) -> void:
 		$selection_mode_scroller.visible = true
 		$small_selection_mode_container.visible = true
 		
-		match amount_of_cards_to_show:
-			1:
-				card_scaling = scale5x2
-			2:
-				card_scaling = scale5x2
-			3:
-				card_scaling = scale5x2
-			4:
-				card_scaling = scale4x7
-			5:
-				card_scaling = scale3x75
-			6:
-				card_scaling = scale3x1
-			7:
-				card_scaling = scale2x7
-		
 		# Now display the passed through card array to the selection mode container in large pixel format
-		display_array_of_cards(card_array, $small_selection_mode_container, card_scaling)
+		display_array_of_cards(card_array, $small_selection_mode_container, card_scales[amount_of_cards_to_show])
 
 # When teh
 func _on_cancel_selection_mode_button_pressed() -> void:
 	$selection_mode_scroller.visible = false
 	$selection_mode_scroller/large_selection_mode_container.visible = false
 	$cancel_selection_mode_view_button.visible = false
+	$small_selection_mode_container.visible = false
+	
 	$player_hand_hbox_container.visible = true
 	$opponent_hand_hbox_container.visible = true
 
@@ -296,6 +287,7 @@ func _on_cancel_selection_mode_button_pressed() -> void:
 func _ready() -> void:
 	print("TEST 123123")
 	$player_hand_hbox_container.gui_input.connect(_on_player_hand_clicked)
+	$opponent_hand_hbox_container.gui_input.connect(_on_opponent_hand_clicked)
 	$cancel_selection_mode_view_button.pressed.connect(_on_cancel_selection_mode_button_pressed)
 	setup_player()
 	setup_opponent("Fisherman1")
