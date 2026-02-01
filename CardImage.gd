@@ -1,12 +1,16 @@
 extends TextureRect
 
+# Create a custom signal that will be emitted when this card is clicked to set this card as the "selected" card
+signal card_clicked(card_uid: String)
+
 # Declare the card ID as a variable
 var card_uid
-var target_width = 0
-var target_height = 0
 
 # Function to load the card image based on the UID (e.g Base1-1)
 func load_card_image(card_uid: String, card_target_size):
+	
+	# Store the card UID so we can access it later when clicked
+	self.card_uid = card_uid
 	
 	# Check the card_uid to make sure it's valid and if not error out 
 	var split_uid = card_uid.split("-")
@@ -27,7 +31,6 @@ func load_card_image(card_uid: String, card_target_size):
 	else:
 		card_image_path="res://cardimages/"+card_set+"/Large/"+card_uid+".png"	
 	
-	#print("Card Image is: ", card_image_path)
 	# Now find the image from the path provided
 	var card_texture = load(card_image_path)
 	
@@ -58,7 +61,18 @@ func load_card_image(card_uid: String, card_target_size):
 		self.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		self.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
 		
-		#print("Card loaded: ", card_uid, " | Original: ", original_card_dimension_width, "x", original_card_dimension_height, 
-		#	  " | Scaled to: ", final_width, "x", final_height)
 	else:
 		print("Error: Could not load card image at path: ", card_image_path)
+
+# This function script is used to determine when a card is clicked		
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		# Check if the click is actually on this card
+		if get_global_rect().has_point(event.position):
+			card_clicked.emit(card_uid)
+		
+# On card load...
+func _ready() -> void:
+
+	# Allow mouse input to pass through to this TextureRect
+	mouse_filter = MOUSE_FILTER_PASS

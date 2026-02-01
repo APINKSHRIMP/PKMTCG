@@ -1,3 +1,4 @@
 res://MatchStart.tscn
 res://uiresources/kenneyUI-blue.tres
 res://main_match_script.gd
+res://CardImage.gd

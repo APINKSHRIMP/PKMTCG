@@ -9,6 +9,8 @@ var opponent_deck: Array = []
 
 var amount_of_cards_to_draw = 7
 
+var selected_card_for_action = null
+
 # I know this code is a bit messy but for testing and just resizing things on the UI it's easier
 # I should delete most of these when done
 
@@ -130,8 +132,6 @@ func draw_opening_hand(deck: Array, player_name: String = "") -> Array:
 			
 			# Shuffle again
 			deck.shuffle()
-
-	print("Basic pokemon found.", player_name, "'s hand contains: ", hand)
 	
 	return hand
 
@@ -150,8 +150,6 @@ func load_deck_from_file(deck_file_path: String) -> Array:
 	var unparsed_json_text = loaded_deck_from_file.get_as_text()
 	loaded_deck_from_file.close()
 	
-	#print("Raw text of deck file is: ", unparsed_json_text)
-	
 	# Parse the JSON
 	var new_json_object = JSON.new()
 	var deck_json_parse_result = new_json_object.parse(unparsed_json_text)
@@ -163,8 +161,7 @@ func load_deck_from_file(deck_file_path: String) -> Array:
 	
 	# Load the deck as parsed data
 	var deck_data = new_json_object.data
-	#print("Parsed deck data: ", deck_data)
-	
+
 	# As we have the json data containing the ids and count of the cards we now need to make this into a readable deck
 	if deck_data.size() > 0:
 		for this_card in deck_data:
@@ -173,14 +170,26 @@ func load_deck_from_file(deck_file_path: String) -> Array:
 			
 			for i in range(card_to_append_to_deck_count):
 				deck.append(card_to_append_to_deck_id)
-	
-	#print("Total Cards in deck counted are: ", deck.size())
-	
+
 	# Shuffle the deck
 	deck.shuffle()
-	#print("Deck shuffled. First card after shuffle: ", deck[0])
-	
+
 	return deck
+
+# Called when a card in selection mode is clicked
+func this_card_clicked(card_uid: String) -> void:
+	print("Card clicked: ", card_uid)
+	
+	# Look up the card's metadata using the existing function
+	var card_metadata = get_card_metadata(card_uid)
+	
+	# Check if metadata was found
+	if card_metadata != null:
+		print("Card name: ", card_metadata.get("name", "Unknown"))
+	else:
+		print("Failed to find metadata for card: ", card_uid)
+		
+	#selected_card_for_action = card_metadata
 
 # Display hand cards in a container
 func display_array_of_cards(hand: Array, hand_container, card_size: Vector2):
@@ -202,6 +211,9 @@ func display_array_of_cards(hand: Array, hand_container, card_size: Vector2):
 		
 		# Load the card image with pixel sizes for hand cards
 		hand_card_to_display.load_card_image(this_card_in_hand, card_size)
+		
+		# Connect this card's signal to the main script's handler
+		hand_card_to_display.card_clicked.connect(this_card_clicked)
 
 # Main function to set up the player's deck and hand at match start
 func setup_player():
@@ -213,8 +225,6 @@ func setup_player():
 	
 	# Draw opening hand with mulligan
 	player_hand = draw_opening_hand(player_deck, "Player")
-	
-	#print("Player deck size after drawing hand: ", player_deck.size())
 	
 	# Display the hand
 	display_array_of_cards(player_hand, player_hand_container, card_scales[11])
@@ -244,7 +254,7 @@ func show_enlarged_array(card_array: Array) -> void:
 	var amount_of_cards_to_show = card_array.size()
 	# I couldn't figure out how to get a scrolling box to be centrally aligned and gave up
 	# So instead, if the card array is OVER 7 then use the scroller box. If it's UNDER 7 then just use a box central aligned
-	if amount_of_cards_to_show > 8:
+	if amount_of_cards_to_show > 7:
 		# Hide ALL UI components
 		$player_hand_hbox_container.visible = false
 		$opponent_hand_hbox_container.visible = false
@@ -256,7 +266,7 @@ func show_enlarged_array(card_array: Array) -> void:
 		$selection_mode_scroller/large_selection_mode_container.visible = true
 		
 		# Now display the passed through card array to the selection mode container in large pixel format
-		display_array_of_cards(card_array, $selection_mode_scroller/large_selection_mode_container, card_scales[2])
+		display_array_of_cards(card_array, $selection_mode_scroller/large_selection_mode_container, card_scales[5])
 		
 		# If UNDER 8 cards (small array)	
 	else:
@@ -270,10 +280,12 @@ func show_enlarged_array(card_array: Array) -> void:
 		$selection_mode_scroller.visible = true
 		$small_selection_mode_container.visible = true
 		
+		$small_selection_mode_container.custom_minimum_size = Vector2(0, 0)
+		
 		# Now display the passed through card array to the selection mode container in large pixel format
 		display_array_of_cards(card_array, $small_selection_mode_container, card_scales[amount_of_cards_to_show])
 
-# When teh
+# When the cancel button is clicked, hide everthing in card selection mode and show main screen again
 func _on_cancel_selection_mode_button_pressed() -> void:
 	$selection_mode_scroller.visible = false
 	$selection_mode_scroller/large_selection_mode_container.visible = false
@@ -285,7 +297,6 @@ func _on_cancel_selection_mode_button_pressed() -> void:
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	print("TEST 123123")
 	$player_hand_hbox_container.gui_input.connect(_on_player_hand_clicked)
 	$opponent_hand_hbox_container.gui_input.connect(_on_opponent_hand_clicked)
 	$cancel_selection_mode_view_button.pressed.connect(_on_cancel_selection_mode_button_pressed)
