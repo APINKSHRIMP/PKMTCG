@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://dqwekyllekveg"]
 
-[ext_resource type="Script" uid="uid://du6jwng7w7fn4" path="res://main_match_script.gd" id="1_c6k6o"]
+[ext_resource type="Script" uid="uid://du6jwng7w7fn4" path="res://gdscripts/main_match_script.gd" id="1_c6k6o"]
 [ext_resource type="Theme" uid="uid://bb6vwl0h1flws" path="res://uiresources/kenneyUI-blue.tres" id="2_h8hhb"]
 
 [node name="MAIN GAME CONTROL NODE" type="Control"]

@@ -13,7 +13,7 @@ config_version=5
 config/name="PKM_TCG_GDT"
 run/main_scene="uid://dqwekyllekveg"
 config/features=PackedStringArray("4.5", "Forward Plus")
-config/icon="res://icon.svg"
+config/icon="uid://xujrd2j28w2v"
 
 [display]
 

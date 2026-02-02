@@ -73,6 +73,10 @@ func _input(event: InputEvent) -> void:
 		# Check if the click is actually on this card
 		if get_global_rect().has_point(event.position):
 			card_clicked.emit(card_ref)
+			
+			# Tell main script a card was clicked
+			get_tree().root.get_child(0).card_was_clicked_this_frame = true
+		
 		
 # On card load...
 func _ready() -> void:

@@ -7,13 +7,14 @@ var player_deck: Array = []
 var opponent_hand: Array = []
 var opponent_deck: Array = []
 
-var amount_of_cards_to_draw = 7
+var amount_of_cards_to_draw = 10
 
+var card_selection_mode_enabled = false
 var selected_card_for_action = null
+var card_was_clicked_this_frame: bool = false
 
-# I know this code is a bit messy but for testing and just resizing things on the UI it's easier
+# I know this vector dict code is a bit messy but for testing and just resizing things on the UI it's easier
 # I should delete most of these when done
-
 var card_scales: Dictionary = {
 	1: Vector2(600, 825),
 	2: Vector2(550, 756),
@@ -186,21 +187,23 @@ func load_deck_from_file(deck_file_path: String) -> Array:
 
 # Called when a card in selection mode is clicked
 func this_card_clicked(clicked_card: card_object) -> void:
-	print("Card clicked: ", clicked_card.uid)
-	
-	# We now have the actual card object, so we can access its metadata directly
-	print("Card name: ", clicked_card.metadata.get("name", "Unknown"))
-	
-	# Store reference to the selected card
-	selected_card_for_action = clicked_card
-	
-	print("Selected card stored: ", selected_card_for_action.uid)
+	if card_selection_mode_enabled == true:
+		#print("Card clicked: ", clicked_card.uid)
 		
-	#selected_card_for_action = card_metadata
+		# We now have the actual card object, so we can access its metadata directly
+		#print("Card name: ", clicked_card.metadata.get("name", "Unknown"))
+		
+		# Store reference to the selected card
+		selected_card_for_action = clicked_card
+		
+		print("Selected card for action: ", selected_card_for_action.metadata["name"])
+			
+	else:
+		selected_card_for_action = null
 
 # Display hand cards in a container
 func display_array_of_cards(hand: Array, hand_container, card_size: Vector2):
-	var card_display_script = load("res://CardImage.gd")
+	var card_display_script = load("res://gdscripts/cardimage.gd")
 	
 	# Clear existing cards from container
 	for child in hand_container.get_children():
@@ -258,6 +261,7 @@ func _on_opponent_hand_clicked(event: InputEvent) -> void:
 # This is a reusable function to display any array passed to it and hide everything else on the screen.
 # Used for any selection of hand discard pile bench etc
 func show_enlarged_array(card_array: Array) -> void:
+	card_selection_mode_enabled = true
 	var amount_of_cards_to_show = card_array.size()
 	# I couldn't figure out how to get a scrolling box to be centrally aligned and gave up
 	# So instead, if the card array is OVER 7 then use the scroller box. If it's UNDER 7 then just use a box central aligned
@@ -294,6 +298,7 @@ func show_enlarged_array(card_array: Array) -> void:
 
 # When the cancel button is clicked, hide everthing in card selection mode and show main screen again
 func _on_cancel_selection_mode_button_pressed() -> void:
+	card_selection_mode_enabled = false
 	$selection_mode_scroller.visible = false
 	$selection_mode_scroller/large_selection_mode_container.visible = false
 	$cancel_selection_mode_view_button.visible = false
@@ -302,6 +307,33 @@ func _on_cancel_selection_mode_button_pressed() -> void:
 	$player_hand_hbox_container.visible = true
 	$opponent_hand_hbox_container.visible = true
 
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		# Get the mouse position
+		var mouse_pos = get_global_mouse_position()
+		
+		# Check if mouse is over any card in the visible containers
+		var clicked_on_card = false
+		
+		
+		# Check small selection container cards
+		for card_ui in $small_selection_mode_container.get_children():
+			if card_ui.get_global_rect().has_point(mouse_pos) and card_selection_mode_enabled == true:
+				clicked_on_card = true
+				print("the game thinks a card has been clicked")
+				break
+
+		# Check large selection container cards
+		for card_ui in $selection_mode_scroller/large_selection_mode_container.get_children():
+			if card_ui.get_global_rect().has_point(mouse_pos) and card_selection_mode_enabled == true:
+				clicked_on_card = true
+				break
+		
+		# If no card was clicked, clear selection
+		if not clicked_on_card:
+			print("CARD WAS NOT CLICKED SO CLEAR SELECTED")
+			selected_card_for_action = null
+			
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	$player_hand_hbox_container.gui_input.connect(_on_player_hand_clicked)
@@ -310,4 +342,3 @@ func _ready() -> void:
 	setup_player()
 	setup_opponent("Fisherman1")
 	show_enlarged_array(player_hand)
-	
