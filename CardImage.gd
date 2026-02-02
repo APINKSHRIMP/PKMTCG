@@ -1,13 +1,16 @@
 extends TextureRect
 
 # Create a custom signal that will be emitted when this card is clicked to set this card as the "selected" card
-signal card_clicked(card_uid: String)
+signal card_clicked(clicked_card: card_object)
 
 # Declare the card ID as a variable
 var card_uid
+var card_ref: card_object
 
 # Function to load the card image based on the UID (e.g Base1-1)
-func load_card_image(card_uid: String, card_target_size):
+func load_card_image(card_uid: String, card_target_size, card_object_ref: card_object = null):	
+	# Store reference to the card object so we can emit it when clicked
+	self.card_ref = card_object_ref
 	
 	# Store the card UID so we can access it later when clicked
 	self.card_uid = card_uid
@@ -69,7 +72,7 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		# Check if the click is actually on this card
 		if get_global_rect().has_point(event.position):
-			card_clicked.emit(card_uid)
+			card_clicked.emit(card_ref)
 		
 # On card load...
 func _ready() -> void:

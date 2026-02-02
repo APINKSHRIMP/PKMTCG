@@ -75,10 +75,11 @@ func get_card_metadata(card_uid: String):
 	return null
 
 # Main function to check if a card is a basic pokemon or not. Will return true or false
-func is_basic_pokemon(card_uid: String) -> bool:
-	# Get the full card metadata by running the card uid through the function called get card metadata
-	var card_full_metadata = get_card_metadata(card_uid)
-	# Make sure a card is actually returned succesfully
+func is_basic_pokemon(card: card_object) -> bool:
+	# Get the metadata from the card object directly
+	var card_full_metadata = card.metadata
+	
+	# Make sure metadata exists
 	if card_full_metadata == null:
 		return false
 	
@@ -169,7 +170,14 @@ func load_deck_from_file(deck_file_path: String) -> Array:
 			var card_to_append_to_deck_count = this_card["count"]
 			
 			for i in range(card_to_append_to_deck_count):
-				deck.append(card_to_append_to_deck_id)
+				# Get the metadata for this card to save to the card object
+				var card_metadata = get_card_metadata(card_to_append_to_deck_id)
+				
+				# Create a new card_object with the UID and metadata
+				var new_card = card_object.new(card_to_append_to_deck_id, card_metadata)
+				
+				# Add the card object to the deck
+				deck.append(new_card)
 
 	# Shuffle the deck
 	deck.shuffle()
@@ -177,17 +185,16 @@ func load_deck_from_file(deck_file_path: String) -> Array:
 	return deck
 
 # Called when a card in selection mode is clicked
-func this_card_clicked(card_uid: String) -> void:
-	print("Card clicked: ", card_uid)
+func this_card_clicked(clicked_card: card_object) -> void:
+	print("Card clicked: ", clicked_card.uid)
 	
-	# Look up the card's metadata using the existing function
-	var card_metadata = get_card_metadata(card_uid)
+	# We now have the actual card object, so we can access its metadata directly
+	print("Card name: ", clicked_card.metadata.get("name", "Unknown"))
 	
-	# Check if metadata was found
-	if card_metadata != null:
-		print("Card name: ", card_metadata.get("name", "Unknown"))
-	else:
-		print("Failed to find metadata for card: ", card_uid)
+	# Store reference to the selected card
+	selected_card_for_action = clicked_card
+	
+	print("Selected card stored: ", selected_card_for_action.uid)
 		
 	#selected_card_for_action = card_metadata
 
@@ -210,7 +217,7 @@ func display_array_of_cards(hand: Array, hand_container, card_size: Vector2):
 		hand_container.add_child(hand_card_to_display)
 		
 		# Load the card image with pixel sizes for hand cards
-		hand_card_to_display.load_card_image(this_card_in_hand, card_size)
+		hand_card_to_display.load_card_image(this_card_in_hand.uid, card_size, this_card_in_hand)
 		
 		# Connect this card's signal to the main script's handler
 		hand_card_to_display.card_clicked.connect(this_card_clicked)
