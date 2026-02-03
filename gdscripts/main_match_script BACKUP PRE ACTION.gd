@@ -18,8 +18,6 @@ var card_selection_mode_enabled = false
 var selected_card_for_action = null
 var card_was_clicked_this_frame: bool = false
 
-var match_just_started_basic_pokemon_required = true
-
 # I know this vector dict code is a bit messy but for testing and just resizing things on the UI it's easier
 # I should delete most of these when done
 var card_scales: Dictionary = {
@@ -126,9 +124,7 @@ func draw_opening_hand(deck: Array, player_name: String = "") -> Array:
 		# Now draw 7 card and put them in the hand
 		for i in range(amount_of_cards_to_draw):
 			# Pop front removes the same card from the deck so you don't need to do a .remove and a .add at the same time
-			var drawn_card = deck.pop_front() 
-			drawn_card.current_location = "hand" 
-			hand.append(drawn_card)
+			hand.append(deck.pop_front())
 		
 		# Check if hand contains at least one Basic Pokemon, if not hand needs to go back in deck and reshuffle
 		for card_uid in hand:
@@ -201,17 +197,19 @@ func load_deck_from_file(deck_file_path: String) -> Array:
 # Called when a card in selection mode is clicked
 func this_card_clicked(clicked_card: card_object) -> void:
 	if card_selection_mode_enabled == true:
+		#print("Card clicked: ", clicked_card.uid)
+		
+		# We now have the actual card object, so we can access its metadata directly
+		#print("Card name: ", clicked_card.metadata.get("name", "Unknown"))
+		
 		# Store reference to the selected card
 		selected_card_for_action = clicked_card
 		
 		print("Selected card for action: ", selected_card_for_action.metadata["name"])
-		
-		# Update the button text and state based on the selected card
-		update_action_button()
 			
 	else:
 		selected_card_for_action = null
-		
+
 # Display hand cards in a container
 func display_array_of_cards(hand: Array, hand_container, card_size: Vector2):
 	var card_display_script = load("res://gdscripts/cardimage.gd")
@@ -274,25 +272,17 @@ func _on_opponent_hand_clicked(event: InputEvent) -> void:
 func show_enlarged_array(card_array: Array) -> void:
 	card_selection_mode_enabled = true
 	var amount_of_cards_to_show = card_array.size()
-	
-	if match_just_started_basic_pokemon_required == true:
-		$cancel_selection_mode_view_button.visible = false
-	else:
-		$cancel_selection_mode_view_button.visible = true
-		
-	# These lines apply to BOTH branches - move them here
-	$player_hand_hbox_container.visible = false
-	$opponent_hand_hbox_container.visible = false
-	$selection_mode_scroller.visible = true
-	$card_action_button.visible = true
-	$player_active_pokemon_container.visible = false
-	$opponent_active_pokemon_container.visible = false
-	
 	# I couldn't figure out how to get a scrolling box to be centrally aligned and gave up
 	# So instead, if the card array is OVER 7 then use the scroller box. If it's UNDER 7 then just use a box central aligned
 	if amount_of_cards_to_show > 7:
-		# Hide the small container
+		# Hide ALL UI components
+		$player_hand_hbox_container.visible = false
+		$opponent_hand_hbox_container.visible = false
 		$small_selection_mode_container.visible = false
+		
+		# Show only the selection mode container and the button to cancel the view
+		$cancel_selection_mode_view_button.visible = true
+		$selection_mode_scroller.visible = true
 		$selection_mode_scroller/large_selection_mode_container.visible = true
 		
 		# Now display the passed through card array to the selection mode container in large pixel format
@@ -300,9 +290,16 @@ func show_enlarged_array(card_array: Array) -> void:
 		
 		# If UNDER 8 cards (small array)	
 	else:
-		# Hide the large container
+		#Hide ALL UI components
+		$player_hand_hbox_container.visible = false
+		$opponent_hand_hbox_container.visible = false
 		$selection_mode_scroller/large_selection_mode_container.visible = false
+		
+		# Show only the selection mode container and the button to cancel the view
+		$cancel_selection_mode_view_button.visible = true
+		$selection_mode_scroller.visible = true
 		$small_selection_mode_container.visible = true
+		
 		$small_selection_mode_container.custom_minimum_size = Vector2(0, 0)
 		
 		# Now display the passed through card array to the selection mode container in large pixel format
@@ -311,19 +308,13 @@ func show_enlarged_array(card_array: Array) -> void:
 # When the cancel button is clicked, hide everthing in card selection mode and show main screen again
 func _on_cancel_selection_mode_button_pressed() -> void:
 	card_selection_mode_enabled = false
-	selected_card_for_action = null  
-	update_action_button()  
-	
 	$selection_mode_scroller.visible = false
 	$selection_mode_scroller/large_selection_mode_container.visible = false
 	$cancel_selection_mode_view_button.visible = false
-	$card_action_button.visible = false
 	$small_selection_mode_container.visible = false
 	
 	$player_hand_hbox_container.visible = true
 	$opponent_hand_hbox_container.visible = true
-	$player_active_pokemon_container.visible = true
-	$opponent_active_pokemon_container.visible = true
 
 # Function for setting the active pokemon from hand of bench
 func set_player_active_pokemon() -> void:
@@ -336,34 +327,19 @@ func set_player_active_pokemon() -> void:
 	if not is_basic_pokemon(selected_card_for_action):
 		print("Error: Selected card is not a basic pokemon")
 		return
-		
-	print("Attempting to set an active pokemon:")
-	
-	# Store the original location before we change it
-	var original_location = selected_card_for_action.current_location
 	
 	# If we get here, it's valid - set it as the active pokemon
 	player_active_pokemon = selected_card_for_action
 	
-	# Update the card's location to "active"
-	player_active_pokemon.current_location = "active"
-	
-	# Now remove from the appropriate location based on where it came from
-	match original_location:
-		"hand":
-			player_hand.erase(selected_card_for_action)
-			print("Removed pokemon from hand")
-		"bench":
-			# We'll implement this when we build the bench system
-			# For now: player_bench.erase(selected_card_for_action)
-			print("Removed pokemon from bench")
+	# Remove this card from the player's hand since it's now active
+	player_hand.erase(selected_card_for_action)
 	
 	# Print confirmation
 	print("Player's active pokemon set to: ", player_active_pokemon.metadata["name"])
 	
 	# Clear the selection
 	selected_card_for_action = null
-	
+
 func display_active_pokemon() -> void:
 	# Get the container for the player's active pokemon
 	var active_pokemon_container = $player_active_pokemon_container
@@ -376,8 +352,6 @@ func display_active_pokemon() -> void:
 	if player_active_pokemon == null:
 		print("No active pokemon to display")
 		return
-	
-	print("Attempting to display an active pokemon:")
 	
 	# Load the card display script (same as we do for hand cards)
 	var card_display_script = load("res://gdscripts/cardimage.gd")
@@ -392,135 +366,29 @@ func display_active_pokemon() -> void:
 	active_pokemon_container.add_child(active_card_display)
 	
 	# Load the card image with a larger size (let's use card_scales[2])
-	active_card_display.load_card_image(player_active_pokemon.uid, card_scales[4], player_active_pokemon)
+	active_card_display.load_card_image(player_active_pokemon.uid, card_scales[2], player_active_pokemon)
 	
 	# Connect the signal (though we might want to prevent clicking active pokemon later)
 	active_card_display.card_clicked.connect(this_card_clicked)
 
-func _on_card_action_button_pressed() -> void:
-	# Don't do anything if no card is selected
-	if selected_card_for_action == null:
-		print("Error: No card selected for action")
-		return
+func _on_set_button_pressed() -> void:
+	# Try to set the player's active pokemon
+	set_player_active_pokemon()
 	
-	# Get the action type
-	var action_info = get_card_action(selected_card_for_action)
-	var action_type = action_info["action"]
+	# Refresh the active pokemon display
+	display_active_pokemon()
 	
-	# Perform the appropriate action based on card type
-	match action_type:
-		"SET_POKEMON":
-			set_player_active_pokemon()
-			display_active_pokemon()
-			display_array_of_cards(player_hand, $player_hand_hbox_container, card_scales[11])
-			
-			match_just_started_basic_pokemon_required = false
-			
-			_on_cancel_selection_mode_button_pressed()  # Close selection mode
-		
-		"PLAY_TRAINER":
-			print("Trainer card play not yet implemented")
-			# We'll add this later
-		
-		"ATTACH_ENERGY":
-			print("Energy attachment not yet implemented")
-			# We'll add this later
-		
-		"EVOLVE":
-			print("Evolution not yet implemented")
-			# We'll add this later
-		
-		_:
-			print("Unknown action: ", action_type)
+	# Close the selection mode (same as cancel button)
+	_on_cancel_selection_mode_button_pressed()
 
-func get_card_action(card: card_object) -> Dictionary:
-	# This function returns a dictionary with the action name and whether it's available
-	
-	if card == null:
-		return {"action": "NONE", "button_text": ""}
-	
-	var card_metadata = card.metadata
-	var supertype = card_metadata.get("supertype", "").to_lower()
-	
-	if match_just_started_basic_pokemon_required == true:
-		match supertype:
-			"pokémon":
-				if is_basic_pokemon(card):
-					return {"action": "SET_POKEMON", "button_text": "Play Active Pokemon"}
-				else:
-					# Stage 1 or Stage 2 - we'll handle evolution later
-					return {"action": "NONE", "button_text": "Select Basic Pokemon"}
-			
-			"trainer","energy":
-					return {"action": "NONE", "button_text": "Select Basic Pokemon"}
-	else:
-		match supertype:
-			"pokémon":
-				if is_basic_pokemon(card):
-					return {"action": "SET_POKEMON", "button_text": "Set"}
-				else:
-					# Stage 1 or Stage 2 - we'll handle evolution later
-					return {"action": "EVOLVE", "button_text": "Evolve"}
-			
-			"trainer":
-				return {"action": "PLAY_TRAINER", "button_text": "Play"}
-			
-			"energy":
-				return {"action": "ATTACH_ENERGY", "button_text": "Attach"}	
-				
-	
-	# Default fallback
-	return {"action": "NONE", "button_text": ""}
-
-func update_action_button() -> void:
-	var action_info = get_card_action(selected_card_for_action)
-	var action_button = $card_action_button
-	
-	if selected_card_for_action == null:
-		# No card selected
-		if match_just_started_basic_pokemon_required:
-			action_button.text = "Select Basic Pokemon"
-		else:
-			action_button.text = "Select Card"
-		action_button.disabled = true
-		action_button.theme = load("res://uiresources/kenneyUI.tres")
-		
-	elif match_just_started_basic_pokemon_required and is_basic_pokemon(selected_card_for_action):
-		# Match just started AND a basic pokemon is selected
-		action_button.text = "Play Active Pokemon"
-		action_button.disabled = false
-		action_button.theme = load("res://uiresources/kenneyUI-green.tres")
-		
-	elif match_just_started_basic_pokemon_required:
-		# Match just started BUT wrong card type selected
-		action_button.text = "Select Basic Pokemon"
-		action_button.disabled = true
-		action_button.theme = load("res://uiresources/kenneyUI.tres")
-		
-	else:
-		# Normal match play - use action_info
-		action_button.text = action_info["button_text"]
-		action_button.disabled = (action_info["action"] == "NONE")
-		
-		if action_button.disabled:
-			action_button.theme = load("res://uiresources/kenneyUI.tres")
-		else:
-			action_button.theme = load("res://uiresources/kenneyUI-green.tres")
-	
-	print("Action button updated to: ", action_button.text)
-	
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
+		# Get the mouse position
 		var mouse_pos = get_global_mouse_position()
-		
-		# Check if click is on the cancel or action button - if so, ignore
-		if $cancel_selection_mode_view_button.visible and $cancel_selection_mode_view_button.get_global_rect().has_point(mouse_pos):
-			return
-		if $card_action_button.visible and $card_action_button.get_global_rect().has_point(mouse_pos):
-			return
 		
 		# Check if mouse is over any card in the visible containers
 		var clicked_on_card = false
+		
 		
 		# Check small selection container cards
 		for card_ui in $small_selection_mode_container.get_children():
@@ -539,7 +407,6 @@ func _input(event: InputEvent) -> void:
 		if not clicked_on_card:
 			print("CARD WAS NOT CLICKED SO CLEAR SELECTED")
 			selected_card_for_action = null
-			update_action_button()
 			
 ################################################################ END OF FUNCTIONS ##################################################################
 
@@ -549,11 +416,7 @@ func _ready() -> void:
 	$player_hand_hbox_container.gui_input.connect(_on_player_hand_clicked)
 	$opponent_hand_hbox_container.gui_input.connect(_on_opponent_hand_clicked)
 	$cancel_selection_mode_view_button.pressed.connect(_on_cancel_selection_mode_button_pressed)
-	$card_action_button.pressed.connect(_on_card_action_button_pressed)
 	setup_player()
 	setup_opponent("Fisherman1")
-	update_action_button()
 	show_enlarged_array(player_hand)
-
-	
 ################################################################ END OF GAME ##################################################################
