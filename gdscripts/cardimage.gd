@@ -7,6 +7,11 @@ signal card_clicked(clicked_card: card_object)
 var card_uid
 var card_ref: card_object
 
+# Animation and selection variables
+var tween: Tween
+var is_selected: bool = false
+var original_modulate: Color
+
 # Function to load the card image based on the UID (e.g Base1-1)
 func load_card_image(card_uid: String, card_target_size, card_object_ref: card_object = null):	
 	# Store reference to the card object so we can emit it when clicked
@@ -60,6 +65,12 @@ func load_card_image(card_uid: String, card_target_size, card_object_ref: card_o
 		# Set size
 		self.custom_minimum_size = Vector2(final_width, final_height)
 		
+		# NEW: Set pivot point to center so scaling happens from center
+		self.pivot_offset = Vector2(final_width / 2, final_height / 2)
+		
+		# Set stretch mode to scale proportionally
+		self.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		
 		# Set stretch mode to scale proportionally
 		self.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		self.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
@@ -67,19 +78,67 @@ func load_card_image(card_uid: String, card_target_size, card_object_ref: card_o
 	else:
 		print("Error: Could not load card image at path: ", card_image_path)
 
-# This function script is used to determine when a card is clicked		
+# Apply animation and colour effects to show selected card
+# Apply visual effect when card is selected
+func set_selected(selected: bool) -> void:
+	is_selected = selected
+	
+	if selected:
+		# Kill any existing tween to prevent conflicts
+		if tween:
+			tween.kill()
+		
+		# Store original color BEFORE starting animation if not already stored
+		if original_modulate == Color(0, 0, 0, 0):
+			original_modulate = Color.WHITE
+		
+		# Create new tween for smooth animation
+		tween = create_tween()
+		tween.set_loops()  # Loop the animation
+		
+		# Glow effect: make card slightly brighter
+		tween.tween_property(self, "modulate", Color.WHITE * 1.3, 0.2)
+		# Scale effect: grow slightly
+		tween.tween_property(self, "scale", Vector2(1.05, 1.05), 0.2)
+		
+		# Return to normal
+		tween.tween_property(self, "modulate", Color.WHITE * 1.15, 0.2)
+		# Scale effect: return to normal size
+		tween.tween_property(self, "scale", Vector2(1.0, 1.0), 0.2)
+	else:
+		# Kill the tween animation
+		if tween:
+			tween.kill()
+			tween = null
+		
+		# Restore original appearance immediately
+		modulate = Color.WHITE
+		scale = Vector2(1.0, 1.0)
+		
+# This function script is used to determine when a card is clicked			
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		# Check if the click is actually on this card
 		if get_global_rect().has_point(event.position):
+			
+			# NEW: Check if this card's parent container is visible
+			var parent_container = get_parent()
+			if parent_container and not parent_container.visible:
+				return  # Don't process if parent container is hidden
+			
 			card_clicked.emit(card_ref)
 			
 			# Tell main script a card was clicked
 			get_tree().root.get_child(0).card_was_clicked_this_frame = true
-		
-		
+			
+			# CRITICAL: Get reference to the main script to check if we're in selection mode
+			var main_script = get_tree().root.get_child(0)
+			
+			# If in selection mode, consume the input so it doesn't propagate to other cards
+			if main_script.card_selection_mode_enabled:
+				get_tree().get_root().set_input_as_handled()		
+
 # On card load...
 func _ready() -> void:
-
 	# Allow mouse input to pass through to this TextureRect
 	mouse_filter = MOUSE_FILTER_PASS

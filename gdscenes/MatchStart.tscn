@@ -127,3 +127,12 @@ offset_top = 638.0
 offset_right = 459.0
 offset_bottom = 811.0
 theme_override_constants/separation = 1
+
+[node name="opponent_bench_container" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 1423.0
+offset_top = 673.0
+offset_right = 1878.0
+offset_bottom = 846.0
+theme_override_constants/separation = 1
+alignment = 2

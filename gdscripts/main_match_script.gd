@@ -19,7 +19,7 @@ var opponent_bench: Array = []
 var opponent_active_pokemon: card_object = null
 
 # GAME VARIABLES
-var amount_of_cards_to_draw = 12
+var amount_of_cards_to_draw = 7
 
 # FUNCTIONAL REQUIREMENT VARIABLES
 var card_selection_mode_enabled = false
@@ -29,13 +29,13 @@ var match_just_started_basic_pokemon_required = true
 
 # QUICK REFERENCE VECTORS JUST USED FOR EASY SWAPPING OF SIZES FOR DEVELOPMENT
 var card_scales: Dictionary = {
-	1: Vector2(600, 825),
+	1: Vector2(450, 619),
 	1.5: Vector2(575, 791),
-	2: Vector2(550, 756),
+	2: Vector2(400, 550),
 	2.5: Vector2(525, 722),
-	3: Vector2(500, 688),
+	3: Vector2(375, 515),
 	3.5: Vector2(450, 619),
-	4: Vector2(400, 550),
+	4: Vector2(350, 481),
 	4.5: Vector2(375, 515),
 	5: Vector2(350, 481),
 	5.5: Vector2(325, 447),
@@ -66,6 +66,11 @@ var card_scales: Dictionary = {
 # Main reusable function to display any array passed in a LARGE viewing mode, hide everything else on the screen and allows selection of cards for action
 func show_enlarged_array(card_array: Array) -> void:
 	
+	# Prevent showing empty arrays
+	if card_array.size() == 0:
+		print("Cannot show enlarged array: array is empty")
+		return
+	
 	# If we are showing an enlarged display then card selection mode is enabled.
 	card_selection_mode_enabled = true
 	
@@ -79,6 +84,14 @@ func show_enlarged_array(card_array: Array) -> void:
 	$player_active_pokemon_container.visible = false
 	$opponent_active_pokemon_container.visible = false
 	
+	$player_active_pokemon_container.mouse_filter = MOUSE_FILTER_IGNORE
+	$opponent_active_pokemon_container.mouse_filter = MOUSE_FILTER_IGNORE
+	
+	for card in $player_active_pokemon_container.get_children():
+		card.mouse_filter = MOUSE_FILTER_IGNORE
+	for card in $opponent_active_pokemon_container.get_children():
+		card.mouse_filter = MOUSE_FILTER_IGNORE
+	
 	$player_bench_container.visible = false
 	
 	# Show the buttons
@@ -89,6 +102,12 @@ func show_enlarged_array(card_array: Array) -> void:
 		$cancel_selection_mode_view_button.visible = false
 	else:
 		$cancel_selection_mode_view_button.visible = true
+	
+	# Hide action button if viewing opponent's hand
+	if card_array == opponent_hand or card_array == opponent_bench:
+		$card_action_button.visible = false
+	else:
+		$card_action_button.visible = true
 		
 	# If the card array is OVER 7 then use the scroller box. If it's UNDER 7 then just use a box central aligned
 	if amount_of_cards_to_show > 7:
@@ -204,6 +223,11 @@ func display_bench_pokemon() -> void:
 # Both the cancel button and action button will hide selection mode so function is vaguely named for both actions
 func display_main_components_hide_selection_mode() -> void:
 	
+	if selected_card_for_action != null:
+		var card_ui = find_card_ui_for_object(selected_card_for_action)
+		if card_ui:
+			card_ui.set_selected(false)
+	
 	# End card selection mode and clear any selected card to prevent errors
 	card_selection_mode_enabled = false
 	selected_card_for_action = null  
@@ -228,6 +252,18 @@ func display_main_components_hide_selection_mode() -> void:
 	
 	# Show the player and oppoents bench
 	$player_bench_container.visible = true
+	
+	# Re-enable mouse input on previously hidden containers
+	$player_active_pokemon_container.mouse_filter = MOUSE_FILTER_PASS
+	$opponent_active_pokemon_container.mouse_filter = MOUSE_FILTER_PASS
+	$player_bench_container.mouse_filter = MOUSE_FILTER_PASS
+	
+	# Re-enable input on cards in the active pokemon containers
+	for card in $player_active_pokemon_container.get_children():
+		card.mouse_filter = MOUSE_FILTER_PASS
+	for card in $opponent_active_pokemon_container.get_children():
+		card.mouse_filter = MOUSE_FILTER_PASS
+	
 ############################################################### END DISPLAY FUNCTIONS ################################################################
 
 
@@ -370,6 +406,7 @@ func draw_opening_hand(deck: Array, player_name: String = "") -> Array:
 ############################################################## END GAME LOAD FUNCTIONS ###############################################################
 
 ############################################################ CORE FUNCTIONALITY FUNCTIONS ############################################################
+	
 # Main function to get metadata of any card passed to it. Goes off UID to lookup JSON data in game file
 func get_card_metadata(card_uid: String):
 	
@@ -414,6 +451,39 @@ func get_card_metadata(card_uid: String):
 	# If the card could not be found in this set then return null
 	print("Card not found in metadata: ", card_uid)
 	return null
+
+# Main function to check if a card is a basic pokemon or not. Will return true or false
+func is_basic_pokemon(card: card_object) -> bool:
+	
+	# Get the metadata from the card object directly
+	var card_full_metadata = card.metadata
+	
+	# Make sure metadata exists
+	if card_full_metadata == null:
+		return false
+	
+	# Now the card metadata has been found save the super and sub type variables to check
+	var main_card_type = card_full_metadata.get("supertype", "").to_lower()
+	
+	# If the card is a pokemon type then we finally check if it's basic or not
+	if main_card_type == "pokémon":
+		var card_subtypes_array = card_full_metadata.get("subtypes", [])
+		
+		# Now We need to make sure it is a BASIC and POKEMON (there exists BASIC ENERGY and allow baby pokemon as basic pokemon)
+		for each_subtype in card_subtypes_array:
+			
+			# avoid case sensitivity
+			var each_subtype_lower = each_subtype.to_lower()
+			
+			# Baby pokemon count as basic
+			match each_subtype_lower:
+				"basic", "baby":
+					return true
+				"stage 1", "stage 2", "stage1", "stage2":
+					return false
+	
+	# If the above statements don't deem this a POKEMON card at all or it is a pokemon but NOT a BASIC card then return false
+	return false
 
 # Get card action is used when selecting a card from an array. Allows basic pokemon to be set, trainers to be played, energies to be attached
 func get_card_action(card: card_object) -> Dictionary:
@@ -516,39 +586,6 @@ func update_action_button() -> void:
 			action_button.theme = load("res://uiresources/kenneyUI.tres")
 		else:
 			action_button.theme = load("res://uiresources/kenneyUI-green.tres")
-	
-# Main function to check if a card is a basic pokemon or not. Will return true or false
-func is_basic_pokemon(card: card_object) -> bool:
-	
-	# Get the metadata from the card object directly
-	var card_full_metadata = card.metadata
-	
-	# Make sure metadata exists
-	if card_full_metadata == null:
-		return false
-	
-	# Now the card metadata has been found save the super and sub type variables to check
-	var main_card_type = card_full_metadata.get("supertype", "").to_lower()
-	
-	# If the card is a pokemon type then we finally check if it's basic or not
-	if main_card_type == "pokémon":
-		var card_subtypes_array = card_full_metadata.get("subtypes", [])
-		
-		# Now We need to make sure it is a BASIC and POKEMON (there exists BASIC ENERGY and allow baby pokemon as basic pokemon)
-		for each_subtype in card_subtypes_array:
-			
-			# avoid case sensitivity
-			var each_subtype_lower = each_subtype.to_lower()
-			
-			# Baby pokemon count as basic
-			match each_subtype_lower:
-				"basic", "baby":
-					return true
-				"stage 1", "stage 2", "stage1", "stage2":
-					return false
-	
-	# If the above statements don't deem this a POKEMON card at all or it is a pokemon but NOT a BASIC card then return false
-	return false
 
 # Function for setting the active pokemon from hand of bench
 func set_player_active_pokemon() -> void:
@@ -589,6 +626,7 @@ func set_player_active_pokemon() -> void:
 	# Clear the selection
 	selected_card_for_action = null
 
+# Function to add a card from the player's hand to the bench
 func add_pokemon_to_bench(pokemon: card_object) -> void:
 	# Validate that the card is a basic pokemon
 	if not is_basic_pokemon(pokemon):
@@ -614,16 +652,37 @@ func add_pokemon_to_bench(pokemon: card_object) -> void:
 	player_bench.append(pokemon)
 	print("Pokemon added to bench. Bench size: ", player_bench.size())
 
+func find_card_ui_for_object(card_obj: card_object) -> TextureRect:
+	# Check small selection container
+	if $small_selection_mode_container.visible:
+		for card_ui in $small_selection_mode_container.get_children():
+			if card_ui.card_ref == card_obj:
+				return card_ui
+	
+	# Check large selection container
+	if $selection_mode_scroller.visible:
+		for card_ui in $selection_mode_scroller/large_selection_mode_container.get_children():
+			if card_ui.card_ref == card_obj:
+				return card_ui
+	
+	return null
+
 ########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
 
 ########################################################### USER INPUT ON CLICK FUNCTIONS ############################################################
 
-func _on_card_action_button_pressed() -> void:
+# Card action button is the physical button that appears when in card selection mode, allows attaching energies, playing pokemon and trainer cards
+func action_button_pressed_perform_action() -> void:
 	# Don't do anything if no card is selected
 	if selected_card_for_action == null:
 		print("Error: No card selected for action")
 		return
 	
+	# Prevent playing opponents cards
+	if selected_card_for_action not in player_hand:
+		print("Error: Can only play cards from your own hand")
+		return
+		
 	# Get the action type
 	var action_info = get_card_action(selected_card_for_action)
 	var action_type = action_info["action"]
@@ -661,25 +720,48 @@ func _on_card_action_button_pressed() -> void:
 			print("Unknown action: ", action_type)
 
 # When the cancel button is clicked, hide everthing in card selection mode and show main screen again
-func _on_cancel_selection_mode_button_pressed() -> void:
+func cancel_button_pressed_hide_selection_mode() -> void:
 	display_main_components_hide_selection_mode()
 
 # Main function to show all hand cards larger when the player's hand is clicked
-func _on_player_hand_clicked(event: InputEvent) -> void:
+func player_hand_clicked_show_hand(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		show_enlarged_array(player_hand)
-		
-func _on_opponent_hand_clicked(event: InputEvent) -> void:
+
+# Main function to show all hand cards larger when the opponent's hand is clicked		
+func opponent_hand_clicked_show_hidden_hand(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		show_enlarged_array(opponent_hand)
+
+# Main function to show all of player's bench cards larger when clicked
+func player_bench_clicked_show_bench(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		show_enlarged_array(player_bench)
+
+# Main function to show all of opponent's bench cards larger when clicked
+func opponent_bench_clicked_show_bench(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		show_enlarged_array(opponent_bench)
 
 # Called when a card in selection mode is clicked
 func this_card_clicked(clicked_card: card_object) -> void:
 	if card_selection_mode_enabled == true:
+		
+		# NEW: Remove visual effect from previously selected card
+		if selected_card_for_action != null:
+			var prev_card_ui = find_card_ui_for_object(selected_card_for_action)
+			if prev_card_ui:
+				prev_card_ui.set_selected(false)
+		
 		# Store reference to the selected card
 		selected_card_for_action = clicked_card
 		
 		print("Selected card for action: ", selected_card_for_action.metadata["name"])
+		
+		# Apply visual effect to newly selected card
+		var card_ui = find_card_ui_for_object(clicked_card)
+		if card_ui:
+			card_ui.set_selected(true)
 		
 		# Update the button text and state based on the selected card
 		update_action_button()
@@ -710,31 +792,47 @@ func _input(event: InputEvent) -> void:
 		# Check if mouse is over any card in the visible containers
 		var clicked_on_card = false
 		
-		# Check small selection container cards
-		for card_ui in $small_selection_mode_container.get_children():
-			if card_ui.get_global_rect().has_point(mouse_pos) and card_selection_mode_enabled == true:
-				clicked_on_card = true
-				print("the game thinks a card has been clicked")
-				break
+		# NEW: Only check small selection container if it's visible
+		if $small_selection_mode_container.visible:
+			for card_ui in $small_selection_mode_container.get_children():
+				if card_ui.get_global_rect().has_point(mouse_pos) and card_selection_mode_enabled == true:
+					clicked_on_card = true
+					print("the game thinks a card has been clicked")
+					break
 
-		# Check large selection container cards
-		for card_ui in $selection_mode_scroller/large_selection_mode_container.get_children():
-			if card_ui.get_global_rect().has_point(mouse_pos) and card_selection_mode_enabled == true:
-				clicked_on_card = true
-				break
+		# NEW: Only check large selection container if it's visible
+		if $selection_mode_scroller.visible:
+			for card_ui in $selection_mode_scroller/large_selection_mode_container.get_children():
+				if card_ui.get_global_rect().has_point(mouse_pos) and card_selection_mode_enabled == true:
+					clicked_on_card = true
+					break
 		
 		# If no card was clicked, clear selection
 		if not clicked_on_card:
 			print("CARD WAS NOT CLICKED SO CLEAR SELECTED")
+			
+			if selected_card_for_action != null:
+				var card_ui = find_card_ui_for_object(selected_card_for_action)
+				if card_ui:
+					card_ui.set_selected(false)
+			
 			selected_card_for_action = null
 			update_action_button()
+			
+			
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	$player_hand_hbox_container.gui_input.connect(_on_player_hand_clicked)
-	$opponent_hand_hbox_container.gui_input.connect(_on_opponent_hand_clicked)
-	$cancel_selection_mode_view_button.pressed.connect(_on_cancel_selection_mode_button_pressed)
-	$card_action_button.pressed.connect(_on_card_action_button_pressed)
+	
+	# Connect all the signals so that when parts of the UI are clicked by mouse they can perform actions
+	$player_hand_hbox_container.gui_input.connect(player_hand_clicked_show_hand)
+	$opponent_hand_hbox_container.gui_input.connect(opponent_hand_clicked_show_hidden_hand)
+	
+	$player_bench_container.gui_input.connect(player_bench_clicked_show_bench)
+	$opponent_bench_container.gui_input.connect(opponent_bench_clicked_show_bench)
+	
+	$cancel_selection_mode_view_button.pressed.connect(cancel_button_pressed_hide_selection_mode)
+	$card_action_button.pressed.connect(action_button_pressed_perform_action)
 	setup_player()
 	setup_opponent("Fisherman1")
 	update_action_button()
