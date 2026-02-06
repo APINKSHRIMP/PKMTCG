@@ -1,4 +1,5 @@
 HBoxContainer
+Label
 TextureRect
 Control
 Container

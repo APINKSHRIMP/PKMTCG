@@ -10,22 +10,29 @@ extends Control
 var player_hand: Array = []
 var player_deck: Array = []
 var player_bench: Array = []
+var player_prize_cards = []
 var player_active_pokemon: card_object = null
 
 # OPPONENT VARIABLES
 var opponent_hand: Array = []
 var opponent_deck: Array = []
 var opponent_bench: Array = []
+var opponent_prize_cards = []
 var opponent_active_pokemon: card_object = null
 
 # GAME VARIABLES
-var amount_of_cards_to_draw = 7
+var amount_of_cards_to_draw = 10
 
 # FUNCTIONAL REQUIREMENT VARIABLES
 var card_selection_mode_enabled = false
 var selected_card_for_action = null
 var card_was_clicked_this_frame: bool = false
 var match_just_started_basic_pokemon_required = true
+var bench_setup_phase_active = false
+
+# UI VARIABLES
+var large_header_text_label: Label
+var small_hint_info_text_label: Label
 
 # QUICK REFERENCE VECTORS JUST USED FOR EASY SWAPPING OF SIZES FOR DEVELOPMENT
 var card_scales: Dictionary = {
@@ -108,7 +115,9 @@ func show_enlarged_array(card_array: Array) -> void:
 		$card_action_button.visible = false
 	else:
 		$card_action_button.visible = true
-		
+	
+	update_selection_mode_labels(card_array, match_just_started_basic_pokemon_required)
+	
 	# If the card array is OVER 7 then use the scroller box. If it's UNDER 7 then just use a box central aligned
 	if amount_of_cards_to_show > 7:
 		# If OVER 7 cards then use a scrolling box container
@@ -264,6 +273,84 @@ func display_main_components_hide_selection_mode() -> void:
 	for card in $opponent_active_pokemon_container.get_children():
 		card.mouse_filter = MOUSE_FILTER_PASS
 	
+# Updates the header and hint labels based on what array is being displayed
+func update_selection_mode_labels(array_displayed: Array, is_starting_game: bool = false) -> void:
+	
+	# Special case: if we're in bench setup phase, use specific text
+	if bench_setup_phase_active:
+		$large_header_text_label.text = "Build Your Bench"
+		$small_hint_info_text_label.text = "Select up to 5 Pokémon to place on your bench"
+		return
+	
+	# Determine which array we're displaying and set appropriate text
+	if array_displayed == player_hand:
+		if is_starting_game:
+			$large_header_text_label.text = "Select a Basic Pokémon"
+			$small_hint_info_text_label.text = "You must place a Basic Pokémon as your Active Pokémon to start"
+		else:
+			$large_header_text_label.text = "Your Hand"
+			$small_hint_info_text_label.text = "Select a card to play"
+	
+	elif array_displayed == player_bench:
+		$large_header_text_label.text = "Your Bench"
+		$small_hint_info_text_label.text = "Select a Pokémon to set as your Active Pokémon"
+	
+	elif array_displayed == opponent_hand:
+		$large_header_text_label.text = "Opponent's Hand"
+		$small_hint_info_text_label.text = "Viewing opponent's hand"
+		
+	elif array_displayed == opponent_bench:
+		$large_header_text_label.text = "Opponent's Bench"
+		$small_hint_info_text_label.text = "Viewing opponent's bench"
+		
+	elif array_displayed == player_prize_cards:
+		$large_header_text_label.text = "Your Prize Cards"
+		$small_hint_info_text_label.text = "Viewing your prize cards"
+		
+	elif array_displayed == opponent_prize_cards:
+		$large_header_text_label.text = "Opponent's prize cards"
+		$small_hint_info_text_label.text = "Viewing opponent's prize cards"
+
+# Displays the prize cards for the specified player in their prize cards container
+func display_prize_cards(is_player: bool) -> void:
+	
+	# Get the appropriate container and prize cards array
+	var prize_cards_container: HBoxContainer
+	var prize_cards: Array
+	
+	if is_player:
+		prize_cards_container = $player_prize_cards_container
+		prize_cards = player_prize_cards
+	else:
+		prize_cards_container = $opponent_prize_cards_container
+		prize_cards = opponent_prize_cards
+	
+	# Clear any existing cards from the container
+	for child in prize_cards_container.get_children():
+		child.queue_free()
+	
+	# If prize cards array is empty, nothing to display
+	if prize_cards.size() == 0:
+		return
+	
+	# Load the card display script
+	var card_display_script = load("res://gdscripts/cardimage.gd")
+	
+	# Display each prize card
+	for prize_card in prize_cards:
+		var prize_card_display = TextureRect.new()
+		
+		# Attach the card display script
+		prize_card_display.set_script(card_display_script)
+		
+		# Add to container
+		prize_cards_container.add_child(prize_card_display)
+		
+		# Load the card image with a size appropriate for prize cards
+		prize_card_display.load_card_image(prize_card.uid, card_scales[12], prize_card)
+		
+		# Connect the signal so prize cards can be clicked if needed
+		prize_card_display.card_clicked.connect(this_card_clicked)	
 ############################################################### END DISPLAY FUNCTIONS ################################################################
 
 
@@ -403,9 +490,49 @@ func draw_opening_hand(deck: Array, player_name: String = "") -> Array:
 	
 	return hand
 
+# Draws the top 6 cards from the specified player's deck and adds them to prize cards
+func draw_prize_cards(is_player: bool) -> void:
+	
+	# Get the appropriate deck and prize cards array based on whether it's player or opponent
+	var deck: Array
+	var prize_cards: Array
+	
+	if is_player:
+		deck = player_deck
+		prize_cards = player_prize_cards
+	else:
+		deck = opponent_deck
+		prize_cards = opponent_prize_cards
+	
+	# Check if there are at least 6 cards in the deck
+	if deck.size() < 6:
+		print("Error: Not enough cards in deck to draw 6 prize cards. Current deck size: ", deck.size())
+		return
+	
+	# Draw the top 6 cards from the deck and add them to prize cards
+	for i in range(6):
+		var prize_card = deck.pop_front()
+		prize_cards.append(prize_card)
+	
+	# Display the prize cards
+	display_prize_cards(is_player)
+	
+# Initiates the bench setup phase after the active pokemon is selected at game start
+func start_bench_setup_phase() -> void:
+		
+	# Set the flag so we know we're in bench setup mode
+	bench_setup_phase_active = true
+	
+	# Show the hand again for bench pokemon selection
+	show_enlarged_array(player_hand)	
+	
 ############################################################## END GAME LOAD FUNCTIONS ###############################################################
 
 ############################################################ CORE FUNCTIONALITY FUNCTIONS ############################################################
+
+# Quit the game when called
+func end_game() -> void:
+	get_tree().quit()
 	
 # Main function to get metadata of any card passed to it. Goes off UID to lookup JSON data in game file
 func get_card_metadata(card_uid: String):
@@ -496,15 +623,15 @@ func get_card_action(card: card_object) -> Dictionary:
 	var card_metadata = card.metadata
 	var supertype = card_metadata.get("supertype", "").to_lower()
 	
-	# As a very specific piece of logic, only basic pokemon can be set as active pokemon on turn 1 and never again.
+	# As a very specific piece of logic, only basic pokemon can be SET AS ACTIVE POKEMON pokemon on turn 1 and never again.
 	if match_just_started_basic_pokemon_required == true:
 		
 		# Only a pokemon card can be played and ONLY if that pokemon card is basic
 		match supertype:
 			"pokémon":
 				if is_basic_pokemon(card):
-					# If the selected card is a basic pokemon then it can be set as active pokemon on turn one
-					return {"action": "SET_POKEMON", "button_text": "Play Active Pokemon"}
+					# If the selected card is a basic pokemon then it can be SET AS ACTIVE POKEMON pokemon on turn one
+					return {"action": "SET_POKEMON", "button_text": "SET AS ACTIVE POKEMON"}
 				else:
 					# Stage 1 or Stage 2 cannot be played on turn 1
 					return {"action": "NONE", "button_text": "Select Basic Pokemon"}
@@ -539,6 +666,15 @@ func update_action_button() -> void:
 	# We need to see what the button can do by running the function get_card_action
 	var action_info = get_card_action(selected_card_for_action)
 	var action_button = $card_action_button
+	var action_type = action_info["action"]
+	
+	if action_type == "SET_POKEMON" and not match_just_started_basic_pokemon_required:
+		if player_bench.size() >= 5:
+			action_button.disabled = true
+			action_button.text = "BENCH FULL"
+			# If no card is selected, disable the button and change the colour to show it can't be clicked	
+			action_button.theme = load("res://uiresources/kenneyUI.tres")
+			return
 	
 	# If no card is selected then we have no action to perform so disable the button and change text to select the card
 	if selected_card_for_action == null:
@@ -553,11 +689,11 @@ func update_action_button() -> void:
 		action_button.disabled = true
 		action_button.theme = load("res://uiresources/kenneyUI.tres")
 	
-	# If the match has just started, ONLY a basic pokemon can be played and set as active pokemon, not placed on bench	
+	# If the match has just started, ONLY a basic pokemon can be played and SET AS ACTIVE POKEMON pokemon, not placed on bench	
 	elif match_just_started_basic_pokemon_required and is_basic_pokemon(selected_card_for_action):
 		
 		# Match just started AND a basic pokemon is selected so card is set to active
-		action_button.text = "Play Active Pokemon"
+		action_button.text = "SET AS ACTIVE POKEMON"
 		
 		# Enable the button and change the colour
 		action_button.disabled = false
@@ -628,6 +764,12 @@ func set_player_active_pokemon() -> void:
 
 # Function to add a card from the player's hand to the bench
 func add_pokemon_to_bench(pokemon: card_object) -> void:
+	
+	# Set max on bench to 5
+	if player_bench.size() >= 5:
+		print("Error: Bench is full (maximum 5 pokemon)")
+		return
+		
 	# Validate that the card is a basic pokemon
 	if not is_basic_pokemon(pokemon):
 		print("Error: Cannot add non-basic pokemon to bench")
@@ -691,18 +833,26 @@ func action_button_pressed_perform_action() -> void:
 	match action_type:
 		"SET_POKEMON":
 			if match_just_started_basic_pokemon_required:
-				# First turn - set as active pokemon
+				# First turn - SET AS ACTIVE POKEMON pokemon
 				set_player_active_pokemon()
 				display_active_pokemon()
 				display_hand_cards_array(player_hand, $player_hand_hbox_container, card_scales[11])
 				match_just_started_basic_pokemon_required = false
+				
+				# After active pokemon is set, start the bench setup phase
+				start_bench_setup_phase()
 			else:
 				# After first turn - add to bench instead
 				add_pokemon_to_bench(selected_card_for_action)
 				display_hand_cards_array(player_hand, $player_hand_hbox_container, card_scales[11])
 				display_bench_pokemon()
-			
-			display_main_components_hide_selection_mode() 
+				
+				# If in bench setup phase, keep the modal open and re-show the hand for more selections
+				if bench_setup_phase_active:
+					selected_card_for_action = null
+					show_enlarged_array(player_hand)
+				else:
+					display_main_components_hide_selection_mode()
 		
 		"PLAY_TRAINER":
 			print("Trainer card play not yet implemented")
@@ -721,6 +871,12 @@ func action_button_pressed_perform_action() -> void:
 
 # When the cancel button is clicked, hide everthing in card selection mode and show main screen again
 func cancel_button_pressed_hide_selection_mode() -> void:
+	
+	# If we were in bench setup phase, end it and draw prize cards
+	if bench_setup_phase_active:
+		bench_setup_phase_active = false
+		draw_prize_cards(true)
+	
 	display_main_components_hide_selection_mode()
 
 # Main function to show all hand cards larger when the player's hand is clicked
@@ -780,6 +936,11 @@ func this_card_clicked(clicked_card: card_object) -> void:
 ######################################################################################################################################################
 	
 func _input(event: InputEvent) -> void:
+	
+	# Press the escape key to quit the game
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+			end_game()
+			
 	if event is InputEventMouseButton and event.pressed:
 		var mouse_pos = get_global_mouse_position()
 		
@@ -819,8 +980,6 @@ func _input(event: InputEvent) -> void:
 			selected_card_for_action = null
 			update_action_button()
 			
-			
-
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	

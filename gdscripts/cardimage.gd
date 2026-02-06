@@ -96,15 +96,14 @@ func set_selected(selected: bool) -> void:
 		tween = create_tween()
 		tween.set_loops()  # Loop the animation
 		
-		# Glow effect: make card slightly brighter
-		tween.tween_property(self, "modulate", Color.WHITE * 1.3, 0.2)
-		# Scale effect: grow slightly
-		tween.tween_property(self, "scale", Vector2(1.05, 1.05), 0.2)
+		# Glow and scale happen simultaneously
+		tween.tween_property(self, "modulate", Color.WHITE * 1.4, 0.5)
+		tween.parallel().tween_property(self, "scale", Vector2(1.03, 1.03), 0.5)
 		
-		# Return to normal
-		tween.tween_property(self, "modulate", Color.WHITE * 1.15, 0.2)
-		# Scale effect: return to normal size
-		tween.tween_property(self, "scale", Vector2(1.0, 1.0), 0.2)
+		# Return to normal - glow and scale happen simultaneously
+		tween.tween_property(self, "modulate", Color.WHITE * 1.0, 0.5)
+		tween.parallel().tween_property(self, "scale", Vector2(1.0, 1.0), 0.5)
+		
 	else:
 		# Kill the tween animation
 		if tween:
