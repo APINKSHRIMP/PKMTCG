@@ -1,5 +1,5 @@
 63f7b34db8d8cdea90c76aacccf841ec
-::res://::1770391662
+::res://::1770471755
 ::res://backgrounds/::1770149643
 background1.png::CompressedTexture2D::4319622225189491881::1770149641::1770149643::1::::<><><>0<>0<>f44210daa537a7438e038270b4163f34<>res://.godot/imported/background1.png-d54be7a97eb8f16b3a047d474f654630.ctex::
 ::res://cardimages/::1769543294
@@ -1153,14 +1153,14 @@ neo2-72.png::CompressedTexture2D::5864530804789613532::1707069078::1769533284::1
 neo2-73.png::CompressedTexture2D::7740070692480644705::1707069080::1769533284::1::::<><><>0<>0<>1d7a2890b81b82f3e4d485db013e2609<>res://.godot/imported/neo2-73.png-6c8b0c94335637dcf15f639857a8a727.ctex::
 neo2-74.png::CompressedTexture2D::7241655625032921221::1707069082::1769533284::1::::<><><>0<>0<>57d44ae32d6a134a7e9b8ddd44af497e<>res://.godot/imported/neo2-74.png-f8cfcca803ee6eae7aa5c777541cff40.ctex::
 neo2-75.png::CompressedTexture2D::3548911584058716384::1707069083::1769533284::1::::<><><>0<>0<>fc6cb7f1813efd86d3fdb86f03fdcf9d<>res://.godot/imported/neo2-75.png-e904784912c6a40e7c203d629fc0d353.ctex::
-::res://gameimageassets/::1770391856
+::res://gameimageassets/::1770392260
 array_displayed_icon.jpg::CompressedTexture2D::7634540967908125554::1770391856::1770392260::1::::<><><>0<>0<>14b857a273434dadc87843e367b3f850<>res://.godot/imported/array_displayed_icon.jpg-7a5a63256b019a52c1c271fd6b5ef91f.ctex::
-::res://gdscenes/::1770390524
-MatchStart.tscn::PackedScene::8327961863846055698::1770390524::0::1::::<><><>0<>0<><>::uid://du6jwng7w7fn4::::res://gdscripts/main_match_script.gd<>uid://mbsg4xqnedxi::::res://uiresources/kenneyUI-red.tres<>uid://bnhngmri4tfgr::::res://uiresources/kenneyUI-green.tres<>uid://b2spsujdgcisv::::res://backgrounds/background1.png
-::res://gdscripts/::1770389645
+::res://gdscenes/::1770395975
+MatchStart.tscn::PackedScene::8327961863846055698::1770395975::0::1::::<><><>0<>0<><>::uid://du6jwng7w7fn4::::res://gdscripts/main_match_script.gd<>uid://mbsg4xqnedxi::::res://uiresources/kenneyUI-red.tres<>uid://bnhngmri4tfgr::::res://uiresources/kenneyUI-green.tres<>uid://b2spsujdgcisv::::res://backgrounds/background1.png
+::res://gdscripts/::1770395141
 cardimage.gd::GDScript::8839746712978955150::1770388793::0::1::::<>TextureRect<><>0<>0<><>::
 card_class_object.gd::GDScript::7050753202451257024::1770066422::0::1::::card_object<>RefCounted<><>0<>0<><>::
-main_match_script.gd::GDScript::8627621068173585099::1770389645::0::1::::<>Control<><>0<>0<><>::
+main_match_script.gd::GDScript::8627621068173585099::1770395141::0::1::::<>Control<><>0<>0<><>::
 ::res://icon/::1770067344
 RayquazaSprite.png::CompressedTexture2D::1656207969913314715::1770062602::1770067344::1::::<><><>0<>0<>5c1b9796eaa598df7e62bda5eabd4b61<>res://.godot/imported/RayquazaSprite.png-e2b18131d0ebafe8706566d3d48f1901.ctex::
 ::res://opponentdeckdata/::1769776522

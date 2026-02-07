@@ -21,7 +21,7 @@ var opponent_prize_cards = []
 var opponent_active_pokemon: card_object = null
 
 # GAME VARIABLES
-var amount_of_cards_to_draw = 10
+var amount_of_cards_to_draw = 7
 
 # FUNCTIONAL REQUIREMENT VARIABLES
 var card_selection_mode_enabled = false
@@ -57,6 +57,7 @@ var card_scales: Dictionary = {
 	10: Vector2(150, 206),
 	10.5: Vector2(125, 172),
 	11: Vector2(100, 138),
+	11.55: Vector2(83, 113),
 	11.5: Vector2(75, 103),
 	12: Vector2(50, 69)
 }
@@ -91,8 +92,21 @@ func show_enlarged_array(card_array: Array) -> void:
 	$player_active_pokemon_container.visible = false
 	$opponent_active_pokemon_container.visible = false
 	
+	$opponent_bench_cards_label.visible = false
+	$player_bench_cards_label.visible = false
+	
+	$opponent_prize_cards_label.visible = false
+	$player_prize_cards_label.visible = false
+	
+	$opponent_prize_cards_container.visible = false
+	$player_prize_cards_container.visible = false
+	
 	$player_active_pokemon_container.mouse_filter = MOUSE_FILTER_IGNORE
 	$opponent_active_pokemon_container.mouse_filter = MOUSE_FILTER_IGNORE
+	
+	# We do however want to show the header and hint labels
+	$small_hint_info_text_label.visible = true
+	$large_header_text_label.visible = true
 	
 	for card in $player_active_pokemon_container.get_children():
 		card.mouse_filter = MOUSE_FILTER_IGNORE
@@ -262,6 +276,20 @@ func display_main_components_hide_selection_mode() -> void:
 	# Show the player and oppoents bench
 	$player_bench_container.visible = true
 	
+	$opponent_bench_cards_label.visible = true
+	$player_bench_cards_label.visible = true
+	
+	$opponent_prize_cards_label.visible = true
+	$player_prize_cards_label.visible = true
+	
+	$opponent_prize_cards_container.visible = true
+	$player_prize_cards_container.visible = true
+	
+	# We do however want to show the header and hint labels
+	$small_hint_info_text_label.visible = false
+	$large_header_text_label.visible = false
+	
+	
 	# Re-enable mouse input on previously hidden containers
 	$player_active_pokemon_container.mouse_filter = MOUSE_FILTER_PASS
 	$opponent_active_pokemon_container.mouse_filter = MOUSE_FILTER_PASS
@@ -293,7 +321,7 @@ func update_selection_mode_labels(array_displayed: Array, is_starting_game: bool
 	
 	elif array_displayed == player_bench:
 		$large_header_text_label.text = "Your Bench"
-		$small_hint_info_text_label.text = "Select a Pokémon to set as your Active Pokémon"
+		$small_hint_info_text_label.text = "Select a card to set as your Active Pokémon"
 	
 	elif array_displayed == opponent_hand:
 		$large_header_text_label.text = "Opponent's Hand"
@@ -347,7 +375,7 @@ func display_prize_cards(is_player: bool) -> void:
 		prize_cards_container.add_child(prize_card_display)
 		
 		# Load the card image with a size appropriate for prize cards
-		prize_card_display.load_card_image(prize_card.uid, card_scales[12], prize_card)
+		prize_card_display.load_card_image(prize_card.uid, card_scales[11.55], prize_card)
 		
 		# Connect the signal so prize cards can be clicked if needed
 		prize_card_display.card_clicked.connect(this_card_clicked)	
