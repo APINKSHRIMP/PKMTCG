@@ -379,6 +379,7 @@ func display_prize_cards(is_player: bool) -> void:
 		
 		# Connect the signal so prize cards can be clicked if needed
 		prize_card_display.card_clicked.connect(this_card_clicked)	
+		
 ############################################################### END DISPLAY FUNCTIONS ################################################################
 
 
@@ -667,6 +668,21 @@ func get_card_action(card: card_object) -> Dictionary:
 			# trainers and energy cannot be played until a basic pokemon is set
 			"trainer","energy":
 					return {"action": "NONE", "button_text": "Select Basic Pokemon"}
+	
+	elif bench_setup_phase_active:
+		# Only a pokemon card can be played and ONLY if that pokemon card is basic
+		match supertype:
+			"pokémon":
+				if is_basic_pokemon(card):
+					# If the selected card is a basic pokemon then it can be SET AS ACTIVE POKEMON pokemon on turn one
+					return {"action": "SET_POKEMON", "button_text": "PLACE ON BENCH"}
+				else:
+					# Stage 1 or Stage 2 cannot be played on turn 1
+					return {"action": "NONE", "button_text": "Select Basic Pokemon"}
+					
+			# trainers and energy cannot be played until a basic pokemon is set
+			"trainer","energy":
+					return {"action": "NONE", "button_text": "Select Basic Pokemon"}
 					
 	# If turn one is done and a basic pokemon has been played then any card can be played with different actions
 	else:
@@ -837,7 +853,186 @@ func find_card_ui_for_object(card_obj: card_object) -> TextureRect:
 	
 	return null
 
+# Function mainly just for readability in the code to check if a pokemon can evolve from another pokemon by checking the evolving pokemon's "evolvesFrom" metadata
+func can_evolve_from(evolving_pokemon: card_object, base_pokemon: card_object) -> bool:
+	if evolving_pokemon.metadata.has("evolvesFrom"):
+		return evolving_pokemon.metadata["evolvesFrom"] == base_pokemon.metadata.get("name", "")
+	return false
+
+# Function to check if a card is a basic energy card (not special energy like Double Colorless)
+func is_basic_energy_card(card: card_object) -> bool:
+	if card.metadata.get("supertype") != "Energy":
+		return false
+	
+	if card.metadata.has("subtypes") and card.metadata["subtypes"].has("Basic"):
+		return true
+	
+	return false
+
+# Function mainly just for readability to get the pokemon type from a pokemon card
+func get_pokemon_type(pokemon_card: card_object) -> String:
+	if pokemon_card.metadata.has("types") and pokemon_card.metadata["types"].size() > 0:
+		return pokemon_card.metadata["types"][0]
+	return "Colorless"
 ########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
+
+####################################################### AI PRIORITISE FUNCTIONALITY FUNCTIONS ########################################################
+
+# Function to get lowest cost attack for a pokemon by looping through all attacks. Returns a dictionary with "cost" (convertedEnergyCost), "damage" (as int), and "attack_name"
+func get_minimum_cost_attack(pokemon_card: card_object) -> Dictionary:
+	if not pokemon_card.metadata.has("attacks") or pokemon_card.metadata["attacks"].size() == 0:
+		return {}
+	
+	var min_cost_attack = null
+	var min_cost = 999
+	
+	# Loop through all attacks to find the one with lowest converted energy cost
+	for attack in pokemon_card.metadata["attacks"]:
+		var cost = int(attack.get("convertedEnergyCost", 999))
+		if cost < min_cost:
+			min_cost = cost
+			min_cost_attack = attack
+	
+	if min_cost_attack == null:
+		return {}
+	
+	# Extract damage value - damage can be "30", "40+", "50x", "60-" or other formats
+	var damage_str = min_cost_attack.get("damage", "0")
+	var damage = 0
+	# Only parse the number part, ignoring any suffixes like +, -, or x
+	if damage_str != "" and damage_str[0].is_valid_int():
+		var numeric_part = ""
+		for char in damage_str:
+			if char.is_valid_int():
+				numeric_part += char
+			else:
+				break
+		if numeric_part != "":
+			damage = int(numeric_part)
+	
+	return {
+		"cost": min_cost,
+		"damage": damage,
+		"attack_name": min_cost_attack.get("name", "")
+	}
+	
+# PRIORITY CRITERION #1: Single energy attack check
+# If pokemon can attack for only 1 energy: big boost (+100)
+# If all attacks need 2+ energy: penalty (-50)
+func criterion_1_single_energy_attack(basic_pokemon: card_object) -> Dictionary:
+	var min_cost_attack = get_minimum_cost_attack(basic_pokemon)
+	
+	if min_cost_attack.is_empty():
+		return {"score_change": 0, "reason": "No attacks found"}
+	
+	var min_cost = min_cost_attack.get("cost", 999)
+	
+	if min_cost == 1:
+		return {
+			"score_change": 100.0,
+			"reason": "Can attack for only 1 energy"
+		}
+	else:
+		return {
+			"score_change": -50.0,
+			"reason": "Minimum attack cost is " + str(min_cost) + " energy"
+		}
+
+# PRIORITY CRITERION #2: Check for evolution paths (Stage 1 and Stage 2)
+# For Each Stage 1 evolution in hand that can evolve from the basic (+50)
+# If there is a stage 1 that then also has a Stage 2 evolution then additional (+75)
+func criterion_2_evolution_available(basic_pokemon: card_object, hand: Array) -> Dictionary:
+	var score_change = 0.0
+	var reason = "No evolutions in hand"
+	var stage_1_list = []
+	var has_stage_2_chain = false
+	
+	# Find all Stage 1 evolutions for this basic pokemon
+	for card in hand:
+		if card.metadata.has("subtypes") and card.metadata["subtypes"].has("Stage 1"):
+			if can_evolve_from(card, basic_pokemon):
+				stage_1_list.append(card)
+				score_change += 50.0
+	
+	# Check if ANY of the Stage 1s has a Stage 2 evolution (only count once)
+	if stage_1_list.size() > 0:
+		for stage_1 in stage_1_list:
+			if has_evolution(stage_1, hand, "Stage 2"):
+				has_stage_2_chain = true
+				break
+		
+		if has_stage_2_chain:
+			score_change += 75.0
+			reason = "Has " + str(stage_1_list.size()) + " Stage 1(s) with Stage 2 chain"
+		else:
+			reason = "Has " + str(stage_1_list.size()) + " Stage 1 evolution(s)"
+	
+	return {
+		"score_change": score_change,
+		"reason": reason
+	}
+	
+# PRIORITY CRITERION #3: Check if basic energy types in hand match pokemon type
+# Pokemon type matches available basic energy: +50 per matching energy card
+# Colorless pokemon: +20 per basic energy card in hand (flexible but lower priority)
+# Pokemon type does NOT match available basic energy: -30
+func criterion_3_energy_type_match(basic_pokemon: card_object, hand: Array) -> Dictionary:
+	var pokemon_type = get_pokemon_type(basic_pokemon)
+	
+	# Count basic energy cards in hand
+	var basic_energies_in_hand = []
+	for card in hand:
+		if is_basic_energy_card(card):
+			basic_energies_in_hand.append(card)
+	
+	# If no basic energies at all, no match possible
+	if basic_energies_in_hand.is_empty():
+		return {
+			"score_change": 0,
+			"reason": "No basic energy cards in hand"
+		}
+	
+	# Handle Colorless pokemon - gets +20 per basic energy available
+	if pokemon_type == "Colorless":
+		var score_bonus = 20.0 * basic_energies_in_hand.size()
+		return {
+			"score_change": score_bonus,
+			"reason": "Colorless type - " + str(basic_energies_in_hand.size()) + " basic energies available"
+		}
+	
+	# For typed pokemon, count matching energies
+	var matching_energy_count = 0
+	for energy_card in basic_energies_in_hand:
+		var energy_type = get_energy_type_from_card(energy_card)
+		if energy_type == pokemon_type:
+			matching_energy_count += 1
+	
+	# If matching energies found
+	if matching_energy_count > 0:
+		var score_bonus = 50.0 * matching_energy_count
+		return {
+			"score_change": score_bonus,
+			"reason": "Has " + str(matching_energy_count) + " " + pokemon_type + " energy card(s)"
+		}
+	
+	# No matching energy found
+	return {
+		"score_change": -30.0,
+		"reason": "No matching " + pokemon_type + " energy in hand"
+	}	
+###################################################### END AI PRIORITISE FUNCTIONALITY FUNCTIONS #####################################################
+
+######################################################### AI GENERAL FUNCTIONALITY FUNCTIONS #########################################################
+
+# Function to check if a basic pokemon has any Stage 1 evolution in the given card array
+func has_evolution(base_pokemon: card_object, card_array: Array, stage_type: String) -> bool:
+	for card in card_array:
+		if card.metadata.has("subtypes") and card.metadata["subtypes"].has(stage_type):
+			if can_evolve_from(card, base_pokemon):
+				return true
+	return false
+
+####################################################### END AI GENERAL FUNCTIONALITY FUNCTIONS #######################################################
 
 ########################################################### USER INPUT ON CLICK FUNCTIONS ############################################################
 
