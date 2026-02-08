@@ -41,7 +41,7 @@ var card_scales: Dictionary = {
 	2: Vector2(400, 550),
 	2.5: Vector2(525, 722),
 	3: Vector2(375, 515),
-	3.5: Vector2(450, 619),
+	3.5: Vector2(405, 557),
 	4: Vector2(350, 481),
 	4.5: Vector2(375, 515),
 	5: Vector2(350, 481),
@@ -92,6 +92,9 @@ func show_enlarged_array(card_array: Array) -> void:
 	$player_active_pokemon_container.visible = false
 	$opponent_active_pokemon_container.visible = false
 	
+	$player_bench_container.visible = false
+	$opponent_bench_container.visible = false
+	
 	$opponent_bench_cards_label.visible = false
 	$player_bench_cards_label.visible = false
 	
@@ -112,8 +115,6 @@ func show_enlarged_array(card_array: Array) -> void:
 		card.mouse_filter = MOUSE_FILTER_IGNORE
 	for card in $opponent_active_pokemon_container.get_children():
 		card.mouse_filter = MOUSE_FILTER_IGNORE
-	
-	$player_bench_container.visible = false
 	
 	# Show the buttons
 	$card_action_button.visible = true
@@ -176,72 +177,40 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2):
 		# Connect this card's signal to the main script's handler
 		hand_card_to_display.card_clicked.connect(this_card_clicked)
 
-# Displays the active pokemon large and central on screen	
-func display_active_pokemon() -> void:
+# Display active and bench pokemon for either player or opponent
+# is_opponent: true for opponent, false for player
+func display_pokemon(is_opponent: bool) -> void:
+	var active_pokemon = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench_pokemon_array = opponent_bench if is_opponent else player_bench
+	var active_container = $opponent_active_pokemon_container if is_opponent else $player_active_pokemon_container
+	var bench_container = $opponent_bench_container if is_opponent else $player_bench_container
 	
-	# Get the container for the active pokemon
-	var active_pokemon_container = $player_active_pokemon_container
-	
-	# Clear the active pokemon to prevent stale cards when knocked out, retreated or evolved
-	for child in active_pokemon_container.get_children():
+	# Clear active pokemon container
+	for child in active_container.get_children():
 		child.queue_free()
 	
-	# Only display if there actually IS an active pokemon. error out if there isn't
-	if player_active_pokemon == null:
-		print("No active pokemon to display")
-		return
+	# Display active pokemon if exists
+	if active_pokemon != null:
+		var card_display_script = load("res://gdscripts/cardimage.gd")
+		var active_card_display = TextureRect.new()
+		active_card_display.set_script(card_display_script)
+		active_container.add_child(active_card_display)
+		active_card_display.load_card_image(active_pokemon.uid, card_scales[3.5], active_pokemon)
+		active_card_display.card_clicked.connect(this_card_clicked)
 	
-	# Load the card display script
-	var card_display_script = load("res://gdscripts/cardimage.gd")
-	
-	# Create a new TextureRect for the active pokemon card to be displayed (texture rect =/= a control/container node)
-	var active_card_display = TextureRect.new()
-	
-	# Attach the card display script to display the correct image
-	active_card_display.set_script(card_display_script)
-	
-	# Add the sprite/texture to the container
-	active_pokemon_container.add_child(active_card_display)
-	
-	# Load the card image with a large size
-	active_card_display.load_card_image(player_active_pokemon.uid, card_scales[3.5], player_active_pokemon)
-	
-	# Connect the signal allowing the active pokemon to be clicked and selected
-	active_card_display.card_clicked.connect(this_card_clicked)
-
-# Displays the bench pokemon smaller and in corner of screen
-func display_bench_pokemon() -> void:
-	
-	# Get the container for the correct bench
-	var bench_container = $player_bench_container
-	
-	# Clear any existing cards from the container
+	# Clear bench container
 	for child in bench_container.get_children():
 		child.queue_free()
 	
-	# If bench is empty, nothing to display so don't run the rest of the code
-	if player_bench.size() == 0:
-		return
-	
-	# Load the card display script
-	var card_display_script = load("res://gdscripts/cardimage.gd")
-	
-	# Loop through each pokemon on the bench and display it
-	for bench_pokemon in player_bench:
-		# Create a new TextureRect for each benched pokemon
-		var bench_card_display = TextureRect.new()
-		
-		# Attach the card display script
-		bench_card_display.set_script(card_display_script)
-		
-		# Add it to the container
-		bench_container.add_child(bench_card_display)
-		
-		# Load the card image using card_scales
-		bench_card_display.load_card_image(bench_pokemon.uid, card_scales[11], bench_pokemon)
-		
-		# Connect the signal so benched pokemon can be clicked
-		bench_card_display.card_clicked.connect(this_card_clicked)
+	# Display bench pokemon
+	if bench_pokemon_array.size() > 0:
+		var card_display_script = load("res://gdscripts/cardimage.gd")
+		for bench_pokemon in bench_pokemon_array:
+			var bench_card_display = TextureRect.new()
+			bench_card_display.set_script(card_display_script)
+			bench_container.add_child(bench_card_display)
+			bench_card_display.load_card_image(bench_pokemon.uid, card_scales[11], bench_pokemon)
+			bench_card_display.card_clicked.connect(this_card_clicked)
 
 # Both the cancel button and action button will hide selection mode so function is vaguely named for both actions
 func display_main_components_hide_selection_mode() -> void:
@@ -275,6 +244,7 @@ func display_main_components_hide_selection_mode() -> void:
 	
 	# Show the player and oppoents bench
 	$player_bench_container.visible = true
+	$opponent_bench_container.visible = true
 	
 	$opponent_bench_cards_label.visible = true
 	$player_bench_cards_label.visible = true
@@ -381,7 +351,7 @@ func display_prize_cards(is_player: bool) -> void:
 		prize_card_display.card_clicked.connect(this_card_clicked)	
 		
 ############################################################### END DISPLAY FUNCTIONS ################################################################
-
+######################################################################################################################################################
 
 ################################################################ GAME LOAD FUNCTIONS #################################################################
 # Reusable function to load any deck (both player and opponent) from JSON file path
@@ -838,6 +808,7 @@ func add_pokemon_to_bench(pokemon: card_object) -> void:
 	player_bench.append(pokemon)
 	print("Pokemon added to bench. Bench size: ", player_bench.size())
 
+# Function that get's the card position/location/object. Called from various functions when trying to find a specific card object
 func find_card_ui_for_object(card_obj: card_object) -> TextureRect:
 	# Check small selection container
 	if $small_selection_mode_container.visible:
@@ -852,6 +823,21 @@ func find_card_ui_for_object(card_obj: card_object) -> TextureRect:
 				return card_ui
 	
 	return null
+
+ #mainly just for readability
+
+# Function to get all basic pokemon from a given array of cards
+func get_all_basic_pokemon(card_array: Array) -> Array:
+	var basic_pokemon = []
+	for card in card_array:
+		if card.metadata.get("supertype") == "Pokémon" and card.metadata.has("subtypes") and card.metadata["subtypes"].has("Basic"):
+			basic_pokemon.append(card)
+	return basic_pokemon
+	
+########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
+######################################################################################################################################################
+
+################################################### SMALL FUNCTIONS TO HELP WITH CODE READABILITY ####################################################
 
 # Function mainly just for readability in the code to check if a pokemon can evolve from another pokemon by checking the evolving pokemon's "evolvesFrom" metadata
 func can_evolve_from(evolving_pokemon: card_object, base_pokemon: card_object) -> bool:
@@ -869,14 +855,199 @@ func is_basic_energy_card(card: card_object) -> bool:
 	
 	return false
 
+# Function to get the energy type from an energy card name
+func get_energy_type_from_card(energy_card: card_object) -> String:
+	var energy_name = energy_card.metadata.get("name", "")
+	return energy_name.trim_suffix(" Energy")
+
 # Function mainly just for readability to get the pokemon type from a pokemon card
 func get_pokemon_type(pokemon_card: card_object) -> String:
 	if pokemon_card.metadata.has("types") and pokemon_card.metadata["types"].size() > 0:
 		return pokemon_card.metadata["types"][0]
 	return "Colorless"
-########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
+	
+# Function to get the HP of a pokemon
+func get_pokemon_hp(pokemon_card: card_object) -> int:
+	if pokemon_card.metadata.has("hp"):
+		return int(pokemon_card.metadata["hp"])
+	return 0
+	
+# Function to check if a basic pokemon has any Stage 1 evolution in the given card array
+func has_evolution(base_pokemon: card_object, card_array: Array, stage_type: String) -> bool:
+	for card in card_array:
+		if card.metadata.has("subtypes") and card.metadata["subtypes"].has(stage_type):
+			if can_evolve_from(card, base_pokemon):
+				return true
+	return false
+
+################################################# END SMALL FUNCTIONS TO HELP WITH CODE READABILITY ##################################################
+######################################################################################################################################################
 
 ####################################################### AI PRIORITISE FUNCTIONALITY FUNCTIONS ########################################################
+
+# THESE FUNCTIONS ARE SPECIFICALLY FOR DECIDING THE BEST POKEMON FROM A GIVEN ARRAY.
+# USED TO CHOOSE THE FIRST ACTIVE POKEMON AT MATCH START, REPLACING ACTIVE POKEMON FROM BENCH, AND CHOOSING BEST CARD FOR DECK SEARCHING EFFECTS
+
+# PRIORITY CRITERION #1: Single energy attack check
+# If pokemon can attack for only 1 energy: big boost (+100)
+# If all attacks need 2+ energy: penalty (-50)
+func criterion_1_single_energy_attack(basic_pokemon: card_object) -> Dictionary:
+	var min_cost_attack = get_minimum_cost_attack(basic_pokemon)
+	
+	if min_cost_attack.is_empty():
+		return {"score_change": 0, "reason": "No attacks found"}
+	
+	var min_cost = min_cost_attack.get("cost", 999)
+	
+	if min_cost == 1:
+		return {
+			"score_change": 100.0,
+			"reason": "Can attack for only 1 energy"
+		}
+	else:
+		return {
+			"score_change": -50.0,
+			"reason": "Minimum attack cost is " + str(min_cost) + " energy"
+		}
+
+# PRIORITY CRITERION #2: Check for evolution paths (Stage 1 and Stage 2)
+# For Each Stage 1 evolution in hand that can evolve from the basic (+100)
+# If there is a stage 1 that then also has a Stage 2 evolution then additional (+100)
+func criterion_2_evolution_available(basic_pokemon: card_object, hand: Array) -> Dictionary:
+	var score_change = 0.0
+	var reason = "No evolutions in hand"
+	var stage_1_list = []
+	var has_stage_2_chain = false
+	
+	# Find all Stage 1 evolutions for this basic pokemon
+	for card in hand:
+		if card.metadata.has("subtypes") and card.metadata["subtypes"].has("Stage 1"):
+			if can_evolve_from(card, basic_pokemon):
+				stage_1_list.append(card)
+				score_change += 100.0
+	
+	# Check if ANY of the Stage 1s has a Stage 2 evolution (only count once)
+	if stage_1_list.size() > 0:
+		for stage_1 in stage_1_list:
+			if has_evolution(stage_1, hand, "Stage 2"):
+				has_stage_2_chain = true
+				break
+		
+		if has_stage_2_chain:
+			score_change += 100.0
+			reason = "Has " + str(stage_1_list.size()) + " Stage 1(s) with Stage 2 chain"
+		else:
+			reason = "Has " + str(stage_1_list.size()) + " Stage 1 evolution(s)"
+	
+	return {
+		"score_change": score_change,
+		"reason": reason
+	}
+	
+# PRIORITY CRITERION #3: Check if basic energy types in hand match pokemon type
+# Pokemon type matches available basic energy: +30 per matching energy card
+# Colorless pokemon: +15 per basic energy card in hand (flexible but lower priority)
+# Pokemon type does NOT match available basic energy: -150
+func criterion_3_energy_type_match(basic_pokemon: card_object, hand: Array) -> Dictionary:
+	var pokemon_type = get_pokemon_type(basic_pokemon)
+	
+	# Count basic energy cards in hand
+	var basic_energies_in_hand = []
+	for card in hand:
+		if is_basic_energy_card(card):
+			basic_energies_in_hand.append(card)
+	
+	# If no basic energies at all, no match possible
+	if basic_energies_in_hand.is_empty():
+		return {
+			"score_change": 0,
+			"reason": "No basic energy cards in hand"
+		}
+	
+	# Handle Colorless pokemon - gets +20 per basic energy available
+	if pokemon_type == "Colorless":
+		var score_bonus = 15.0 * basic_energies_in_hand.size()
+		return {
+			"score_change": score_bonus,
+			"reason": "Colorless type - " + str(basic_energies_in_hand.size()) + " basic energies available"
+		}
+	
+	# For typed pokemon, count matching energies
+	var matching_energy_count = 0
+	for energy_card in basic_energies_in_hand:
+		var energy_type = get_energy_type_from_card(energy_card)
+		if energy_type == pokemon_type:
+			matching_energy_count += 1
+	
+	# If matching energies found
+	if matching_energy_count > 0:
+		var score_bonus = 30.0 * matching_energy_count
+		return {
+			"score_change": score_bonus,
+			"reason": "Has " + str(matching_energy_count) + " " + pokemon_type + " energy card(s)"
+		}
+	
+	# No matching energy found
+	return {
+		"score_change": -150.0,
+		"reason": "No matching " + pokemon_type + " energy in hand"
+	}	
+	
+# PRIORITY CRITERION #4: Higher HP is more durable and valuable
+# Score = HP * 2
+# e.g 50HP = +60
+# e.g 100HP = +150
+func criterion_4_pokemon_hp(basic_pokemon: card_object) -> Dictionary:
+	var hp = get_pokemon_hp(basic_pokemon)
+	var score_bonus = hp * 2
+	
+	return {
+		"score_change": score_bonus,
+		"reason": "HP: " + str(hp) + " (+" + str(int(score_bonus)) + " points)"
+	}
+	
+# PRIORITY CRITERION #5: Damage output potential (either 1 bonus or 2 bonuses if more than 1 attack)
+# 1-energy attack damage: damage * 3 (immediate threat). e.g 10 = +30, 20 = +60, 30 = +90
+# Efficiency bonus (only if 2+ attacks): (highest_damage / energy_cost) * 3. e.g 4*Energy for 80 damage = +60
+func criterion_5_attack_damage(basic_pokemon: card_object) -> Dictionary:
+	if not basic_pokemon.metadata.has("attacks") or basic_pokemon.metadata["attacks"].size() == 0:
+		return {
+			"score_change": 0,
+			"reason": "No attacks available"
+		}
+	
+	var attack_count = basic_pokemon.metadata["attacks"].size()
+	var score_bonus = 0.0
+	var reason_parts = []
+	
+	# Check for 1-energy attack damage
+	var min_cost_attack = get_minimum_cost_attack(basic_pokemon)
+	if not min_cost_attack.is_empty() and min_cost_attack.get("cost") == 1:
+		var one_energy_damage = min_cost_attack.get("damage", 0)
+		var one_energy_bonus = one_energy_damage * 3
+		score_bonus += one_energy_bonus
+		reason_parts.append(str(one_energy_damage) + " damage at 1 energy")
+	
+	# Only add efficiency bonus if pokemon has 2+ attacks
+	if attack_count >= 2:
+		var max_damage = get_maximum_attack_damage(basic_pokemon)
+		var max_cost = get_maximum_attack_cost(basic_pokemon)
+		var efficiency = float(max_damage) / float(max_cost)
+		var efficiency_bonus = efficiency * 2.0
+		score_bonus += efficiency_bonus
+		reason_parts.append("efficiency " + str(max_damage) + "/" + str(max_cost) + " energy")
+	
+	var reason = "Damage: " + ", ".join(reason_parts)
+	
+	return {
+		"score_change": score_bonus,
+		"reason": reason
+	}	
+			
+###################################################### END AI PRIORITISE FUNCTIONALITY FUNCTIONS #####################################################
+######################################################################################################################################################
+
+######################################################### AI GENERAL FUNCTIONALITY FUNCTIONS #########################################################
 
 # Function to get lowest cost attack for a pokemon by looping through all attacks. Returns a dictionary with "cost" (convertedEnergyCost), "damage" (as int), and "attack_name"
 func get_minimum_cost_attack(pokemon_card: card_object) -> Dictionary:
@@ -902,9 +1073,9 @@ func get_minimum_cost_attack(pokemon_card: card_object) -> Dictionary:
 	# Only parse the number part, ignoring any suffixes like +, -, or x
 	if damage_str != "" and damage_str[0].is_valid_int():
 		var numeric_part = ""
-		for char in damage_str:
-			if char.is_valid_int():
-				numeric_part += char
+		for numberchar in damage_str:
+			if numberchar.is_valid_int():
+				numeric_part += numberchar
 			else:
 				break
 		if numeric_part != "":
@@ -916,123 +1087,159 @@ func get_minimum_cost_attack(pokemon_card: card_object) -> Dictionary:
 		"attack_name": min_cost_attack.get("name", "")
 	}
 	
-# PRIORITY CRITERION #1: Single energy attack check
-# If pokemon can attack for only 1 energy: big boost (+100)
-# If all attacks need 2+ energy: penalty (-50)
-func criterion_1_single_energy_attack(basic_pokemon: card_object) -> Dictionary:
-	var min_cost_attack = get_minimum_cost_attack(basic_pokemon)
+# Helper function to get the energy cost of the highest damage attack a pokemon can perform
+func get_maximum_attack_cost(pokemon_card: card_object) -> int:
+	if not pokemon_card.metadata.has("attacks") or pokemon_card.metadata["attacks"].size() == 0:
+		return 0
 	
-	if min_cost_attack.is_empty():
-		return {"score_change": 0, "reason": "No attacks found"}
+	var max_damage = 0
+	var max_damage_cost = 0
 	
-	var min_cost = min_cost_attack.get("cost", 999)
-	
-	if min_cost == 1:
-		return {
-			"score_change": 100.0,
-			"reason": "Can attack for only 1 energy"
-		}
-	else:
-		return {
-			"score_change": -50.0,
-			"reason": "Minimum attack cost is " + str(min_cost) + " energy"
-		}
-
-# PRIORITY CRITERION #2: Check for evolution paths (Stage 1 and Stage 2)
-# For Each Stage 1 evolution in hand that can evolve from the basic (+50)
-# If there is a stage 1 that then also has a Stage 2 evolution then additional (+75)
-func criterion_2_evolution_available(basic_pokemon: card_object, hand: Array) -> Dictionary:
-	var score_change = 0.0
-	var reason = "No evolutions in hand"
-	var stage_1_list = []
-	var has_stage_2_chain = false
-	
-	# Find all Stage 1 evolutions for this basic pokemon
-	for card in hand:
-		if card.metadata.has("subtypes") and card.metadata["subtypes"].has("Stage 1"):
-			if can_evolve_from(card, basic_pokemon):
-				stage_1_list.append(card)
-				score_change += 50.0
-	
-	# Check if ANY of the Stage 1s has a Stage 2 evolution (only count once)
-	if stage_1_list.size() > 0:
-		for stage_1 in stage_1_list:
-			if has_evolution(stage_1, hand, "Stage 2"):
-				has_stage_2_chain = true
+	for attack in pokemon_card.metadata["attacks"]:
+		var damage_str = attack.get("damage", "")
+		
+		# Skip attacks with no damage value
+		if damage_str == "" or damage_str[0].is_valid_int() == false:
+			continue
+		
+		var numeric_part = ""
+		for numericalchar in damage_str:
+			if numericalchar.is_valid_int():
+				numeric_part += numericalchar
+			else:
 				break
 		
-		if has_stage_2_chain:
-			score_change += 75.0
-			reason = "Has " + str(stage_1_list.size()) + " Stage 1(s) with Stage 2 chain"
-		else:
-			reason = "Has " + str(stage_1_list.size()) + " Stage 1 evolution(s)"
+		if numeric_part != "":
+			var damage = int(numeric_part)
+			if damage > max_damage:
+				max_damage = damage
+				max_damage_cost = int(attack.get("convertedEnergyCost", 1))
+	
+	return max_damage_cost
+
+# Function to get the maximum possible damage from any attack a pokemon can perform
+func get_maximum_attack_damage(pokemon_card: card_object) -> int:
+	if not pokemon_card.metadata.has("attacks") or pokemon_card.metadata["attacks"].size() == 0:
+		return 0
+	
+	var max_damage = 0
+	
+	for attack in pokemon_card.metadata["attacks"]:
+		var damage_str = attack.get("damage", "")
+		
+		# Skip attacks with no damage value
+		if damage_str == "" or damage_str[0].is_valid_int() == false:
+			continue
+		
+		var numeric_part = ""
+		for numericchar in damage_str:
+			if numericchar.is_valid_int():
+				numeric_part += numericchar
+			else:
+				break
+		
+		if numeric_part != "":
+			var damage = int(numeric_part)
+			if damage > max_damage:
+				max_damage = damage
+	
+	return max_damage
+
+# Main function to evaluate a basic pokemon and return a score by calling criterion 1-5 and returns the total score with breakdown reasoning
+func evaluate_opponents_start_setup_pokemon_choices(basic_pokemon: card_object, hand: Array) -> Dictionary:
+	var total_score = 0.0
+	var score_breakdown = []
+	
+	# Apply all 5 criteria
+	var criterion_1 = criterion_1_single_energy_attack(basic_pokemon)
+	total_score += criterion_1.get("score_change", 0)
+	score_breakdown.append(criterion_1.get("reason", ""))
+	
+	var criterion_2 = criterion_2_evolution_available(basic_pokemon, hand)
+	total_score += criterion_2.get("score_change", 0)
+	score_breakdown.append(criterion_2.get("reason", ""))
+	
+	var criterion_3 = criterion_3_energy_type_match(basic_pokemon, hand)
+	total_score += criterion_3.get("score_change", 0)
+	score_breakdown.append(criterion_3.get("reason", ""))
+	
+	var criterion_4 = criterion_4_pokemon_hp(basic_pokemon)
+	total_score += criterion_4.get("score_change", 0)
+	score_breakdown.append(criterion_4.get("reason", ""))
+	
+	var criterion_5 = criterion_5_attack_damage(basic_pokemon)
+	total_score += criterion_5.get("score_change", 0)
+	score_breakdown.append(criterion_5.get("reason", ""))
 	
 	return {
-		"score_change": score_change,
-		"reason": reason
+		"pokemon_name": basic_pokemon.metadata.get("name", "Unknown"),
+		"total_score": total_score,
+		"breakdown": score_breakdown
 	}
+
+# Function to select the best active pokemon and up to 3 bench pokemon from opponent's hand
+# Evaluates all basic pokemon, returns highest scorer as active and next 3 as bench
+func select_opponent_pokemon_for_setup(hand: Array) -> Dictionary:
+	var all_basic_pokemon = get_all_basic_pokemon(hand)
 	
-# PRIORITY CRITERION #3: Check if basic energy types in hand match pokemon type
-# Pokemon type matches available basic energy: +50 per matching energy card
-# Colorless pokemon: +20 per basic energy card in hand (flexible but lower priority)
-# Pokemon type does NOT match available basic energy: -30
-func criterion_3_energy_type_match(basic_pokemon: card_object, hand: Array) -> Dictionary:
-	var pokemon_type = get_pokemon_type(basic_pokemon)
+	if all_basic_pokemon.size() == 0:
+		print("Error: No basic pokemon found in hand")
+		return {"active": null, "bench": []}
 	
-	# Count basic energy cards in hand
-	var basic_energies_in_hand = []
-	for card in hand:
-		if is_basic_energy_card(card):
-			basic_energies_in_hand.append(card)
+	# Score all basic pokemon
+	var scored_pokemon = []
+	for pokemon in all_basic_pokemon:
+		var evaluation = evaluate_opponents_start_setup_pokemon_choices(pokemon, hand)
+		scored_pokemon.append({
+			"pokemon": pokemon,
+			"score": evaluation.get("total_score", 0),
+			"breakdown": evaluation.get("breakdown", [])
+		})
 	
-	# If no basic energies at all, no match possible
-	if basic_energies_in_hand.is_empty():
-		return {
-			"score_change": 0,
-			"reason": "No basic energy cards in hand"
-		}
+	# Sort by score (highest first)
+	scored_pokemon.sort_custom(func(a, b): return a["score"] > b["score"])
 	
-	# Handle Colorless pokemon - gets +20 per basic energy available
-	if pokemon_type == "Colorless":
-		var score_bonus = 20.0 * basic_energies_in_hand.size()
-		return {
-			"score_change": score_bonus,
-			"reason": "Colorless type - " + str(basic_energies_in_hand.size()) + " basic energies available"
-		}
+	# First is active, next up to 3 are bench
+	var active_pokemon = scored_pokemon[0]["pokemon"]
+	var bench_pokemon = []
+	for i in range(1, min(4, scored_pokemon.size())):
+		bench_pokemon.append(scored_pokemon[i]["pokemon"])
 	
-	# For typed pokemon, count matching energies
-	var matching_energy_count = 0
-	for energy_card in basic_energies_in_hand:
-		var energy_type = get_energy_type_from_card(energy_card)
-		if energy_type == pokemon_type:
-			matching_energy_count += 1
+	# Print results
+	print("Opponent AI selected active: " + active_pokemon.metadata.get("name", "Unknown") + " (Score: " + str(int(scored_pokemon[0]["score"])) + ")")
+	for reason in scored_pokemon[0]["breakdown"]:
+		print("  - " + reason)
 	
-	# If matching energies found
-	if matching_energy_count > 0:
-		var score_bonus = 50.0 * matching_energy_count
-		return {
-			"score_change": score_bonus,
-			"reason": "Has " + str(matching_energy_count) + " " + pokemon_type + " energy card(s)"
-		}
+	print("Opponent AI selected " + str(bench_pokemon.size()) + " bench pokemon")
+	for i in range(bench_pokemon.size()):
+		print("  " + str(i + 1) + ". " + bench_pokemon[i].metadata.get("name", "Unknown") + " (Score: " + str(int(scored_pokemon[i + 1]["score"])) + ")")
 	
-	# No matching energy found
 	return {
-		"score_change": -30.0,
-		"reason": "No matching " + pokemon_type + " energy in hand"
-	}	
-###################################################### END AI PRIORITISE FUNCTIONALITY FUNCTIONS #####################################################
+		"active": active_pokemon,
+		"bench": bench_pokemon
+	}
 
-######################################################### AI GENERAL FUNCTIONALITY FUNCTIONS #########################################################
-
-# Function to check if a basic pokemon has any Stage 1 evolution in the given card array
-func has_evolution(base_pokemon: card_object, card_array: Array, stage_type: String) -> bool:
-	for card in card_array:
-		if card.metadata.has("subtypes") and card.metadata["subtypes"].has(stage_type):
-			if can_evolve_from(card, base_pokemon):
-				return true
-	return false
+# Function to set up opponent's active and bench pokemon using the priority condition criteria scoring selection
+func opponent_setup_pokemon_from_hand() -> void:
+	var selected_pokemon = select_opponent_pokemon_for_setup(opponent_hand)
+	var active_pokemon = selected_pokemon.get("active")
+	var bench_pokemon_list = selected_pokemon.get("bench", [])
+	
+	# Remove active pokemon from hand and set it as active
+	opponent_hand.erase(active_pokemon)
+	opponent_active_pokemon = active_pokemon
+	
+	# Remove bench pokemon from hand and add to bench
+	for bench_pokemon in bench_pokemon_list:
+		opponent_hand.erase(bench_pokemon)
+		opponent_bench.append(bench_pokemon)
+	
+	# Update displays
+	display_pokemon(true)  # true = opponent
+	display_hand_cards_array(opponent_hand, $opponent_hand_hbox_container, card_scales[12])
 
 ####################################################### END AI GENERAL FUNCTIONALITY FUNCTIONS #######################################################
+######################################################################################################################################################
 
 ########################################################### USER INPUT ON CLICK FUNCTIONS ############################################################
 
@@ -1058,7 +1265,7 @@ func action_button_pressed_perform_action() -> void:
 			if match_just_started_basic_pokemon_required:
 				# First turn - SET AS ACTIVE POKEMON pokemon
 				set_player_active_pokemon()
-				display_active_pokemon()
+				display_pokemon(false)  # false = player
 				display_hand_cards_array(player_hand, $player_hand_hbox_container, card_scales[11])
 				match_just_started_basic_pokemon_required = false
 				
@@ -1068,7 +1275,7 @@ func action_button_pressed_perform_action() -> void:
 				# After first turn - add to bench instead
 				add_pokemon_to_bench(selected_card_for_action)
 				display_hand_cards_array(player_hand, $player_hand_hbox_container, card_scales[11])
-				display_bench_pokemon()
+				display_pokemon(false)  # false = player
 				
 				# If in bench setup phase, keep the modal open and re-show the hand for more selections
 				if bench_setup_phase_active:
@@ -1149,6 +1356,7 @@ func this_card_clicked(clicked_card: card_object) -> void:
 		selected_card_for_action = null
 
 ########################################################### USER INPUT ON CLICK FUNCTIONS ############################################################
+######################################################################################################################################################
 
 ######################################################################################################################################################			
 ################################################################# END OF FUNCTIONS ###################################################################
@@ -1213,15 +1421,16 @@ func _ready() -> void:
 	$player_bench_container.gui_input.connect(player_bench_clicked_show_bench)
 	$opponent_bench_container.gui_input.connect(opponent_bench_clicked_show_bench)
 	
+	
 	$cancel_selection_mode_view_button.pressed.connect(cancel_button_pressed_hide_selection_mode)
 	$card_action_button.pressed.connect(action_button_pressed_perform_action)
 	setup_player()
-	setup_opponent("Fisherman1")
+	setup_opponent("testing1")
+	opponent_setup_pokemon_from_hand()
 	update_action_button()
 	show_enlarged_array(player_hand)
-	display_bench_pokemon()	
-
+	display_pokemon(false)  # false = player
 
 ######################################################################################################################################################
-####################################################### END OF MAIN GAME RUNNING FUNCTIONS #########################################################
+######################################################## END OF MAIN GAME RUNNING FUNCTIONS ##########################################################
 ######################################################################################################################################################

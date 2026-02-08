@@ -113,17 +113,17 @@ alignment = 1
 
 [node name="player_active_pokemon_container" type="Control" parent="."]
 anchors_preset = 0
-offset_left = 518.0
-offset_top = 254.0
-offset_right = 907.0
-offset_bottom = 774.0
+offset_left = 525.0
+offset_top = 272.0
+offset_right = 914.0
+offset_bottom = 792.0
 
 [node name="opponent_active_pokemon_container" type="Control" parent="."]
 anchors_preset = 0
-offset_left = 1182.0
-offset_top = 282.0
-offset_right = 1608.0
-offset_bottom = 859.0
+offset_left = 992.0
+offset_top = 271.0
+offset_right = 1418.0
+offset_bottom = 848.0
 
 [node name="player_bench_container" type="HBoxContainer" parent="."]
 layout_mode = 0
@@ -135,12 +135,11 @@ theme_override_constants/separation = 1
 
 [node name="opponent_bench_container" type="HBoxContainer" parent="."]
 layout_mode = 0
-offset_left = 1423.0
-offset_top = 673.0
-offset_right = 1878.0
-offset_bottom = 846.0
+offset_left = 1411.0
+offset_top = 640.0
+offset_right = 1866.0
+offset_bottom = 813.0
 theme_override_constants/separation = 1
-alignment = 2
 
 [node name="player_prize_cards_container" type="HBoxContainer" parent="."]
 layout_mode = 0
