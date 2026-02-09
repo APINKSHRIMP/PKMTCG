@@ -902,12 +902,12 @@ func criterion_1_single_energy_attack(basic_pokemon: card_object) -> Dictionary:
 	if min_cost == 1:
 		return {
 			"score_change": 100.0,
-			"reason": "Can attack for only 1 energy"
+			"reason": "Can attack for only 1 energy. (+100 points)"
 		}
 	else:
 		return {
 			"score_change": -50.0,
-			"reason": "Minimum attack cost is " + str(min_cost) + " energy"
+			"reason": "Minimum attack cost is " + str(min_cost) + " energy. (-50 points)"
 		}
 
 # PRIORITY CRITERION #2: Check for evolution paths (Stage 1 and Stage 2)
@@ -915,7 +915,7 @@ func criterion_1_single_energy_attack(basic_pokemon: card_object) -> Dictionary:
 # If there is a stage 1 that then also has a Stage 2 evolution then additional (+100)
 func criterion_2_evolution_available(basic_pokemon: card_object, hand: Array) -> Dictionary:
 	var score_change = 0.0
-	var reason = "No evolutions in hand"
+	var reason = "No evolutions in hand (+0)"
 	var stage_1_list = []
 	var has_stage_2_chain = false
 	
@@ -935,9 +935,9 @@ func criterion_2_evolution_available(basic_pokemon: card_object, hand: Array) ->
 		
 		if has_stage_2_chain:
 			score_change += 100.0
-			reason = "Has " + str(stage_1_list.size()) + " Stage 1(s) with Stage 2 chain"
+			reason = "Has " + str(stage_1_list.size()) + " Stage 1(s) with Stage 2 chain. (+"+str(score_change) +" points)"
 		else:
-			reason = "Has " + str(stage_1_list.size()) + " Stage 1 evolution(s)"
+			reason = "Has " + str(stage_1_list.size()) + " Stage 1 evolution(s) (+"+str(score_change) +" points)"
 	
 	return {
 		"score_change": score_change,
@@ -969,7 +969,7 @@ func criterion_3_energy_type_match(basic_pokemon: card_object, hand: Array) -> D
 		var score_bonus = 15.0 * basic_energies_in_hand.size()
 		return {
 			"score_change": score_bonus,
-			"reason": "Colorless type - " + str(basic_energies_in_hand.size()) + " basic energies available"
+			"reason": "Colorless type - " + str(basic_energies_in_hand.size()) + " basic energies available (+"+str(score_bonus) +" points)"
 		}
 	
 	# For typed pokemon, count matching energies
@@ -984,13 +984,13 @@ func criterion_3_energy_type_match(basic_pokemon: card_object, hand: Array) -> D
 		var score_bonus = 30.0 * matching_energy_count
 		return {
 			"score_change": score_bonus,
-			"reason": "Has " + str(matching_energy_count) + " " + pokemon_type + " energy card(s)"
+			"reason": "Has " + str(matching_energy_count) + " " + pokemon_type + " energy card(s) (+"+str(score_bonus) +" points)"
 		}
 	
 	# No matching energy found
 	return {
 		"score_change": -150.0,
-		"reason": "No matching " + pokemon_type + " energy in hand"
+		"reason": "No matching " + pokemon_type + " energy in hand (-150 points)"
 	}	
 	
 # PRIORITY CRITERION #4: Higher HP is more durable and valuable
@@ -1026,16 +1026,44 @@ func criterion_5_attack_damage(basic_pokemon: card_object) -> Dictionary:
 		var one_energy_damage = min_cost_attack.get("damage", 0)
 		var one_energy_bonus = one_energy_damage * 3
 		score_bonus += one_energy_bonus
-		reason_parts.append(str(one_energy_damage) + " damage at 1 energy")
+		reason_parts.append(str(one_energy_damage) + " damage at 1 energy (+" + str(one_energy_bonus) + " points)")
+		
+		# Check if the lowest cost attack has an effect (additional text)
+		var attack_text = min_cost_attack.get("text", "")
+		var attack_penalty = get_attack_text_penalty(attack_text, basic_pokemon.metadata.get("name", ""))
+		
+		if attack_penalty < 0:
+			score_bonus += attack_penalty
+			reason_parts.append("1-energy attack has penalty (" + str(attack_penalty) + " points)")
+		elif attack_text != "":
+			score_bonus += 20.0
+			reason_parts.append("1-energy attack has beneficial effect (+20 points)")
 	
+
+	# Check if the lowest cost attack has an effect (additional text)	
 	# Only add efficiency bonus if pokemon has 2+ attacks
 	if attack_count >= 2:
-		var max_damage = get_maximum_attack_damage(basic_pokemon)
-		var max_cost = get_maximum_attack_cost(basic_pokemon)
-		var efficiency = float(max_damage) / float(max_cost)
-		var efficiency_bonus = efficiency * 2.0
-		score_bonus += efficiency_bonus
-		reason_parts.append("efficiency " + str(max_damage) + "/" + str(max_cost) + " energy")
+		var max_attack = get_maximum_damage_attack(basic_pokemon)
+		var max_damage = max_attack.get("damage", 0)
+		var max_cost = max_attack.get("cost", 1)
+		var attack_text = max_attack.get("text", "")
+		
+		# Check if highest damage attack has an effect
+		var attack_penalty = get_attack_text_penalty(attack_text, basic_pokemon.metadata.get("name", ""))
+		
+		if attack_penalty < 0:
+			score_bonus += attack_penalty
+			reason_parts.append("Highest damage attack has penalty (" + str(attack_penalty) + " points)")
+		elif attack_text != "":
+			score_bonus += 20.0
+			reason_parts.append("Highest damage attack has beneficial effect (+20 points)")
+		
+		# Only calculate efficiency if there's actual damage
+		if max_damage > 0:
+			var efficiency = float(max_damage) / float(max_cost)
+			var efficiency_bonus = efficiency * 3.0
+			score_bonus += efficiency_bonus
+			reason_parts.append("highest damage efficiency " + str(max_damage) + "/" + str(max_cost) + " energy (+" + str(efficiency_bonus) + " points)")
 	
 	var reason = "Damage: " + ", ".join(reason_parts)
 	
@@ -1070,6 +1098,7 @@ func get_minimum_cost_attack(pokemon_card: card_object) -> Dictionary:
 	# Extract damage value - damage can be "30", "40+", "50x", "60-" or other formats
 	var damage_str = min_cost_attack.get("damage", "0")
 	var damage = 0
+	
 	# Only parse the number part, ignoring any suffixes like +, -, or x
 	if damage_str != "" and damage_str[0].is_valid_int():
 		var numeric_part = ""
@@ -1081,48 +1110,24 @@ func get_minimum_cost_attack(pokemon_card: card_object) -> Dictionary:
 		if numeric_part != "":
 			damage = int(numeric_part)
 	
+		#print("COST: ", min_cost)
+		#print("damage: ", damage)
+		#print("attack_name: ", min_cost_attack.get("name", ""))
+	
 	return {
 		"cost": min_cost,
 		"damage": damage,
-		"attack_name": min_cost_attack.get("name", "")
+		"attack_name": min_cost_attack.get("name", ""),
+		"text": min_cost_attack.get("text", "")
 	}
 	
-# Helper function to get the energy cost of the highest damage attack a pokemon can perform
-func get_maximum_attack_cost(pokemon_card: card_object) -> int:
+# Helper function to get the highest damage attack and return all its data
+func get_maximum_damage_attack(pokemon_card: card_object) -> Dictionary:
 	if not pokemon_card.metadata.has("attacks") or pokemon_card.metadata["attacks"].size() == 0:
-		return 0
+		return {}
 	
 	var max_damage = 0
-	var max_damage_cost = 0
-	
-	for attack in pokemon_card.metadata["attacks"]:
-		var damage_str = attack.get("damage", "")
-		
-		# Skip attacks with no damage value
-		if damage_str == "" or damage_str[0].is_valid_int() == false:
-			continue
-		
-		var numeric_part = ""
-		for numericalchar in damage_str:
-			if numericalchar.is_valid_int():
-				numeric_part += numericalchar
-			else:
-				break
-		
-		if numeric_part != "":
-			var damage = int(numeric_part)
-			if damage > max_damage:
-				max_damage = damage
-				max_damage_cost = int(attack.get("convertedEnergyCost", 1))
-	
-	return max_damage_cost
-
-# Function to get the maximum possible damage from any attack a pokemon can perform
-func get_maximum_attack_damage(pokemon_card: card_object) -> int:
-	if not pokemon_card.metadata.has("attacks") or pokemon_card.metadata["attacks"].size() == 0:
-		return 0
-	
-	var max_damage = 0
+	var max_damage_attack = null
 	
 	for attack in pokemon_card.metadata["attacks"]:
 		var damage_str = attack.get("damage", "")
@@ -1142,8 +1147,17 @@ func get_maximum_attack_damage(pokemon_card: card_object) -> int:
 			var damage = int(numeric_part)
 			if damage > max_damage:
 				max_damage = damage
+				max_damage_attack = attack
 	
-	return max_damage
+	if max_damage_attack == null:
+		return {}
+	
+	return {
+		"damage": max_damage,
+		"cost": int(max_damage_attack.get("convertedEnergyCost", 1)),
+		"text": max_damage_attack.get("text", ""),
+		"attack_name": max_damage_attack.get("name", "")
+	}
 
 # Main function to evaluate a basic pokemon and return a score by calling criterion 1-5 and returns the total score with breakdown reasoning
 func evaluate_opponents_start_setup_pokemon_choices(basic_pokemon: card_object, hand: Array) -> Dictionary:
@@ -1209,11 +1223,17 @@ func select_opponent_pokemon_for_setup(hand: Array) -> Dictionary:
 	print("Opponent AI selected active: " + active_pokemon.metadata.get("name", "Unknown") + " (Score: " + str(int(scored_pokemon[0]["score"])) + ")")
 	for reason in scored_pokemon[0]["breakdown"]:
 		print("  - " + reason)
+		
+	print("__________________________________________________________________")
 	
 	print("Opponent AI selected " + str(bench_pokemon.size()) + " bench pokemon")
 	for i in range(bench_pokemon.size()):
 		print("  " + str(i + 1) + ". " + bench_pokemon[i].metadata.get("name", "Unknown") + " (Score: " + str(int(scored_pokemon[i + 1]["score"])) + ")")
-	
+		for reason in scored_pokemon[i+1]["breakdown"]:
+			print("  - " + reason)
+			
+		print("__________________________________________________________________")
+		
 	return {
 		"active": active_pokemon,
 		"bench": bench_pokemon
@@ -1238,6 +1258,66 @@ func opponent_setup_pokemon_from_hand() -> void:
 	display_pokemon(true)  # true = opponent
 	display_hand_cards_array(opponent_hand, $opponent_hand_hbox_container, card_scales[12])
 
+# Helper function to check attack text for negative self-inflicted effects
+# Only penalizes exact patterns where energy is discarded from the attacking pokemon
+# Returns the penalty score (negative value) if found, 0 if no penalty
+func get_attack_text_penalty(attack_text: String, pokemon_name: String) -> int:
+	if attack_text == "":
+		return 0
+	
+	var text = attack_text
+	
+	# Check for "discard all" attached to THIS pokemon (-70)
+	if ("Discard all Energy cards attached to " + pokemon_name in text) or \
+	   ("Discard all basic Energy cards attached to " + pokemon_name in text) or \
+	   ("Discard all" in text and "Energy cards attached to " + pokemon_name in text):
+		return -70
+	
+	# Check for "discard 3" attached to THIS pokemon (-50)
+	if ("Discard 3 Energy cards attached to " + pokemon_name in text) or \
+	   ("Discard 3 basic Energy cards attached to " + pokemon_name in text) or \
+	   ("Discard 3" in text and "Energy cards attached to " + pokemon_name in text):
+		return -50
+	
+	# Check for "discard 2" attached to THIS pokemon (-30)
+	if ("Discard 2 Energy cards attached to " + pokemon_name in text) or \
+	   ("Discard 2 basic Energy cards attached to " + pokemon_name in text) or \
+	   ("Discard 2" in text and "Energy cards attached to " + pokemon_name in text):
+		return -30
+	
+	# Check for "discard 1" or "discard a" attached to THIS pokemon (-10)
+	if ("Discard 1" in text and "Energy card attached to " + pokemon_name in text) or \
+	   ("Discard a" in text and "Energy card attached to " + pokemon_name in text) or \
+	   ("Discard a basic Energy card attached to " + pokemon_name in text):
+		return -10
+	
+	# Check for damage reduction effects (-20)
+	if "damage minus" in text.to_lower():
+		return -20
+	
+	# Check for self-damage effects (X damage to itself = -X*0.5)
+	if pokemon_name in text and "damage to itself" in text.to_lower():
+		var pattern = "does "
+		var lower_text = text.to_lower()
+		var start_index = lower_text.find(pattern)
+		
+		if start_index != -1:
+			start_index += pattern.length()
+			var number_str = ""
+			for i in range(start_index, lower_text.length()):
+				var numericalchar = lower_text[i]
+				if numericalchar.is_valid_int():
+					number_str += numericalchar
+				elif number_str != "":
+					break
+			
+			if number_str != "":
+				var damage = int(number_str)
+				var penalty = int(damage * 0.5)
+				return -penalty
+	
+	return 0
+	
 ####################################################### END AI GENERAL FUNCTIONALITY FUNCTIONS #######################################################
 ######################################################################################################################################################
 
@@ -1427,6 +1507,7 @@ func _ready() -> void:
 	setup_player()
 	setup_opponent("testing1")
 	opponent_setup_pokemon_from_hand()
+	draw_prize_cards(false)  # false = opponent
 	update_action_button()
 	show_enlarged_array(player_hand)
 	display_pokemon(false)  # false = player

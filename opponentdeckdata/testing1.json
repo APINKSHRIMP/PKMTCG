@@ -1,23 +1,43 @@
 [
   {
     "id": "base1-3",
-    "count": 4
+    "count": 2
   },
   {
     "id": "base1-5",
-    "count": 4
+    "count": 2
   },
   {
     "id": "base1-7",
-    "count": 4
+    "count": 2
   },
   {
     "id": "base1-10",
-    "count": 4
+    "count": 2
   },
   {
-    "id": "base1-20",
-    "count": 4
+    "id": "base1-26",
+    "count": 2
+  },
+  {
+    "id": "base1-35",
+    "count": 2
+  },
+   {
+    "id": "base1-43",
+    "count": 2
+  },
+   {
+    "id": "base1-46",
+    "count": 2
+  },
+   {
+    "id": "base1-47",
+    "count": 2
+  },
+   {
+    "id": "base1-50",
+    "count": 2
   },
   {
     "id": "base1-100",

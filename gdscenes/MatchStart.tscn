@@ -120,9 +120,9 @@ offset_bottom = 792.0
 
 [node name="opponent_active_pokemon_container" type="Control" parent="."]
 anchors_preset = 0
-offset_left = 992.0
+offset_left = 986.0
 offset_top = 271.0
-offset_right = 1418.0
+offset_right = 1412.0
 offset_bottom = 848.0
 
 [node name="player_bench_container" type="HBoxContainer" parent="."]
@@ -151,10 +151,10 @@ theme_override_constants/separation = 0
 
 [node name="opponent_prize_cards_container" type="HBoxContainer" parent="."]
 layout_mode = 0
-offset_left = 1606.0
-offset_top = 847.0
-offset_right = 1901.0
-offset_bottom = 938.0
+offset_left = 1401.0
+offset_top = 826.0
+offset_right = 1696.0
+offset_bottom = 917.0
 alignment = 2
 
 [node name="large_header_text_label" type="Label" parent="."]
