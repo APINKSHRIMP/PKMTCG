@@ -1,9 +1,9 @@
 [gd_scene load_steps=7 format=3 uid="uid://dqwekyllekveg"]
 
 [ext_resource type="Script" uid="uid://du6jwng7w7fn4" path="res://gdscripts/main_match_script.gd" id="1_c6k6o"]
+[ext_resource type="Texture2D" uid="uid://cpbbo8tyee1n4" path="res://backgrounds/background2.png" id="2_1cpm0"]
 [ext_resource type="Theme" uid="uid://mbsg4xqnedxi" path="res://uiresources/kenneyUI-red.tres" id="2_6pfim"]
 [ext_resource type="Theme" uid="uid://bnhngmri4tfgr" path="res://uiresources/kenneyUI-green.tres" id="3_x7i8m"]
-[ext_resource type="Texture2D" uid="uid://b2spsujdgcisv" path="res://backgrounds/background1.png" id="4_x7i8m"]
 [ext_resource type="Theme" uid="uid://bb6vwl0h1flws" path="res://uiresources/kenneyUI-blue.tres" id="5_1cpm0"]
 
 [sub_resource type="StyleBoxLine" id="StyleBoxLine_1cpm0"]
@@ -17,14 +17,14 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_c6k6o")
 
-[node name="TextureRect" type="TextureRect" parent="."]
+[node name="match_background" type="TextureRect" parent="."]
 layout_mode = 0
 offset_left = -41.0
 offset_right = 1961.0
 offset_bottom = 1127.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("4_x7i8m")
+texture = ExtResource("2_1cpm0")
 
 [node name="player_hand_hbox_container" type="HBoxContainer" parent="."]
 layout_mode = 1
@@ -57,9 +57,9 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = 40.0
-offset_top = -100.0
+offset_top = -88.0
 offset_right = 290.0
-offset_bottom = -20.0
+offset_bottom = -8.0
 grow_horizontal = 2
 grow_vertical = 0
 size_flags_vertical = 8
@@ -69,9 +69,9 @@ text = "CANCEL"
 [node name="card_action_button" type="Button" parent="."]
 layout_mode = 0
 offset_left = 727.0
-offset_top = 980.0
+offset_top = 991.0
 offset_right = 977.0
-offset_bottom = 1060.0
+offset_bottom = 1071.0
 theme = ExtResource("3_x7i8m")
 text = "SET"
 
@@ -88,7 +88,7 @@ offset_right = 20.0
 offset_bottom = 56.0
 grow_horizontal = 2
 grow_vertical = 2
-alignment = 1
+alignment = 2
 
 [node name="selection_mode_scroller" type="ScrollContainer" parent="."]
 clip_contents = false
@@ -256,3 +256,18 @@ theme_override_styles/normal = SubResource("StyleBoxLine_1cpm0")
 text = "BENCH"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="player_active_pokemon_energies" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 50.0
+offset_top = 425.0
+offset_right = 435.0
+offset_bottom = 579.0
+alignment = 2
+
+[node name="opponent_active_pokemon_energies" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 1495.0
+offset_top = 430.0
+offset_right = 1880.0
+offset_bottom = 584.0

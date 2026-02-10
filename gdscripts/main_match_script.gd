@@ -27,8 +27,13 @@ var amount_of_cards_to_draw = 7
 var card_selection_mode_enabled = false
 var selected_card_for_action = null
 var card_was_clicked_this_frame: bool = false
+
 var match_just_started_basic_pokemon_required = true
 var bench_setup_phase_active = false
+
+var has_energy_been_played_this_turn: bool = false
+var energy_card_awaiting_target: card_object = null  # Stores the energy card while selecting its target
+var card_attach_mode_active: bool = false
 
 # UI VARIABLES
 var large_header_text_label: Label
@@ -69,6 +74,7 @@ var card_scales: Dictionary = {
 ################################################################ START OF FUNCTIONS ##################################################################
 ######################################################################################################################################################
 
+######################################################################################################################################################
 ################################################################# DISPLAY FUNCTIONS ##################################################################
 
 # Main reusable function to display any array passed in a LARGE viewing mode, hide everything else on the screen and allows selection of cards for action
@@ -106,6 +112,9 @@ func show_enlarged_array(card_array: Array) -> void:
 	
 	$player_active_pokemon_container.mouse_filter = MOUSE_FILTER_IGNORE
 	$opponent_active_pokemon_container.mouse_filter = MOUSE_FILTER_IGNORE
+	
+	$player_active_pokemon_energies.visible = false
+	$opponent_active_pokemon_energies.visible = false
 	
 	# We do however want to show the header and hint labels
 	$small_hint_info_text_label.visible = true
@@ -152,6 +161,8 @@ func show_enlarged_array(card_array: Array) -> void:
 		display_hand_cards_array(card_array, $small_selection_mode_container, card_scales[amount_of_cards_to_show])
 
 # Displays both the player and opponents hand cards. Shows players at the top of screen and opponents in top right smaller.
+# Modify display_hand_cards_array to track the card index and style the active Pokemon differently
+
 func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2):
 	
 	# Load the script that displays card images
@@ -162,7 +173,8 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2):
 		child.queue_free()
 	
 	# Draw all cards in the hand
-	for this_card_in_hand in hand:
+	for index in range(hand.size()):
+		var this_card_in_hand = hand[index]
 		var hand_card_to_display = TextureRect.new()
 		
 		# Attach the loading of the card image script to the newly generated card
@@ -176,7 +188,30 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2):
 		
 		# Connect this card's signal to the main script's handler
 		hand_card_to_display.card_clicked.connect(this_card_clicked)
-
+		
+		# If this is the active Pokemon (index 0) in attachment mode, add visual distinction
+		if card_attach_mode_active and index == hand.size() - 1:
+			# Make the active Pokemon noticeably larger by reloading with bigger card_size
+			var larger_size = Vector2(card_size.x * 1.25, card_size.y * 1.25)
+			hand_card_to_display.load_card_image(this_card_in_hand.uid, larger_size, this_card_in_hand)
+			
+			# Add brightness boost
+			hand_card_to_display.modulate = Color.WHITE * 1.2
+			
+			# Align to bottom
+			hand_card_to_display.size_flags_vertical = Control.SIZE_SHRINK_END
+			
+			# Add large spacer AFTER the active Pokemon to separate it from bench
+			var spacer = Control.new()
+			spacer.custom_minimum_size = Vector2(100, 0)
+			spacer.mouse_filter = MOUSE_FILTER_IGNORE
+			hand_container.add_child(spacer)
+		else:
+			# For bench Pokemon, apply normal modulate and align to bottom
+			hand_card_to_display.modulate = Color.WHITE
+			hand_card_to_display.size_flags_vertical = Control.SIZE_SHRINK_END
+			
+			
 # Display active and bench pokemon for either player or opponent
 # is_opponent: true for opponent, false for player
 func display_pokemon(is_opponent: bool) -> void:
@@ -241,6 +276,9 @@ func display_main_components_hide_selection_mode() -> void:
 	# Show the player and opponents active pokemon
 	$player_active_pokemon_container.visible = true
 	$opponent_active_pokemon_container.visible = true
+	
+	$player_active_pokemon_energies.visible = true
+	$opponent_active_pokemon_energies.visible = true
 	
 	# Show the player and oppoents bench
 	$player_bench_container.visible = true
@@ -349,11 +387,39 @@ func display_prize_cards(is_player: bool) -> void:
 		
 		# Connect the signal so prize cards can be clicked if needed
 		prize_card_display.card_clicked.connect(this_card_clicked)	
+
+# Add this new function after display_pokemon()
+func display_active_pokemon_energies() -> void:
+	# Clear the energies container first
+	for child in $player_active_pokemon_energies.get_children():
+		child.queue_free()
+	
+	# If no active pokemon, nothing to display
+	if player_active_pokemon == null:
+		return
+	
+	# If active pokemon has no attached energies, nothing to display
+	if player_active_pokemon.attached_energies.size() == 0:
+		return
+	
+	# Load the card display script for energy cards
+	var card_display_script = load("res://gdscripts/cardimage.gd")
+	
+	# Display each attached energy
+	for attached_energy in player_active_pokemon.attached_energies:
+		var energy_display = TextureRect.new()
+		energy_display.set_script(card_display_script)
+		$player_active_pokemon_energies.add_child(energy_display)
+		
+		# Display energy cards smaller than the Pokemon (use card_scales[10])
+		energy_display.load_card_image(attached_energy.uid, card_scales[11], attached_energy)
 		
 ############################################################### END DISPLAY FUNCTIONS ################################################################
 ######################################################################################################################################################
 
+######################################################################################################################################################
 ################################################################ GAME LOAD FUNCTIONS #################################################################
+
 # Reusable function to load any deck (both player and opponent) from JSON file path
 func load_deck_from_file(deck_file_path: String) -> Array:
 	var deck = []
@@ -674,6 +740,12 @@ func get_card_action(card: card_object) -> Dictionary:
 	# Default fallback
 	return {"action": "NONE", "button_text": ""}
 
+############################################################### END GAME LOAD FUNCTIONS ##############################################################
+######################################################################################################################################################
+
+######################################################################################################################################################
+############################################################# CORE FUNCTIONALITY FUNCTIONS ###########################################################
+
 # Function to change the text, enabled mode and function of the action button.
 func update_action_button() -> void:
 	
@@ -722,6 +794,18 @@ func update_action_button() -> void:
 		# Disable the button and change the colour
 		action_button.disabled = true
 		action_button.theme = load("res://uiresources/kenneyUI.tres")
+	
+	# If the card selected was an energy card
+	elif action_info["action"] == "ATTACH_ENERGY":
+		# Energy card is selected and we're ready to attach it
+		if has_energy_been_played_this_turn:
+			action_button.text = "ENERGY ALREADY ATTACHED THIS TURN"
+			action_button.disabled = true
+			action_button.theme = load("res://uiresources/kenneyUI.tres")
+		else:
+			action_button.text = "SELECT POKEMON TO ATTACH"
+			action_button.disabled = false
+			action_button.theme = load("res://uiresources/kenneyUI-green.tres")
 	
 	# For 99% of other cases, if a card has been selected from the hand AND it isn't turn 1 requiring a basic, then display the action the card can take	
 	else:
@@ -813,18 +897,20 @@ func find_card_ui_for_object(card_obj: card_object) -> TextureRect:
 	# Check small selection container
 	if $small_selection_mode_container.visible:
 		for card_ui in $small_selection_mode_container.get_children():
-			if card_ui.card_ref == card_obj:
-				return card_ui
+			# Only check if this is a TextureRect with card_ref
+			if card_ui is TextureRect and "card_ref" in card_ui:
+				if card_ui.card_ref == card_obj:
+					return card_ui
 	
 	# Check large selection container
 	if $selection_mode_scroller.visible:
 		for card_ui in $selection_mode_scroller/large_selection_mode_container.get_children():
-			if card_ui.card_ref == card_obj:
-				return card_ui
+			# Only check if this is a TextureRect with card_ref
+			if card_ui is TextureRect and "card_ref" in card_ui:
+				if card_ui.card_ref == card_obj:
+					return card_ui
 	
 	return null
-
- #mainly just for readability
 
 # Function to get all basic pokemon from a given array of cards
 func get_all_basic_pokemon(card_array: Array) -> Array:
@@ -833,10 +919,86 @@ func get_all_basic_pokemon(card_array: Array) -> Array:
 		if card.metadata.get("supertype") == "Pokémon" and card.metadata.has("subtypes") and card.metadata["subtypes"].has("Basic"):
 			basic_pokemon.append(card)
 	return basic_pokemon
+
+# Function called when selecting an energy card to attach to a pokemon. Calls show enlarged array as a subfunction	
+func start_energy_attachment() -> void:
+	# Validate that an energy card is selected
+	if selected_card_for_action == null:
+		print("Error: No energy card selected for attachment")
+		return
+	
+	# Store the energy card for later attachment
+	energy_card_awaiting_target = selected_card_for_action
+	
+	# Create temporary array of valid attachment targets
+	var attachment_targets = []
+	
+	attachment_targets.append_array(player_bench)
+	if player_active_pokemon != null:
+		attachment_targets.append(player_active_pokemon)
+	
+	
+	# Enter attach mode and show only valid targets
+	card_attach_mode_active = true
+	show_enlarged_array(attachment_targets)
+	
+	# Update labels for energy attachment context
+	var energy_name = energy_card_awaiting_target.metadata.get("name", "Unknown Energy")
+	$large_header_text_label.text = "ATTACHING " + energy_name.to_upper()
+	$small_hint_info_text_label.text = "Select a Pokémon to attach " + energy_name + " to"
+	
+	# Update action button text
+	$card_action_button.text = "ATTACH ENERGY"
+	
+# Add this new function after start_energy_attachment()
+func perform_energy_attachment() -> void:
+	# Validate that we have an energy card awaiting attachment
+	if energy_card_awaiting_target == null:
+		print("Error: No energy card awaiting attachment")
+		return
+	
+	# Validate that we have a target Pokemon selected
+	if selected_card_for_action == null:
+		print("Error: No target Pokemon selected")
+		return
+	
+	# Get the target Pokemon
+	var target_pokemon = selected_card_for_action
+	
+	# Add the energy to the Pokemon's attached energies array
+	target_pokemon.attached_energies.append(energy_card_awaiting_target)
+	
+	print("Attached ", energy_card_awaiting_target.metadata.get("name", "Unknown Energy"), " to ", target_pokemon.metadata.get("name", "Unknown Pokemon"))
+	
+	# Remove the energy card from the player's hand
+	player_hand.erase(energy_card_awaiting_target)
+	
+	# Set the flag so no more energies can be attached this turn
+	has_energy_been_played_this_turn = true
+	
+	# Clear the attachment variables
+	energy_card_awaiting_target = null
+	selected_card_for_action = null
+	
+	# Exit attach mode
+	card_attach_mode_active = false
+	
+	# Return to normal UI
+	display_main_components_hide_selection_mode()
+	
+	# Refresh the hand display to remove the attached energy
+	display_hand_cards_array(player_hand, $player_hand_hbox_container, card_scales[11])
+	
+	# Refresh the active Pokemon display to show the attached energy
+	display_pokemon(false)	
+	
+	# Display the attached energies on the active Pokemon
+	display_active_pokemon_energies()
 	
 ########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
 ######################################################################################################################################################
 
+######################################################################################################################################################
 ################################################### SMALL FUNCTIONS TO HELP WITH CODE READABILITY ####################################################
 
 # Function mainly just for readability in the code to check if a pokemon can evolve from another pokemon by checking the evolving pokemon's "evolvesFrom" metadata
@@ -883,6 +1045,7 @@ func has_evolution(base_pokemon: card_object, card_array: Array, stage_type: Str
 ################################################# END SMALL FUNCTIONS TO HELP WITH CODE READABILITY ##################################################
 ######################################################################################################################################################
 
+######################################################################################################################################################
 ####################################################### AI PRIORITISE FUNCTIONALITY FUNCTIONS ########################################################
 
 # THESE FUNCTIONS ARE SPECIFICALLY FOR DECIDING THE BEST POKEMON FROM A GIVEN ARRAY.
@@ -1075,6 +1238,7 @@ func criterion_5_attack_damage(basic_pokemon: card_object) -> Dictionary:
 ###################################################### END AI PRIORITISE FUNCTIONALITY FUNCTIONS #####################################################
 ######################################################################################################################################################
 
+######################################################################################################################################################
 ######################################################### AI GENERAL FUNCTIONALITY FUNCTIONS #########################################################
 
 # Function to get lowest cost attack for a pokemon by looping through all attacks. Returns a dictionary with "cost" (convertedEnergyCost), "damage" (as int), and "attack_name"
@@ -1321,10 +1485,18 @@ func get_attack_text_penalty(attack_text: String, pokemon_name: String) -> int:
 ####################################################### END AI GENERAL FUNCTIONALITY FUNCTIONS #######################################################
 ######################################################################################################################################################
 
+######################################################################################################################################################
 ########################################################### USER INPUT ON CLICK FUNCTIONS ############################################################
 
 # Card action button is the physical button that appears when in card selection mode, allows attaching energies, playing pokemon and trainer cards
 func action_button_pressed_perform_action() -> void:
+	
+	# Check if we're in attach mode - handle differently
+	if card_attach_mode_active:
+		# In attach mode, we're attaching the energy to the selected Pokemon
+		perform_energy_attachment()
+		return
+		
 	# Don't do anything if no card is selected
 	if selected_card_for_action == null:
 		print("Error: No card selected for action")
@@ -1369,8 +1541,7 @@ func action_button_pressed_perform_action() -> void:
 			# We'll add this later
 		
 		"ATTACH_ENERGY":
-			print("Energy attachment not yet implemented")
-			# We'll add this later
+			start_energy_attachment()
 		
 		"EVOLVE":
 			print("Evolution not yet implemented")
@@ -1381,6 +1552,20 @@ func action_button_pressed_perform_action() -> void:
 
 # When the cancel button is clicked, hide everthing in card selection mode and show main screen again
 func cancel_button_pressed_hide_selection_mode() -> void:
+	
+		# If we're in attach mode, cancel the energy attachment
+	if card_attach_mode_active:
+		print("Energy attachment cancelled")
+		
+		# Clear the energy card awaiting target (it stays in the hand)
+		energy_card_awaiting_target = null
+		
+		# Exit attach mode
+		card_attach_mode_active = false
+		
+		# Return to main UI screen
+		display_main_components_hide_selection_mode()
+		return
 	
 	# If we were in bench setup phase, end it and draw prize cards
 	if bench_setup_phase_active:
@@ -1410,14 +1595,43 @@ func opponent_bench_clicked_show_bench(event: InputEvent) -> void:
 		show_enlarged_array(opponent_bench)
 
 # Called when a card in selection mode is clicked
+# Replace the this_card_clicked function with this updated version
+
+# Replace the this_card_clicked function with this updated version (with renamed variable)
+
 func this_card_clicked(clicked_card: card_object) -> void:
 	if card_selection_mode_enabled == true:
 		
-		# NEW: Remove visual effect from previously selected card
+		# NEW: Check if we're in card attach mode (selecting a target Pokemon)
+		if card_attach_mode_active:
+			# In attach mode, we're selecting a target Pokemon, not performing a card action
+			if selected_card_for_action != null:
+				var prev_card_display = find_card_ui_for_object(selected_card_for_action)
+				if prev_card_display:
+					prev_card_display.set_selected(false)
+			
+			# Store the selected target Pokemon
+			selected_card_for_action = clicked_card
+			
+			print("Selected target Pokemon for energy attachment: ", selected_card_for_action.metadata["name"])
+			
+			# Apply visual effect to newly selected Pokemon
+			var card_display = find_card_ui_for_object(clicked_card)
+			if card_display:
+				card_display.set_selected(true)
+			
+			# Update button to show it's ready to attach
+			$card_action_button.text = "ATTACH ENERGY"
+			$card_action_button.disabled = false
+			$card_action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+			return
+		
+		# Normal card selection mode (not in attach mode)
+		# Remove visual effect from previously selected card
 		if selected_card_for_action != null:
-			var prev_card_ui = find_card_ui_for_object(selected_card_for_action)
-			if prev_card_ui:
-				prev_card_ui.set_selected(false)
+			var prev_card_display = find_card_ui_for_object(selected_card_for_action)
+			if prev_card_display:
+				prev_card_display.set_selected(false)
 		
 		# Store reference to the selected card
 		selected_card_for_action = clicked_card
@@ -1425,16 +1639,16 @@ func this_card_clicked(clicked_card: card_object) -> void:
 		print("Selected card for action: ", selected_card_for_action.metadata["name"])
 		
 		# Apply visual effect to newly selected card
-		var card_ui = find_card_ui_for_object(clicked_card)
-		if card_ui:
-			card_ui.set_selected(true)
+		var card_display = find_card_ui_for_object(clicked_card)
+		if card_display:
+			card_display.set_selected(true)
 		
 		# Update the button text and state based on the selected card
 		update_action_button()
 			
 	else:
 		selected_card_for_action = null
-
+		
 ########################################################### USER INPUT ON CLICK FUNCTIONS ############################################################
 ######################################################################################################################################################
 
