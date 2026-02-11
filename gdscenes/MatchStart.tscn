@@ -56,10 +56,10 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = 40.0
-offset_top = -88.0
-offset_right = 290.0
-offset_bottom = -8.0
+offset_left = 35.0
+offset_top = -100.0
+offset_right = 473.0
+offset_bottom = -20.0
 grow_horizontal = 2
 grow_vertical = 0
 size_flags_vertical = 8
@@ -67,11 +67,18 @@ theme = ExtResource("2_6pfim")
 text = "CANCEL"
 
 [node name="card_action_button" type="Button" parent="."]
-layout_mode = 0
-offset_left = 727.0
-offset_top = 991.0
-offset_right = 977.0
-offset_bottom = 1071.0
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -219.0
+offset_top = -100.0
+offset_right = 219.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
 theme = ExtResource("3_x7i8m")
 text = "SET"
 
@@ -83,9 +90,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -20.0
-offset_top = 16.0
+offset_top = -10.0
 offset_right = 20.0
-offset_bottom = 56.0
+offset_bottom = 30.0
 grow_horizontal = 2
 grow_vertical = 2
 alignment = 2
@@ -110,6 +117,15 @@ vertical_scroll_mode = 0
 [node name="large_selection_mode_container" type="HBoxContainer" parent="selection_mode_scroller"]
 layout_mode = 2
 alignment = 1
+
+[node name="player_active_pokemon_energies" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 394.0
+offset_top = 332.0
+offset_right = 394.0
+offset_bottom = 332.0
+theme_override_constants/separation = -16
+alignment = 2
 
 [node name="player_active_pokemon_container" type="Control" parent="."]
 anchors_preset = 0
@@ -160,28 +176,33 @@ alignment = 2
 [node name="large_header_text_label" type="Label" parent="."]
 layout_mode = 0
 offset_left = -40.0
-offset_top = 177.0
+offset_top = 17.0
 offset_right = 1960.0
-offset_bottom = 248.0
+offset_bottom = 89.0
 theme = ExtResource("5_1cpm0")
 theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_colors/font_shadow_color = Color(0, 0.72322696, 1.1377786, 0.5411765)
-theme_override_constants/shadow_offset_x = 3
-theme_override_constants/shadow_offset_y = 2
-theme_override_constants/shadow_outline_size = 11
-theme_override_font_sizes/font_size = 50
+theme_override_colors/font_shadow_color = Color(1.0187511, 1.0187511, 1.0187511, 1)
+theme_override_constants/line_spacing = 3
+theme_override_constants/shadow_offset_x = 0
+theme_override_constants/shadow_offset_y = 0
+theme_override_constants/shadow_outline_size = 20
+theme_override_font_sizes/font_size = 61
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="small_hint_info_text_label" type="Label" parent="."]
 layout_mode = 0
 offset_left = -40.0
-offset_top = 236.0
+offset_top = 94.0
 offset_right = 1960.0
-offset_bottom = 307.0
+offset_bottom = 165.0
 theme = ExtResource("5_1cpm0")
 theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 28
+theme_override_colors/font_shadow_color = Color(1, 1, 1, 1)
+theme_override_constants/shadow_offset_x = 0
+theme_override_constants/shadow_offset_y = 0
+theme_override_constants/shadow_outline_size = 12
+theme_override_font_sizes/font_size = 41
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -256,14 +277,6 @@ theme_override_styles/normal = SubResource("StyleBoxLine_1cpm0")
 text = "BENCH"
 horizontal_alignment = 1
 vertical_alignment = 1
-
-[node name="player_active_pokemon_energies" type="HBoxContainer" parent="."]
-layout_mode = 0
-offset_left = 50.0
-offset_top = 425.0
-offset_right = 435.0
-offset_bottom = 579.0
-alignment = 2
 
 [node name="opponent_active_pokemon_energies" type="HBoxContainer" parent="."]
 layout_mode = 0

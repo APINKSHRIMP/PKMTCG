@@ -189,26 +189,24 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2):
 		# Connect this card's signal to the main script's handler
 		hand_card_to_display.card_clicked.connect(this_card_clicked)
 		
-		# If this is the active Pokemon (index 0) in attachment mode, add visual distinction
+		# Replace the visual distinction block in display_hand_cards_array():
+
+		# If this is the active Pokemon (last card in attach mode), add visual distinction
 		if card_attach_mode_active and index == hand.size() - 1:
-			# Make the active Pokemon noticeably larger by reloading with bigger card_size
-			var larger_size = Vector2(card_size.x * 1.25, card_size.y * 1.25)
-			hand_card_to_display.load_card_image(this_card_in_hand.uid, larger_size, this_card_in_hand)
+			# Add large spacer BEFORE the active Pokemon to separate it from bench
+			var spacer = Control.new()
+			spacer.custom_minimum_size = Vector2(25, 0)
+			spacer.mouse_filter = MOUSE_FILTER_IGNORE
+			hand_container.add_child(spacer)
+			hand_container.move_child(spacer, hand_container.get_child_count() - 2)  # Move to second-to-last position
 			
-			# Add brightness boost
-			hand_card_to_display.modulate = Color.WHITE * 1.2
+			# Make the active Pokemon noticeably larger by reloading with bigger card_size
+			var larger_size = Vector2(card_size.x * 1.2, card_size.y * 1.2)
+			hand_card_to_display.load_card_image(this_card_in_hand.uid, larger_size, this_card_in_hand)
 			
 			# Align to bottom
 			hand_card_to_display.size_flags_vertical = Control.SIZE_SHRINK_END
-			
-			# Add large spacer AFTER the active Pokemon to separate it from bench
-			var spacer = Control.new()
-			spacer.custom_minimum_size = Vector2(100, 0)
-			spacer.mouse_filter = MOUSE_FILTER_IGNORE
-			hand_container.add_child(spacer)
 		else:
-			# For bench Pokemon, apply normal modulate and align to bottom
-			hand_card_to_display.modulate = Color.WHITE
 			hand_card_to_display.size_flags_vertical = Control.SIZE_SHRINK_END
 			
 			
@@ -297,6 +295,9 @@ func display_main_components_hide_selection_mode() -> void:
 	$small_hint_info_text_label.visible = false
 	$large_header_text_label.visible = false
 	
+	$card_action_button.text = "Select a Card"
+	$card_action_button.disabled = true
+	$card_action_button.theme = load("res://uiresources/kenneyUI.tres")
 	
 	# Re-enable mouse input on previously hidden containers
 	$player_active_pokemon_container.mouse_filter = MOUSE_FILTER_PASS
@@ -587,6 +588,14 @@ func start_bench_setup_phase() -> void:
 		
 	# Set the flag so we know we're in bench setup mode
 	bench_setup_phase_active = true
+	$card_action_button.text = "Select a Card"
+	$card_action_button.disabled = true
+	$card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+	
+	selected_card_for_action = null
+	
+	$cancel_selection_mode_view_button.text = "Done"
+	$cancel_selection_mode_view_button.theme = load("res://uiresources/kenneyUI-green.tres")
 	
 	# Show the hand again for bench pokemon selection
 	show_enlarged_array(player_hand)	
@@ -799,11 +808,11 @@ func update_action_button() -> void:
 	elif action_info["action"] == "ATTACH_ENERGY":
 		# Energy card is selected and we're ready to attach it
 		if has_energy_been_played_this_turn:
-			action_button.text = "ENERGY ALREADY ATTACHED THIS TURN"
+			action_button.text = "ENERGY PLAYED"
 			action_button.disabled = true
 			action_button.theme = load("res://uiresources/kenneyUI.tres")
 		else:
-			action_button.text = "SELECT POKEMON TO ATTACH"
+			action_button.text = "ATTACH ENERGY"
 			action_button.disabled = false
 			action_button.theme = load("res://uiresources/kenneyUI-green.tres")
 	
@@ -1491,6 +1500,10 @@ func get_attack_text_penalty(attack_text: String, pokemon_name: String) -> int:
 # Card action button is the physical button that appears when in card selection mode, allows attaching energies, playing pokemon and trainer cards
 func action_button_pressed_perform_action() -> void:
 	
+	$card_action_button.text = "Select a Card"
+	$card_action_button.disabled = true
+	$card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+	
 	# Check if we're in attach mode - handle differently
 	if card_attach_mode_active:
 		# In attach mode, we're attaching the energy to the selected Pokemon
@@ -1520,6 +1533,7 @@ func action_button_pressed_perform_action() -> void:
 				display_pokemon(false)  # false = player
 				display_hand_cards_array(player_hand, $player_hand_hbox_container, card_scales[11])
 				match_just_started_basic_pokemon_required = false
+				$card_action_button.position.x -= 210 
 				
 				# After active pokemon is set, start the bench setup phase
 				start_bench_setup_phase()
@@ -1570,6 +1584,8 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 	# If we were in bench setup phase, end it and draw prize cards
 	if bench_setup_phase_active:
 		bench_setup_phase_active = false
+		$cancel_selection_mode_view_button.text = "Cancel"
+		$cancel_selection_mode_view_button.theme = load("res://uiresources/kenneyUI-red.tres")
 		draw_prize_cards(true)
 	
 	display_main_components_hide_selection_mode()
