@@ -10,7 +10,16 @@ var metadata: Dictionary
 var attached_energies: Array = []
 var current_location: String = "deck"  # "hand", "deck", "bench", "discard", etc.
 
+# self metadata addition to track hp damage
+var current_hp: int = 0
+
 # Constructor - initialize the card with a UID and load its metadata
 func _init(card_uid: String, card_metadata: Dictionary) -> void:
 	uid = card_uid
 	metadata = card_metadata
+	
+	# Initialize current HP to max HP (from metadata)
+	if metadata.has("hp"):
+		current_hp = int(metadata["hp"])
+	else:
+		current_hp = 0

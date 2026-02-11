@@ -19,20 +19,56 @@ script = ExtResource("1_c6k6o")
 
 [node name="match_background" type="TextureRect" parent="."]
 layout_mode = 0
-offset_left = -41.0
-offset_right = 1961.0
-offset_bottom = 1127.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_left = 1.0
+offset_top = 2.0
+offset_right = 1921.0
+offset_bottom = 1082.0
 texture = ExtResource("2_1cpm0")
+
+[node name="main_screen_buttons_container" type="HBoxContainer" parent="."]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 0
+offset_left = 107.0
+offset_top = 961.0
+offset_right = 2007.0
+offset_bottom = 1033.0
+theme_override_constants/separation = 100
+
+[node name="button_main_attack" type="Button" parent="main_screen_buttons_container"]
+custom_minimum_size = Vector2(350, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("5_1cpm0")
+text = "ATTACK"
+
+[node name="button_main_power" type="Button" parent="main_screen_buttons_container"]
+custom_minimum_size = Vector2(350, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("5_1cpm0")
+text = "POWER"
+
+[node name="button_main_retreat" type="Button" parent="main_screen_buttons_container"]
+custom_minimum_size = Vector2(350, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("5_1cpm0")
+text = "RETREAT"
+
+[node name="button_main_endturn" type="Button" parent="main_screen_buttons_container"]
+custom_minimum_size = Vector2(350, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("5_1cpm0")
+text = "END TURN"
 
 [node name="player_hand_hbox_container" type="HBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_top = 10.0
-offset_bottom = 10.0
+offset_top = 16.0
+offset_bottom = 16.0
 grow_horizontal = 2
 theme_override_constants/separation = 3
 alignment = 1
@@ -43,13 +79,14 @@ anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -70.0
-offset_top = 190.0
+offset_top = 184.0
 offset_right = -30.0
-offset_bottom = 230.0
+offset_bottom = 224.0
 grow_horizontal = 0
 theme_override_constants/separation = -20
 
 [node name="cancel_selection_mode_view_button" type="Button" parent="."]
+visible = false
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -57,9 +94,9 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = 35.0
-offset_top = -100.0
+offset_top = -124.0
 offset_right = 473.0
-offset_bottom = -20.0
+offset_bottom = -44.0
 grow_horizontal = 2
 grow_vertical = 0
 size_flags_vertical = 8
@@ -67,6 +104,7 @@ theme = ExtResource("2_6pfim")
 text = "CANCEL"
 
 [node name="card_action_button" type="Button" parent="."]
+visible = false
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -74,9 +112,9 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -219.0
-offset_top = -100.0
+offset_top = -124.0
 offset_right = 219.0
-offset_bottom = -20.0
+offset_bottom = -44.0
 grow_horizontal = 2
 grow_vertical = 0
 theme = ExtResource("3_x7i8m")
@@ -118,6 +156,13 @@ vertical_scroll_mode = 0
 layout_mode = 2
 alignment = 1
 
+[node name="player_active_pokemon_container" type="Control" parent="."]
+anchors_preset = 0
+offset_left = 525.0
+offset_top = 259.0
+offset_right = 914.0
+offset_bottom = 779.0
+
 [node name="player_active_pokemon_energies" type="HBoxContainer" parent="."]
 layout_mode = 0
 offset_left = 394.0
@@ -127,50 +172,123 @@ offset_bottom = 332.0
 theme_override_constants/separation = -16
 alignment = 2
 
-[node name="player_active_pokemon_container" type="Control" parent="."]
-anchors_preset = 0
-offset_left = 525.0
-offset_top = 272.0
-offset_right = 914.0
-offset_bottom = 792.0
-
 [node name="opponent_active_pokemon_container" type="Control" parent="."]
 anchors_preset = 0
 offset_left = 986.0
-offset_top = 271.0
+offset_top = 259.0
 offset_right = 1412.0
-offset_bottom = 848.0
+offset_bottom = 836.0
+
+[node name="opponent_active_pokemon_energies" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 1495.0
+offset_top = 430.0
+offset_right = 1880.0
+offset_bottom = 584.0
+
+[node name="player_bench_cards_label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 142.0
+offset_top = 573.0
+offset_right = 363.0
+offset_bottom = 606.0
+theme = ExtResource("5_1cpm0")
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_shadow_color = Color(0.434353, 0.7908705, 1.523, 1)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 1
+theme_override_constants/shadow_outline_size = 3
+theme_override_font_sizes/font_size = 23
+theme_override_styles/normal = SubResource("StyleBoxLine_1cpm0")
+text = "BENCH"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="player_bench_container" type="HBoxContainer" parent="."]
 layout_mode = 0
-offset_left = 4.0
-offset_top = 640.0
-offset_right = 459.0
-offset_bottom = 813.0
-theme_override_constants/separation = 1
+offset_left = 9.0
+offset_top = 611.0
+offset_right = 464.0
+offset_bottom = 784.0
+theme_override_constants/separation = 4
+
+[node name="opponent_bench_cards_label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 1569.0
+offset_top = 573.0
+offset_right = 1790.0
+offset_bottom = 606.0
+theme = ExtResource("5_1cpm0")
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_shadow_color = Color(0.434353, 0.7908705, 1.523, 1)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 1
+theme_override_constants/shadow_outline_size = 3
+theme_override_font_sizes/font_size = 23
+theme_override_styles/normal = SubResource("StyleBoxLine_1cpm0")
+text = "BENCH"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="opponent_bench_container" type="HBoxContainer" parent="."]
 layout_mode = 0
 offset_left = 1411.0
-offset_top = 640.0
+offset_top = 611.0
 offset_right = 1866.0
-offset_bottom = 813.0
-theme_override_constants/separation = 1
+offset_bottom = 784.0
+theme_override_constants/separation = 4
+
+[node name="player_prize_cards_label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 145.0
+offset_top = 762.0
+offset_right = 366.0
+offset_bottom = 795.0
+theme = ExtResource("5_1cpm0")
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_shadow_color = Color(0.434353, 0.7908705, 1.523, 1)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 1
+theme_override_constants/shadow_outline_size = 3
+theme_override_font_sizes/font_size = 23
+theme_override_styles/normal = SubResource("StyleBoxLine_1cpm0")
+text = "PRIZE CARDS"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="player_prize_cards_container" type="HBoxContainer" parent="."]
 layout_mode = 0
 offset_left = 8.0
-offset_top = 825.0
+offset_top = 799.0
 offset_right = 303.0
-offset_bottom = 916.0
-theme_override_constants/separation = 0
+offset_bottom = 890.0
+theme_override_constants/separation = 2
+
+[node name="opponent_prize_cards_label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 1571.0
+offset_top = 762.0
+offset_right = 1792.0
+offset_bottom = 795.0
+theme = ExtResource("5_1cpm0")
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_shadow_color = Color(0.434353, 0.7908705, 1.523, 1)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 1
+theme_override_constants/shadow_outline_size = 3
+theme_override_font_sizes/font_size = 23
+theme_override_styles/normal = SubResource("StyleBoxLine_1cpm0")
+text = "PRIZE CARDS"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="opponent_prize_cards_container" type="HBoxContainer" parent="."]
 layout_mode = 0
 offset_left = 1401.0
-offset_top = 826.0
+offset_top = 799.0
 offset_right = 1696.0
-offset_bottom = 917.0
+offset_bottom = 890.0
+theme_override_constants/separation = 2
 alignment = 2
 
 [node name="large_header_text_label" type="Label" parent="."]
@@ -206,81 +324,18 @@ theme_override_font_sizes/font_size = 41
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="player_prize_cards_label" type="Label" parent="."]
+[node name="player_active_pokemon_hp_container" type="GridContainer" parent="."]
 layout_mode = 0
-offset_left = 145.0
-offset_top = 791.0
-offset_right = 366.0
-offset_bottom = 824.0
-theme = ExtResource("5_1cpm0")
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_colors/font_shadow_color = Color(0.434353, 0.7908705, 1.523, 1)
-theme_override_constants/shadow_offset_x = 2
-theme_override_constants/shadow_offset_y = 1
-theme_override_constants/shadow_outline_size = 3
-theme_override_font_sizes/font_size = 23
-theme_override_styles/normal = SubResource("StyleBoxLine_1cpm0")
-text = "PRIZE CARDS"
-horizontal_alignment = 1
-vertical_alignment = 1
+offset_left = 525.0
+offset_top = 183.0
+offset_right = 971.0
+offset_bottom = 369.0
+columns = 12
 
-[node name="opponent_prize_cards_label" type="Label" parent="."]
+[node name="opponent_active_pokemon_hp_container" type="GridContainer" parent="."]
 layout_mode = 0
-offset_left = 1571.0
-offset_top = 791.0
-offset_right = 1792.0
-offset_bottom = 824.0
-theme = ExtResource("5_1cpm0")
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_colors/font_shadow_color = Color(0.434353, 0.7908705, 1.523, 1)
-theme_override_constants/shadow_offset_x = 2
-theme_override_constants/shadow_offset_y = 1
-theme_override_constants/shadow_outline_size = 3
-theme_override_font_sizes/font_size = 23
-theme_override_styles/normal = SubResource("StyleBoxLine_1cpm0")
-text = "PRIZE CARDS"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="player_bench_cards_label" type="Label" parent="."]
-layout_mode = 0
-offset_left = 142.0
-offset_top = 605.0
-offset_right = 363.0
-offset_bottom = 638.0
-theme = ExtResource("5_1cpm0")
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_colors/font_shadow_color = Color(0.434353, 0.7908705, 1.523, 1)
-theme_override_constants/shadow_offset_x = 2
-theme_override_constants/shadow_offset_y = 1
-theme_override_constants/shadow_outline_size = 3
-theme_override_font_sizes/font_size = 23
-theme_override_styles/normal = SubResource("StyleBoxLine_1cpm0")
-text = "BENCH"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="opponent_bench_cards_label" type="Label" parent="."]
-layout_mode = 0
-offset_left = 1569.0
-offset_top = 605.0
-offset_right = 1790.0
-offset_bottom = 638.0
-theme = ExtResource("5_1cpm0")
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_colors/font_shadow_color = Color(0.434353, 0.7908705, 1.523, 1)
-theme_override_constants/shadow_offset_x = 2
-theme_override_constants/shadow_offset_y = 1
-theme_override_constants/shadow_outline_size = 3
-theme_override_font_sizes/font_size = 23
-theme_override_styles/normal = SubResource("StyleBoxLine_1cpm0")
-text = "BENCH"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="opponent_active_pokemon_energies" type="HBoxContainer" parent="."]
-layout_mode = 0
-offset_left = 1495.0
-offset_top = 430.0
-offset_right = 1880.0
-offset_bottom = 584.0
+offset_left = 987.0
+offset_top = 183.0
+offset_right = 1433.0
+offset_bottom = 369.0
+columns = 12

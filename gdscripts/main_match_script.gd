@@ -162,7 +162,6 @@ func show_enlarged_array(card_array: Array) -> void:
 
 # Displays both the player and opponents hand cards. Shows players at the top of screen and opponents in top right smaller.
 # Modify display_hand_cards_array to track the card index and style the active Pokemon differently
-
 func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2):
 	
 	# Load the script that displays card images
@@ -208,8 +207,7 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2):
 			hand_card_to_display.size_flags_vertical = Control.SIZE_SHRINK_END
 		else:
 			hand_card_to_display.size_flags_vertical = Control.SIZE_SHRINK_END
-			
-			
+						
 # Display active and bench pokemon for either player or opponent
 # is_opponent: true for opponent, false for player
 func display_pokemon(is_opponent: bool) -> void:
@@ -244,6 +242,9 @@ func display_pokemon(is_opponent: bool) -> void:
 			bench_container.add_child(bench_card_display)
 			bench_card_display.load_card_image(bench_pokemon.uid, card_scales[11], bench_pokemon)
 			bench_card_display.card_clicked.connect(this_card_clicked)
+			
+	# Display HP circles for active Pokemon
+	display_hp_circles_above_align(active_pokemon, is_opponent)
 
 # Both the cancel button and action button will hide selection mode so function is vaguely named for both actions
 func display_main_components_hide_selection_mode() -> void:
@@ -414,7 +415,174 @@ func display_active_pokemon_energies() -> void:
 		
 		# Display energy cards smaller than the Pokemon (use card_scales[10])
 		energy_display.load_card_image(attached_energy.uid, card_scales[11], attached_energy)
+
+# Display both player's active pokemon HP
+func display_hp_circles_complex_align(active_pokemon: card_object, is_opponent: bool) -> void:
+	var hp_container = $opponent_active_pokemon_hp_container if is_opponent else $player_active_pokemon_hp_container
+	
+	# Clear existing circles
+	for child in hp_container.get_children():
+		child.queue_free()
+	
+	# Set grid to 12 columns
+	hp_container.columns = 12
+	
+	# If no active pokemon or no HP, return early
+	if active_pokemon == null or not active_pokemon.metadata.has("hp"):
+		return
+	
+	# Calculate total circles needed
+	var total_circles = int(active_pokemon.metadata["hp"]) / 10
+	var circles_per_row = 12
+	
+	# Process each row
+	var circles_added = 0
+	while circles_added < total_circles:
+		var circles_in_this_row = min(circles_per_row, total_circles - circles_added)
 		
+		# For player: add spacers before the circles in this row
+		if not is_opponent:
+			var spacers_needed = circles_per_row - circles_in_this_row
+			for _i in range(spacers_needed):
+				var spacer = Control.new()
+				spacer.custom_minimum_size = Vector2(30, 30)
+				hp_container.add_child(spacer)
+		
+		# Add circles for this row
+		for _i in range(circles_in_this_row):
+			var circle = ColorRect.new()
+			circle.custom_minimum_size = Vector2(30, 30)
+			circle.color = Color.GREEN
+			hp_container.add_child(circle)
+		
+		circles_added += circles_in_this_row
+
+func display_hp_circles_central_align(active_pokemon: card_object, is_opponent: bool) -> void:
+	var hp_container = $opponent_active_pokemon_hp_container if is_opponent else $player_active_pokemon_hp_container
+	
+	# Clear existing circles
+	for child in hp_container.get_children():
+		child.queue_free()
+	
+	# Set grid to 12 columns
+	hp_container.columns = 12
+	
+	# If no active pokemon or no HP, return early
+	if active_pokemon == null or not active_pokemon.metadata.has("hp"):
+		return
+	
+	# Calculate total circles needed
+	var total_circles = int(active_pokemon.metadata["hp"]) / 10
+	var circles_per_row = 12
+	
+	# Process each row
+	var circles_added = 0
+	while circles_added < total_circles:
+		var circles_in_this_row = min(circles_per_row, total_circles - circles_added)
+		var spacers_needed = circles_per_row - circles_in_this_row
+		var spacers_left = spacers_needed / 2
+		var spacers_right = spacers_needed - spacers_left
+		
+		# Add spacers on the left
+		for _i in range(spacers_left):
+			var spacer = Control.new()
+			spacer.custom_minimum_size = Vector2(30, 30)
+			hp_container.add_child(spacer)
+		
+		# Add circles for this row
+		for _i in range(circles_in_this_row):
+			var circle = ColorRect.new()
+			circle.custom_minimum_size = Vector2(30, 30)
+			circle.color = Color.GREEN
+			hp_container.add_child(circle)
+		
+		# Add spacers on the right
+		for _i in range(spacers_right):
+			var spacer = Control.new()
+			spacer.custom_minimum_size = Vector2(20, 20)
+			hp_container.add_child(spacer)
+		
+		circles_added += circles_in_this_row
+	
+func display_hp_circles_above_align(active_pokemon: card_object, is_opponent: bool) -> void:
+	var hp_grid_container = $opponent_active_pokemon_hp_container if is_opponent else $player_active_pokemon_hp_container
+	
+	# Clear existing circles
+	for child in hp_grid_container.get_children():
+		child.queue_free()
+	
+	# Set grid to 12 columns
+	hp_grid_container.columns = 12
+	
+	# If no active pokemon or no HP, return early
+	if active_pokemon == null or not active_pokemon.metadata.has("hp"):
+		return
+	
+	# Calculate total circles needed
+	var total_circles = int(active_pokemon.metadata["hp"]) / 10
+	var circles_per_row = 12
+	var max_circles = 24  # 240 HP / 10
+	
+	# Calculate how many circles go in top row vs bottom row
+	var bottom_row_circles = min(total_circles, circles_per_row)
+	var top_row_circles = max(0, total_circles - circles_per_row)
+	
+	# Calculate spacers needed
+	var top_row_spacers = circles_per_row - top_row_circles
+	var bottom_row_spacers = circles_per_row - bottom_row_circles
+	
+	# Add top row
+	if is_opponent:
+		# Opponent: circles first, then spacers
+		for _i in range(top_row_circles):
+			var circle = ColorRect.new()
+			circle.custom_minimum_size = Vector2(30, 30)
+			circle.color = Color.GREEN
+			hp_grid_container.add_child(circle)
+		
+		for _i in range(top_row_spacers):
+			var spacer = Control.new()
+			spacer.custom_minimum_size = Vector2(30, 30)
+			hp_grid_container.add_child(spacer)
+	else:
+		# Player: spacers first, then circles
+		for _i in range(top_row_spacers):
+			var spacer = Control.new()
+			spacer.custom_minimum_size = Vector2(30, 30)
+			hp_grid_container.add_child(spacer)
+		
+		for _i in range(top_row_circles):
+			var circle = ColorRect.new()
+			circle.custom_minimum_size = Vector2(30, 30)
+			circle.color = Color.GREEN
+			hp_grid_container.add_child(circle)
+	
+	# Add bottom row
+	if is_opponent:
+		# Opponent: circles first, then spacers
+		for _i in range(bottom_row_circles):
+			var circle = ColorRect.new()
+			circle.custom_minimum_size = Vector2(30, 30)
+			circle.color = Color.GREEN
+			hp_grid_container.add_child(circle)
+		
+		for _i in range(bottom_row_spacers):
+			var spacer = Control.new()
+			spacer.custom_minimum_size = Vector2(30, 30)
+			hp_grid_container.add_child(spacer)
+	else:
+		# Player: spacers first, then circles
+		for _i in range(bottom_row_spacers):
+			var spacer = Control.new()
+			spacer.custom_minimum_size = Vector2(30, 30)
+			hp_grid_container.add_child(spacer)
+		
+		for _i in range(bottom_row_circles):
+			var circle = ColorRect.new()
+			circle.custom_minimum_size = Vector2(30, 30)
+			circle.color = Color.GREEN
+			hp_grid_container.add_child(circle)
+
 ############################################################### END DISPLAY FUNCTIONS ################################################################
 ######################################################################################################################################################
 
