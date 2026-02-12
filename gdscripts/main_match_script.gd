@@ -98,6 +98,15 @@ func show_enlarged_array(card_array: Array) -> void:
 	$player_active_pokemon_container.visible = false
 	$opponent_active_pokemon_container.visible = false
 	
+	$player_active_pokemon_container.mouse_filter = MOUSE_FILTER_IGNORE
+	$opponent_active_pokemon_container.mouse_filter = MOUSE_FILTER_IGNORE
+	
+	$player_active_pokemon_energies.visible = false
+	$opponent_active_pokemon_energies.visible = false
+	
+	$player_active_pokemon_hp_container.visible = false
+	$opponent_active_pokemon_hp_container.visible = false
+	
 	$player_bench_container.visible = false
 	$opponent_bench_container.visible = false
 	
@@ -110,15 +119,13 @@ func show_enlarged_array(card_array: Array) -> void:
 	$opponent_prize_cards_container.visible = false
 	$player_prize_cards_container.visible = false
 	
-	$player_active_pokemon_container.mouse_filter = MOUSE_FILTER_IGNORE
-	$opponent_active_pokemon_container.mouse_filter = MOUSE_FILTER_IGNORE
 	
-	$player_active_pokemon_energies.visible = false
-	$opponent_active_pokemon_energies.visible = false
 	
 	# We do however want to show the header and hint labels
 	$small_hint_info_text_label.visible = true
 	$large_header_text_label.visible = true
+	
+	$main_screen_buttons_container.visible = false
 	
 	for card in $player_active_pokemon_container.get_children():
 		card.mouse_filter = MOUSE_FILTER_IGNORE
@@ -278,6 +285,11 @@ func display_main_components_hide_selection_mode() -> void:
 	
 	$player_active_pokemon_energies.visible = true
 	$opponent_active_pokemon_energies.visible = true
+	
+	$player_active_pokemon_hp_container.visible = true
+	$opponent_active_pokemon_hp_container.visible = true
+	
+	$main_screen_buttons_container.visible = true
 	
 	# Show the player and oppoents bench
 	$player_bench_container.visible = true

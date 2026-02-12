@@ -26,6 +26,7 @@ offset_bottom = 1082.0
 texture = ExtResource("2_1cpm0")
 
 [node name="main_screen_buttons_container" type="HBoxContainer" parent="."]
+visible = false
 custom_minimum_size = Vector2(280, 0)
 layout_mode = 0
 offset_left = 107.0
@@ -57,6 +58,57 @@ text = "RETREAT"
 
 [node name="button_main_endturn" type="Button" parent="main_screen_buttons_container"]
 custom_minimum_size = Vector2(350, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("5_1cpm0")
+text = "END TURN"
+
+[node name="main_screen_attack_buttons_container" type="HBoxContainer" parent="."]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 0
+offset_left = 107.0
+offset_top = 961.0
+offset_right = 2707.0
+offset_bottom = 1033.0
+theme_override_constants/separation = 72
+
+[node name="button_attack_1" type="Button" parent="main_screen_attack_buttons_container"]
+custom_minimum_size = Vector2(250, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("5_1cpm0")
+text = "ATTACK"
+
+[node name="button_attack_2" type="Button" parent="main_screen_attack_buttons_container"]
+custom_minimum_size = Vector2(250, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("5_1cpm0")
+text = "POWER"
+
+[node name="button_attack_3" type="Button" parent="main_screen_attack_buttons_container"]
+custom_minimum_size = Vector2(250, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("5_1cpm0")
+text = "RETREAT"
+
+[node name="button_attack_4" type="Button" parent="main_screen_attack_buttons_container"]
+custom_minimum_size = Vector2(250, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("5_1cpm0")
+text = "END TURN"
+
+[node name="button_attack_5" type="Button" parent="main_screen_attack_buttons_container"]
+custom_minimum_size = Vector2(250, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("5_1cpm0")
+text = "END TURN"
+
+[node name="button_attack_6" type="Button" parent="main_screen_attack_buttons_container"]
+custom_minimum_size = Vector2(250, 50)
 layout_mode = 2
 size_flags_horizontal = 0
 theme = ExtResource("5_1cpm0")
@@ -172,6 +224,14 @@ offset_bottom = 332.0
 theme_override_constants/separation = -16
 alignment = 2
 
+[node name="player_active_pokemon_hp_container" type="GridContainer" parent="."]
+layout_mode = 0
+offset_left = 525.0
+offset_top = 183.0
+offset_right = 971.0
+offset_bottom = 369.0
+columns = 12
+
 [node name="opponent_active_pokemon_container" type="Control" parent="."]
 anchors_preset = 0
 offset_left = 986.0
@@ -185,6 +245,14 @@ offset_left = 1495.0
 offset_top = 430.0
 offset_right = 1880.0
 offset_bottom = 584.0
+
+[node name="opponent_active_pokemon_hp_container" type="GridContainer" parent="."]
+layout_mode = 0
+offset_left = 987.0
+offset_top = 183.0
+offset_right = 1433.0
+offset_bottom = 369.0
+columns = 12
 
 [node name="player_bench_cards_label" type="Label" parent="."]
 layout_mode = 0
@@ -323,19 +391,3 @@ theme_override_constants/shadow_outline_size = 12
 theme_override_font_sizes/font_size = 41
 horizontal_alignment = 1
 vertical_alignment = 1
-
-[node name="player_active_pokemon_hp_container" type="GridContainer" parent="."]
-layout_mode = 0
-offset_left = 525.0
-offset_top = 183.0
-offset_right = 971.0
-offset_bottom = 369.0
-columns = 12
-
-[node name="opponent_active_pokemon_hp_container" type="GridContainer" parent="."]
-layout_mode = 0
-offset_left = 987.0
-offset_top = 183.0
-offset_right = 1433.0
-offset_bottom = 369.0
-columns = 12
