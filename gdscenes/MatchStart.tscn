@@ -26,7 +26,6 @@ offset_bottom = 1082.0
 texture = ExtResource("2_1cpm0")
 
 [node name="main_screen_buttons_container" type="HBoxContainer" parent="."]
-visible = false
 custom_minimum_size = Vector2(280, 0)
 layout_mode = 0
 offset_left = 107.0
@@ -68,51 +67,16 @@ custom_minimum_size = Vector2(280, 0)
 layout_mode = 0
 offset_left = 107.0
 offset_top = 961.0
-offset_right = 2707.0
+offset_right = 2007.0
 offset_bottom = 1033.0
-theme_override_constants/separation = 72
+theme_override_constants/separation = 100
 
-[node name="button_attack_1" type="Button" parent="main_screen_attack_buttons_container"]
-custom_minimum_size = Vector2(250, 50)
+[node name="cancel_attack_mode_button" type="Button" parent="main_screen_attack_buttons_container"]
+custom_minimum_size = Vector2(350, 72)
 layout_mode = 2
-size_flags_horizontal = 0
-theme = ExtResource("5_1cpm0")
-text = "ATTACK"
-
-[node name="button_attack_2" type="Button" parent="main_screen_attack_buttons_container"]
-custom_minimum_size = Vector2(250, 50)
-layout_mode = 2
-size_flags_horizontal = 0
-theme = ExtResource("5_1cpm0")
-text = "POWER"
-
-[node name="button_attack_3" type="Button" parent="main_screen_attack_buttons_container"]
-custom_minimum_size = Vector2(250, 50)
-layout_mode = 2
-size_flags_horizontal = 0
-theme = ExtResource("5_1cpm0")
-text = "RETREAT"
-
-[node name="button_attack_4" type="Button" parent="main_screen_attack_buttons_container"]
-custom_minimum_size = Vector2(250, 50)
-layout_mode = 2
-size_flags_horizontal = 0
-theme = ExtResource("5_1cpm0")
-text = "END TURN"
-
-[node name="button_attack_5" type="Button" parent="main_screen_attack_buttons_container"]
-custom_minimum_size = Vector2(250, 50)
-layout_mode = 2
-size_flags_horizontal = 0
-theme = ExtResource("5_1cpm0")
-text = "END TURN"
-
-[node name="button_attack_6" type="Button" parent="main_screen_attack_buttons_container"]
-custom_minimum_size = Vector2(250, 50)
-layout_mode = 2
-size_flags_horizontal = 0
-theme = ExtResource("5_1cpm0")
-text = "END TURN"
+size_flags_vertical = 8
+theme = ExtResource("2_6pfim")
+text = "CANCEL"
 
 [node name="player_hand_hbox_container" type="HBoxContainer" parent="."]
 layout_mode = 1

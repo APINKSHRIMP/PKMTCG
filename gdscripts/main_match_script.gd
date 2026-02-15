@@ -71,6 +71,99 @@ var card_scales: Dictionary = {
 ######################################################################################################################################################
 
 ######################################################################################################################################################
+############################################################# OLD / REPLACED FUNCTIONS ###############################################################
+
+func display_hp_circles_complex_align(active_pokemon: card_object, is_opponent: bool) -> void:
+	var hp_container = $opponent_active_pokemon_hp_container if is_opponent else $player_active_pokemon_hp_container
+	
+	# Clear existing circles
+	for child in hp_container.get_children():
+		child.queue_free()
+	
+	# Set grid to 12 columns
+	hp_container.columns = 12
+	
+	# If no active pokemon or no HP, return early
+	if active_pokemon == null or not active_pokemon.metadata.has("hp"):
+		return
+	
+	# Calculate total circles needed
+	var total_circles = int(active_pokemon.metadata["hp"]) / 10
+	var circles_per_row = 12
+	
+	# Process each row
+	var circles_added = 0
+	while circles_added < total_circles:
+		var circles_in_this_row = min(circles_per_row, total_circles - circles_added)
+		
+		# For player: add spacers before the circles in this row
+		if not is_opponent:
+			var spacers_needed = circles_per_row - circles_in_this_row
+			for _i in range(spacers_needed):
+				var spacer = Control.new()
+				spacer.custom_minimum_size = Vector2(30, 30)
+				hp_container.add_child(spacer)
+		
+		# Add circles for this row
+		for _i in range(circles_in_this_row):
+			var circle = ColorRect.new()
+			circle.custom_minimum_size = Vector2(30, 30)
+			circle.color = Color.GREEN
+			hp_container.add_child(circle)
+		
+		circles_added += circles_in_this_row
+
+func display_hp_circles_central_align(active_pokemon: card_object, is_opponent: bool) -> void:
+	var hp_container = $opponent_active_pokemon_hp_container if is_opponent else $player_active_pokemon_hp_container
+	
+	# Clear existing circles
+	for child in hp_container.get_children():
+		child.queue_free()
+	
+	# Set grid to 12 columns
+	hp_container.columns = 12
+	
+	# If no active pokemon or no HP, return early
+	if active_pokemon == null or not active_pokemon.metadata.has("hp"):
+		return
+	
+	# Calculate total circles needed
+	var total_circles = int(active_pokemon.metadata["hp"]) / 10
+	var circles_per_row = 12
+	
+	# Process each row
+	var circles_added = 0
+	while circles_added < total_circles:
+		var circles_in_this_row = min(circles_per_row, total_circles - circles_added)
+		var spacers_needed = circles_per_row - circles_in_this_row
+		var spacers_left = spacers_needed / 2
+		var spacers_right = spacers_needed - spacers_left
+		
+		# Add spacers on the left
+		for _i in range(spacers_left):
+			var spacer = Control.new()
+			spacer.custom_minimum_size = Vector2(30, 30)
+			hp_container.add_child(spacer)
+		
+		# Add circles for this row
+		for _i in range(circles_in_this_row):
+			var circle = ColorRect.new()
+			circle.custom_minimum_size = Vector2(30, 30)
+			circle.color = Color.GREEN
+			hp_container.add_child(circle)
+		
+		# Add spacers on the right
+		for _i in range(spacers_right):
+			var spacer = Control.new()
+			spacer.custom_minimum_size = Vector2(20, 20)
+			hp_container.add_child(spacer)
+		
+		circles_added += circles_in_this_row
+
+############################################################# OLD / REPLACED FUNCTIONS ###############################################################
+######################################################################################################################################################	
+
+######################################################################################################################################################
 ################################################################ START OF FUNCTIONS ##################################################################
 ######################################################################################################################################################
 
@@ -84,6 +177,10 @@ func show_enlarged_array(card_array: Array) -> void:
 	if card_array.size() == 0:
 		print("Cannot show enlarged array: array is empty")
 		return
+	
+	# Hide attack buttons if they are currently showing
+	if $main_screen_attack_buttons_container.visible:
+		hide_attack_buttons()
 	
 	# If we are showing an enlarged display then card selection mode is enabled.
 	card_selection_mode_enabled = true
@@ -428,172 +525,117 @@ func display_active_pokemon_energies() -> void:
 		# Display energy cards smaller than the Pokemon (use card_scales[10])
 		energy_display.load_card_image(attached_energy.uid, card_scales[11], attached_energy)
 
-# Display both player's active pokemon HP
-func display_hp_circles_complex_align(active_pokemon: card_object, is_opponent: bool) -> void:
-	var hp_container = $opponent_active_pokemon_hp_container if is_opponent else $player_active_pokemon_hp_container
-	
-	# Clear existing circles
-	for child in hp_container.get_children():
-		child.queue_free()
-	
-	# Set grid to 12 columns
-	hp_container.columns = 12
-	
-	# If no active pokemon or no HP, return early
-	if active_pokemon == null or not active_pokemon.metadata.has("hp"):
-		return
-	
-	# Calculate total circles needed
-	var total_circles = int(active_pokemon.metadata["hp"]) / 10
-	var circles_per_row = 12
-	
-	# Process each row
-	var circles_added = 0
-	while circles_added < total_circles:
-		var circles_in_this_row = min(circles_per_row, total_circles - circles_added)
-		
-		# For player: add spacers before the circles in this row
-		if not is_opponent:
-			var spacers_needed = circles_per_row - circles_in_this_row
-			for _i in range(spacers_needed):
-				var spacer = Control.new()
-				spacer.custom_minimum_size = Vector2(30, 30)
-				hp_container.add_child(spacer)
-		
-		# Add circles for this row
-		for _i in range(circles_in_this_row):
-			var circle = ColorRect.new()
-			circle.custom_minimum_size = Vector2(30, 30)
-			circle.color = Color.GREEN
-			hp_container.add_child(circle)
-		
-		circles_added += circles_in_this_row
-
-func display_hp_circles_central_align(active_pokemon: card_object, is_opponent: bool) -> void:
-	var hp_container = $opponent_active_pokemon_hp_container if is_opponent else $player_active_pokemon_hp_container
-	
-	# Clear existing circles
-	for child in hp_container.get_children():
-		child.queue_free()
-	
-	# Set grid to 12 columns
-	hp_container.columns = 12
-	
-	# If no active pokemon or no HP, return early
-	if active_pokemon == null or not active_pokemon.metadata.has("hp"):
-		return
-	
-	# Calculate total circles needed
-	var total_circles = int(active_pokemon.metadata["hp"]) / 10
-	var circles_per_row = 12
-	
-	# Process each row
-	var circles_added = 0
-	while circles_added < total_circles:
-		var circles_in_this_row = min(circles_per_row, total_circles - circles_added)
-		var spacers_needed = circles_per_row - circles_in_this_row
-		var spacers_left = spacers_needed / 2
-		var spacers_right = spacers_needed - spacers_left
-		
-		# Add spacers on the left
-		for _i in range(spacers_left):
-			var spacer = Control.new()
-			spacer.custom_minimum_size = Vector2(30, 30)
-			hp_container.add_child(spacer)
-		
-		# Add circles for this row
-		for _i in range(circles_in_this_row):
-			var circle = ColorRect.new()
-			circle.custom_minimum_size = Vector2(30, 30)
-			circle.color = Color.GREEN
-			hp_container.add_child(circle)
-		
-		# Add spacers on the right
-		for _i in range(spacers_right):
-			var spacer = Control.new()
-			spacer.custom_minimum_size = Vector2(20, 20)
-			hp_container.add_child(spacer)
-		
-		circles_added += circles_in_this_row
-	
+# Displays HP circles above the active pokemon, colouring red from damage taken
 func display_hp_circles_above_align(active_pokemon: card_object, is_opponent: bool) -> void:
 	var hp_grid_container = $opponent_active_pokemon_hp_container if is_opponent else $player_active_pokemon_hp_container
 	
-	# Clear existing circles
 	for child in hp_grid_container.get_children():
 		child.queue_free()
 	
-	# Set grid to 12 columns
 	hp_grid_container.columns = 12
 	
-	# If no active pokemon or no HP, return early
 	if active_pokemon == null or not active_pokemon.metadata.has("hp"):
 		return
 	
-	# Calculate total circles needed
-	var total_circles = int(active_pokemon.metadata["hp"]) / 10
-	var circles_per_row = 12
-	var max_circles = 24  # 240 HP / 10
+	var max_hp = int(active_pokemon.metadata["hp"])
+	var total_circles = max_hp / 10
+	var red_circles = (max_hp - active_pokemon.current_hp) / 10
 	
-	# Calculate how many circles go in top row vs bottom row
+	var circles_per_row = 12
 	var bottom_row_circles = min(total_circles, circles_per_row)
 	var top_row_circles = max(0, total_circles - circles_per_row)
-	
-	# Calculate spacers needed
 	var top_row_spacers = circles_per_row - top_row_circles
 	var bottom_row_spacers = circles_per_row - bottom_row_circles
 	
-	# Add top row
+	# Damage fills top row entirely first, remainder spills into bottom row
+	var top_red = min(red_circles, top_row_circles)
+	var bottom_red = red_circles - top_red
+	
 	if is_opponent:
-		# Opponent: circles first, then spacers
-		for _i in range(top_row_circles):
+		for i in range(top_row_circles):
 			var circle = ColorRect.new()
 			circle.custom_minimum_size = Vector2(30, 30)
-			circle.color = Color.GREEN
+			circle.color = Color.RED if i < top_red else Color.GREEN
 			hp_grid_container.add_child(circle)
-		
 		for _i in range(top_row_spacers):
 			var spacer = Control.new()
 			spacer.custom_minimum_size = Vector2(30, 30)
 			hp_grid_container.add_child(spacer)
 	else:
-		# Player: spacers first, then circles
 		for _i in range(top_row_spacers):
 			var spacer = Control.new()
 			spacer.custom_minimum_size = Vector2(30, 30)
 			hp_grid_container.add_child(spacer)
-		
-		for _i in range(top_row_circles):
+		for i in range(top_row_circles):
 			var circle = ColorRect.new()
 			circle.custom_minimum_size = Vector2(30, 30)
-			circle.color = Color.GREEN
+			circle.color = Color.RED if i < top_red else Color.GREEN
 			hp_grid_container.add_child(circle)
 	
-	# Add bottom row
 	if is_opponent:
-		# Opponent: circles first, then spacers
-		for _i in range(bottom_row_circles):
+		for i in range(bottom_row_circles):
 			var circle = ColorRect.new()
 			circle.custom_minimum_size = Vector2(30, 30)
-			circle.color = Color.GREEN
+			circle.color = Color.RED if i >= (bottom_row_circles - bottom_red) else Color.GREEN
 			hp_grid_container.add_child(circle)
-		
 		for _i in range(bottom_row_spacers):
 			var spacer = Control.new()
 			spacer.custom_minimum_size = Vector2(30, 30)
 			hp_grid_container.add_child(spacer)
 	else:
-		# Player: spacers first, then circles
 		for _i in range(bottom_row_spacers):
 			var spacer = Control.new()
 			spacer.custom_minimum_size = Vector2(30, 30)
 			hp_grid_container.add_child(spacer)
-		
-		for _i in range(bottom_row_circles):
+		for i in range(bottom_row_circles):
 			var circle = ColorRect.new()
 			circle.custom_minimum_size = Vector2(30, 30)
-			circle.color = Color.GREEN
+			circle.color = Color.RED if i < bottom_red else Color.GREEN
 			hp_grid_container.add_child(circle)
+
+# Hides the main action buttons and generates one attack button per attack the pokemon has
+func show_attack_buttons() -> void:
+	if player_active_pokemon == null:
+		return
+	
+	$main_screen_buttons_container.visible = false
+	$main_screen_attack_buttons_container.visible = true
+	
+	var attacks = get_attacks_for_card(player_active_pokemon)
+	
+	if attacks.size() == 0:
+		print("Active pokemon has no attacks")
+		return
+	
+	# Loop through each attack and generate a button for it
+	for i in range(attacks.size()):
+		var attack = attacks[i]
+		var btn = Button.new()
+		btn.text = attack.get("name", "Attack")
+		btn.custom_minimum_size = Vector2(350, 50)
+		$main_screen_attack_buttons_container.add_child(btn)
+		
+		# Enable and colour green if requirements met, disable and grey out if not
+		if check_attack_requirements(attack, player_active_pokemon):
+			btn.disabled = false
+			btn.theme = load("res://uiresources/kenneyUI-green.tres")
+		else:
+			btn.disabled = true
+			btn.theme = load("res://uiresources/kenneyUI.tres")
+		
+		# bind(i) locks the current index into the callable so each button calls with its own attack index
+		btn.pressed.connect(perform_attack.bind(i))
+
+# Clears generated attack buttons and restores the main action buttons
+func hide_attack_buttons() -> void:
+	for child in $main_screen_attack_buttons_container.get_children():
+		# Skip the cancel button — it's a permanent node, not dynamically generated
+		if child.name == "cancel_attack_mode_button":
+			continue
+		child.queue_free()
+	
+	$main_screen_attack_buttons_container.visible = false
+	$main_screen_buttons_container.visible = true
 
 ############################################################### END DISPLAY FUNCTIONS ################################################################
 ######################################################################################################################################################
@@ -1183,7 +1225,114 @@ func perform_energy_attachment() -> void:
 	
 	# Display the attached energies on the active Pokemon
 	display_active_pokemon_energies()
+
+# Returns the attacks array for any given card object.
+func get_attacks_for_card(card: card_object) -> Array:
 	
+	# Guard against null being passed in (e.g. no active pokemon yet)
+	if card == null:
+		return []
+	
+	# Get the attacks if they exist
+	var attacks = card.metadata.get("attacks", [])
+	
+	return attacks
+
+# Read an energy card passed to this function and return what energies this card actually provides.
+func get_energy_provided_by_card(energy_card: card_object) -> Array:
+	if energy_card == null:
+		return []
+	
+	var supertype = energy_card.metadata.get("supertype", "").to_lower()
+	if supertype != "energy":
+		return []
+	
+	var subtypes = energy_card.metadata.get("subtypes", [])
+	var card_name = energy_card.metadata.get("name", "")
+	
+	# Basic energy: strip " Energy" from name to get the type string
+	if "Basic" in subtypes:
+		var energy_type = card_name.replace(" Energy", "").strip_edges()
+		return [energy_type]
+	
+	# Special energy: explicit name-based lookup since JSON has no structured provision data
+	if "Special" in subtypes:
+		match card_name:
+			"Double Colorless Energy":
+				return ["Colorless", "Colorless"]
+			"Double Rainbow Energy":
+				return ["Any", "Any"]
+			_:
+				print("Warning: Unknown special energy card: ", card_name)
+				return []
+	
+	return []
+
+# Check energy requirements of any attack passed to it and return true if requirements are met
+func check_attack_requirements(attack_dict: Dictionary, pokemon_card: card_object) -> bool:
+	if pokemon_card == null:
+		return false
+	
+	var required_cost: Array = attack_dict.get("cost", [])
+	if required_cost.size() == 0:
+		return true
+	
+	# Resolve all attached energy cards into a flat pool of type strings
+	var pool: Array = []
+	for attached in pokemon_card.attached_energies:
+		pool.append_array(get_energy_provided_by_card(attached))
+	
+	# Pass 1: satisfy typed requirements first, protecting them from colorless consumption
+	for requirement in required_cost:
+		if requirement == "Colorless":
+			continue
+		var exact_index = pool.find(requirement)
+		if exact_index != -1:
+			pool.remove_at(exact_index)
+			continue
+		# Fall back to an "Any" token if no exact match
+		var any_index = pool.find("Any")
+		if any_index != -1:
+			pool.remove_at(any_index)
+			continue
+		return false
+	
+	# Pass 2: colorless requirements consume whatever tokens remain
+	for requirement in required_cost:
+		if requirement != "Colorless":
+			continue
+		if pool.size() == 0:
+			return false
+		pool.remove_at(0)
+	
+	return true
+
+# Applies damage from the chosen attack to the opponent's active pokemon and refreshes the HP display
+func perform_attack(attack_index: int) -> void:
+	if opponent_active_pokemon == null:
+		print("Error: No opponent active pokemon to attack")
+		return
+	
+	var attacks = get_attacks_for_card(player_active_pokemon)
+	var attack = attacks[attack_index]
+	
+	# Strip non-numeric characters from damage string e.g. "40+", "30x", "" -> 0
+	var raw_damage = attack.get("damage", "0")
+	var numeric_damage = ""
+	for character in raw_damage:
+		if character.is_valid_int():
+			numeric_damage += character
+	var damage = int(numeric_damage) if numeric_damage != "" else 0
+	
+	# Apply damage to opponent's current HP, clamped so it cannot go below zero
+	opponent_active_pokemon.current_hp = max(0, opponent_active_pokemon.current_hp - damage)
+	
+	print(player_active_pokemon.metadata["name"], " used ", attack.get("name", ""), " for ", damage, " damage!")
+	print(opponent_active_pokemon.metadata["name"], " HP remaining: ", opponent_active_pokemon.current_hp)
+	
+	# Refresh the opponent HP display then return to main buttons
+	display_hp_circles_above_align(opponent_active_pokemon, true)
+	hide_attack_buttons()		
 ########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
 ######################################################################################################################################################
 
@@ -1911,9 +2060,16 @@ func _ready() -> void:
 	$player_bench_container.gui_input.connect(player_bench_clicked_show_bench)
 	$opponent_bench_container.gui_input.connect(opponent_bench_clicked_show_bench)
 	
-	
 	$cancel_selection_mode_view_button.pressed.connect(cancel_button_pressed_hide_selection_mode)
 	$card_action_button.pressed.connect(action_button_pressed_perform_action)
+	$main_screen_attack_buttons_container/cancel_attack_mode_button.pressed.connect(hide_attack_buttons)
+	$main_screen_buttons_container/button_main_attack.pressed.connect(show_attack_buttons)
+	$main_screen_attack_buttons_container.visible = false
+	
+	$main_screen_buttons_container/button_main_attack.pressed.connect(show_attack_buttons)
+	$main_screen_attack_buttons_container/cancel_attack_mode_button.pressed.connect(hide_attack_buttons)
+	$main_screen_attack_buttons_container.visible = false
+
 	setup_player()
 	setup_opponent("testing1")
 	opponent_setup_pokemon_from_hand()
