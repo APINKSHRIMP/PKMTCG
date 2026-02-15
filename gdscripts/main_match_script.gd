@@ -39,6 +39,9 @@ var card_attach_mode_active: bool = false
 var large_header_text_label: Label
 var small_hint_info_text_label: Label
 
+#signaLS
+signal message_acknowledged
+
 # QUICK REFERENCE VECTORS JUST USED FOR EASY SWAPPING OF SIZES FOR DEVELOPMENT
 var card_scales: Dictionary = {
 	1: Vector2(450, 619),
@@ -637,6 +640,16 @@ func hide_attack_buttons() -> void:
 	$main_screen_attack_buttons_container.visible = false
 	$main_screen_buttons_container.visible = true
 
+# Displays the message box with given text and pauses execution until the player clicks
+func show_message(message_text: String) -> void:
+	$messagebox_container.visible = true
+	$messagebox_container/messagebox_text_label.text = message_text
+	
+	# Suspend this function here — engine keeps running until signal fires
+	await message_acknowledged
+	
+	$messagebox_container.visible = false
+	
 ############################################################### END DISPLAY FUNCTIONS ################################################################
 ######################################################################################################################################################
 
@@ -1330,9 +1343,13 @@ func perform_attack(attack_index: int) -> void:
 	print(player_active_pokemon.metadata["name"], " used ", attack.get("name", ""), " for ", damage, " damage!")
 	print(opponent_active_pokemon.metadata["name"], " HP remaining: ", opponent_active_pokemon.current_hp)
 	
+	
+	await show_message(("YOUR " + player_active_pokemon.metadata["name"] + " USED " + attack.get("name", "")).to_upper())
+		
 	# Refresh the opponent HP display then return to main buttons
 	display_hp_circles_above_align(opponent_active_pokemon, true)
 	hide_attack_buttons()		
+
 ########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
 ######################################################################################################################################################
 
@@ -2012,6 +2029,11 @@ func _input(event: InputEvent) -> void:
 			end_game()
 			
 	if event is InputEventMouseButton and event.pressed:
+		
+		if $messagebox_container.visible:
+			message_acknowledged.emit()
+			return
+		
 		var mouse_pos = get_global_mouse_position()
 		
 		# Check if click is on the cancel or action button - if so, ignore
