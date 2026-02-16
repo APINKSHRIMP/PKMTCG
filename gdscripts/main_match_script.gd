@@ -649,7 +649,8 @@ func show_message(message_text: String) -> void:
 	await message_acknowledged
 	
 	$messagebox_container.visible = false
-	
+
+
 ############################################################### END DISPLAY FUNCTIONS ################################################################
 ######################################################################################################################################################
 
@@ -1239,6 +1240,12 @@ func perform_energy_attachment() -> void:
 	# Display the attached energies on the active Pokemon
 	display_active_pokemon_energies()
 
+########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
+######################################################################################################################################################
+
+######################################################################################################################################################
+############################################################# ATTACK AND DAMAGE FUNCTIONS ############################################################
+
 # Returns the attacks array for any given card object.
 func get_attacks_for_card(card: card_object) -> Array:
 	
@@ -1329,28 +1336,51 @@ func perform_attack(attack_index: int) -> void:
 	var attacks = get_attacks_for_card(player_active_pokemon)
 	var attack = attacks[attack_index]
 	
-	# Strip non-numeric characters from damage string e.g. "40+", "30x", "" -> 0
 	var raw_damage = attack.get("damage", "0")
 	var numeric_damage = ""
 	for character in raw_damage:
 		if character.is_valid_int():
 			numeric_damage += character
-	var damage = int(numeric_damage) if numeric_damage != "" else 0
+	var base_damage = int(numeric_damage) if numeric_damage != "" else 0
 	
-	# Apply damage to opponent's current HP, clamped so it cannot go below zero
-	opponent_active_pokemon.current_hp = max(0, opponent_active_pokemon.current_hp - damage)
+	var attacking_types = player_active_pokemon.metadata.get("types", ["Colorless"])
+	var final_damage = calculate_final_damage(base_damage, attacking_types, opponent_active_pokemon)
 	
-	print(player_active_pokemon.metadata["name"], " used ", attack.get("name", ""), " for ", damage, " damage!")
-	print(opponent_active_pokemon.metadata["name"], " HP remaining: ", opponent_active_pokemon.current_hp)
+	opponent_active_pokemon.current_hp = max(0, opponent_active_pokemon.current_hp - final_damage)
+	
+	print(player_active_pokemon.metadata["name"] + " used " + attack.get("name", "") + " for " + str(final_damage) + " damage!")
+	print(opponent_active_pokemon.metadata["name"] + " HP remaining: " + str(opponent_active_pokemon.current_hp))
 	
 	
 	await show_message(("YOUR " + player_active_pokemon.metadata["name"] + " USED " + attack.get("name", "")).to_upper())
-		
-	# Refresh the opponent HP display then return to main buttons
+	
 	display_hp_circles_above_align(opponent_active_pokemon, true)
-	hide_attack_buttons()		
+	hide_attack_buttons()
+	
+# Returns final damage after applying weakness and resistance of the defending pokemon
+func calculate_final_damage(base_damage: int, attacking_types: Array, defending_pokemon: card_object) -> int:
+	var damage = base_damage
+	
+	for weakness in defending_pokemon.metadata.get("weaknesses", []):
+		if weakness["type"] in attacking_types:
+			
+			var value = weakness["value"]
+			if "×" in value:
+				var multiplier = int(value.replace("×", "").strip_edges())
+				damage = damage * multiplier
+			elif "+" in value:
+				damage = damage + int(value.replace("+", "").strip_edges())
+	
+	for resistance in defending_pokemon.metadata.get("resistances", []):
+		if resistance["type"] in attacking_types:
+			
+			var value = int(resistance["value"])
+			damage = max(0, damage + value)
+	
+	return damage
 
-########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
+
+########################################################## END ATTACK AND DAMAGE FUNCTIONS ###########################################################
 ######################################################################################################################################################
 
 ######################################################################################################################################################
@@ -1957,10 +1987,6 @@ func opponent_bench_clicked_show_bench(event: InputEvent) -> void:
 		show_enlarged_array(opponent_bench)
 
 # Called when a card in selection mode is clicked
-# Replace the this_card_clicked function with this updated version
-
-# Replace the this_card_clicked function with this updated version (with renamed variable)
-
 func this_card_clicked(clicked_card: card_object) -> void:
 	if card_selection_mode_enabled == true:
 		
