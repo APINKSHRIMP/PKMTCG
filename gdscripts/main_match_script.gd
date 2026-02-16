@@ -650,7 +650,28 @@ func show_message(message_text: String) -> void:
 	
 	$messagebox_container.visible = false
 
-
+# Creates a floating label at a given position that drifts upward and fades out over 2 seconds
+func show_floating_label(message: String, spawn_position: Vector2) -> void:
+	var label = Label.new()
+	label.text = message
+	label.position = spawn_position
+	label.modulate = Color(1, 1, 1, 1)
+	
+	# Apply kenney theme for the pixel font, then override colour and size
+	label.theme = load("res://uiresources/kenneyUI.tres")
+	label.add_theme_color_override("font_color", Color.BLACK)
+	label.add_theme_font_size_override("font_size", 32)
+	
+	add_child(label)
+	
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(label, "position:y", spawn_position.y - 150, 2.0)
+	tween.tween_property(label, "modulate:a", 0.0, 2.0)
+	
+	await tween.finished
+	label.queue_free()
+	
 ############################################################### END DISPLAY FUNCTIONS ################################################################
 ######################################################################################################################################################
 
@@ -1342,43 +1363,50 @@ func perform_attack(attack_index: int) -> void:
 		if character.is_valid_int():
 			numeric_damage += character
 	var base_damage = int(numeric_damage) if numeric_damage != "" else 0
+
+	await show_message((player_active_pokemon.metadata["name"] + " USED " + attack.get("name", "")).to_upper())
 	
 	var attacking_types = player_active_pokemon.metadata.get("types", ["Colorless"])
-	var final_damage = calculate_final_damage(base_damage, attacking_types, opponent_active_pokemon)
+	var result = calculate_final_damage(base_damage, attacking_types, opponent_active_pokemon)
+	var final_damage = result["damage"]
+
+	for modifier in result["modifiers"]:
+		show_floating_label(modifier, Vector2(1420, 250))
+
+	await get_tree().create_timer(0.5).timeout
+	show_floating_label("-"+str(final_damage) + "HP", Vector2(1420, 250))
 	
 	opponent_active_pokemon.current_hp = max(0, opponent_active_pokemon.current_hp - final_damage)
 	
 	print(player_active_pokemon.metadata["name"] + " used " + attack.get("name", "") + " for " + str(final_damage) + " damage!")
 	print(opponent_active_pokemon.metadata["name"] + " HP remaining: " + str(opponent_active_pokemon.current_hp))
 	
-	
-	await show_message(("YOUR " + player_active_pokemon.metadata["name"] + " USED " + attack.get("name", "")).to_upper())
-	
 	display_hp_circles_above_align(opponent_active_pokemon, true)
 	hide_attack_buttons()
 	
-# Returns final damage after applying weakness and resistance of the defending pokemon
-func calculate_final_damage(base_damage: int, attacking_types: Array, defending_pokemon: card_object) -> int:
+# Returns final damage and a list of modifiers applied, for display purposes
+func calculate_final_damage(base_damage: int, attacking_types: Array, defending_pokemon: card_object) -> Dictionary:
 	var damage = base_damage
+	var modifiers_applied = []
 	
 	for weakness in defending_pokemon.metadata.get("weaknesses", []):
 		if weakness["type"] in attacking_types:
-			
 			var value = weakness["value"]
 			if "×" in value:
 				var multiplier = int(value.replace("×", "").strip_edges())
 				damage = damage * multiplier
+				modifiers_applied.append("WEAKNESS " + value)
 			elif "+" in value:
 				damage = damage + int(value.replace("+", "").strip_edges())
+				modifiers_applied.append("WEAKNESS " + value)
 	
 	for resistance in defending_pokemon.metadata.get("resistances", []):
 		if resistance["type"] in attacking_types:
-			
 			var value = int(resistance["value"])
 			damage = max(0, damage + value)
+			modifiers_applied.append("RESISTANCE " + resistance["value"])
 	
-	return damage
-
+	return {"damage": damage, "modifiers": modifiers_applied}
 
 ########################################################## END ATTACK AND DAMAGE FUNCTIONS ###########################################################
 ######################################################################################################################################################
