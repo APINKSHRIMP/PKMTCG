@@ -37,6 +37,8 @@ var opponent_energy_played_this_turn: bool = false
 var energy_card_awaiting_target: card_object = null  # Stores the energy card while selecting its target
 var card_attach_mode_active: bool = false
 
+var opponents_turn_active: bool = false
+
 # UI VARIABLES
 var large_header_text_label: Label
 var small_hint_info_text_label: Label
@@ -568,6 +570,11 @@ func show_message(message_text: String) -> void:
 func show_floating_label(message: String, spawn_position: Vector2) -> void:
 	var label = Label.new()
 	label.text = message
+	
+	# uncomment these to make it centrally aligned instead of left aligned
+	#label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	#label.custom_minimum_size = Vector2(300, 0)
+	
 	label.position = spawn_position
 	label.modulate = Color(1, 1, 1, 1)
 	
@@ -611,6 +618,32 @@ func update_deck_icon(is_opponent: bool) -> void:
 	else:
 		image_path = "res://cardimages/cardbacksanddecks/cardbacksmall.png"
 	widget.texture = load(image_path)
+	
+# Enables or disables all main screen buttons based on current game state
+func update_main_screen_buttons() -> void:
+	var should_disable = (
+		match_just_started_basic_pokemon_required or
+		bench_setup_phase_active or
+		card_selection_mode_enabled or
+		opponents_turn_active or
+		card_attach_mode_active
+	)
+
+	if should_disable:
+		$main_screen_buttons_container/button_main_attack.theme = load("res://uiresources/kenneyUI.tres")
+		$main_screen_buttons_container/button_main_power.theme = load("res://uiresources/kenneyUI.tres")
+		$main_screen_buttons_container/button_main_retreat.theme = load("res://uiresources/kenneyUI.tres")
+		$main_screen_buttons_container/button_main_endturn.theme = load("res://uiresources/kenneyUI.tres")
+	else:
+		$main_screen_buttons_container/button_main_attack.theme = load("res://uiresources/kenneyUI-blue.tres")
+		$main_screen_buttons_container/button_main_power.theme = load("res://uiresources/kenneyUI-blue.tres")
+		$main_screen_buttons_container/button_main_retreat.theme = load("res://uiresources/kenneyUI-blue.tres")
+		$main_screen_buttons_container/button_main_endturn.theme = load("res://uiresources/kenneyUI-blue.tres")	
+				
+	$main_screen_buttons_container/button_main_attack.disabled = should_disable
+	$main_screen_buttons_container/button_main_power.disabled = should_disable
+	$main_screen_buttons_container/button_main_retreat.disabled = should_disable
+	$main_screen_buttons_container/button_main_endturn.disabled = should_disable	
 	
 ############################################################### END DISPLAY FUNCTIONS ################################################################
 ######################################################################################################################################################
@@ -1242,6 +1275,12 @@ func reset_field_pokemon_turn_flags(is_opponent: bool) -> void:
 
 # Called when the player presses the end turn button to reset per-turn variables and begin next turn
 func player_end_turn_checks() -> void:
+	opponents_turn_active = true
+	
+	update_main_screen_buttons()
+	show_floating_label("End turn", Vector2(800, 850))
+	
+	await get_tree().create_timer(1.5).timeout
 	player_energy_played_this_turn = false
 	reset_field_pokemon_turn_flags(false)
 	player_start_turn_checks()
@@ -1249,14 +1288,17 @@ func player_end_turn_checks() -> void:
 # Called at the start of the player's turn to perform mandatory actions
 func player_start_turn_checks() -> void:
 	var drawn_card = draw_card_from_deck(false)
-
+	
+	opponents_turn_active = false
+	update_main_screen_buttons()
+	
 	if drawn_card == null:
 		return
 
 	display_hand_cards_array(player_hand, $player_hand_hbox_container, card_scales[11])
 	update_deck_icon(false)
-
-
+	show_floating_label("Start turn", Vector2(800, 850))
+	
 ########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
 ######################################################################################################################################################
 
@@ -1380,6 +1422,8 @@ func perform_attack(attack_index: int) -> void:
 	
 	display_hp_circles_above_align(opponent_active_pokemon, true)
 	hide_attack_buttons()
+	
+	player_end_turn_checks()
 	
 # Returns final damage and a list of modifiers applied, for display purposes
 func calculate_final_damage(base_damage: int, attacking_types: Array, defending_pokemon: card_object) -> Dictionary:
