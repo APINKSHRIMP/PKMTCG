@@ -74,99 +74,6 @@ var card_scales: Dictionary = {
 ######################################################################################################################################################
 
 ######################################################################################################################################################
-############################################################# OLD / REPLACED FUNCTIONS ###############################################################
-
-func display_hp_circles_complex_align(active_pokemon: card_object, is_opponent: bool) -> void:
-	var hp_container = $opponent_active_pokemon_hp_container if is_opponent else $player_active_pokemon_hp_container
-	
-	# Clear existing circles
-	for child in hp_container.get_children():
-		child.queue_free()
-	
-	# Set grid to 12 columns
-	hp_container.columns = 12
-	
-	# If no active pokemon or no HP, return early
-	if active_pokemon == null or not active_pokemon.metadata.has("hp"):
-		return
-	
-	# Calculate total circles needed
-	var total_circles = int(active_pokemon.metadata["hp"]) / 10
-	var circles_per_row = 12
-	
-	# Process each row
-	var circles_added = 0
-	while circles_added < total_circles:
-		var circles_in_this_row = min(circles_per_row, total_circles - circles_added)
-		
-		# For player: add spacers before the circles in this row
-		if not is_opponent:
-			var spacers_needed = circles_per_row - circles_in_this_row
-			for _i in range(spacers_needed):
-				var spacer = Control.new()
-				spacer.custom_minimum_size = Vector2(30, 30)
-				hp_container.add_child(spacer)
-		
-		# Add circles for this row
-		for _i in range(circles_in_this_row):
-			var circle = ColorRect.new()
-			circle.custom_minimum_size = Vector2(30, 30)
-			circle.color = Color.GREEN
-			hp_container.add_child(circle)
-		
-		circles_added += circles_in_this_row
-
-func display_hp_circles_central_align(active_pokemon: card_object, is_opponent: bool) -> void:
-	var hp_container = $opponent_active_pokemon_hp_container if is_opponent else $player_active_pokemon_hp_container
-	
-	# Clear existing circles
-	for child in hp_container.get_children():
-		child.queue_free()
-	
-	# Set grid to 12 columns
-	hp_container.columns = 12
-	
-	# If no active pokemon or no HP, return early
-	if active_pokemon == null or not active_pokemon.metadata.has("hp"):
-		return
-	
-	# Calculate total circles needed
-	var total_circles = int(active_pokemon.metadata["hp"]) / 10
-	var circles_per_row = 12
-	
-	# Process each row
-	var circles_added = 0
-	while circles_added < total_circles:
-		var circles_in_this_row = min(circles_per_row, total_circles - circles_added)
-		var spacers_needed = circles_per_row - circles_in_this_row
-		var spacers_left = spacers_needed / 2
-		var spacers_right = spacers_needed - spacers_left
-		
-		# Add spacers on the left
-		for _i in range(spacers_left):
-			var spacer = Control.new()
-			spacer.custom_minimum_size = Vector2(30, 30)
-			hp_container.add_child(spacer)
-		
-		# Add circles for this row
-		for _i in range(circles_in_this_row):
-			var circle = ColorRect.new()
-			circle.custom_minimum_size = Vector2(30, 30)
-			circle.color = Color.GREEN
-			hp_container.add_child(circle)
-		
-		# Add spacers on the right
-		for _i in range(spacers_right):
-			var spacer = Control.new()
-			spacer.custom_minimum_size = Vector2(20, 20)
-			hp_container.add_child(spacer)
-		
-		circles_added += circles_in_this_row
-
-############################################################# OLD / REPLACED FUNCTIONS ###############################################################
-######################################################################################################################################################	
-
-######################################################################################################################################################
 ################################################################ START OF FUNCTIONS ##################################################################
 ######################################################################################################################################################
 
@@ -174,7 +81,7 @@ func display_hp_circles_central_align(active_pokemon: card_object, is_opponent: 
 ################################################################# DISPLAY FUNCTIONS ##################################################################
 
 # Main reusable function to display any array passed in a LARGE viewing mode, hide everything else on the screen and allows selection of cards for action
-func show_enlarged_array(card_array: Array) -> void:
+func show_enlarged_array_selection_mode(card_array: Array) -> void:
 	
 	# Prevent showing empty arrays
 	if card_array.size() == 0:
@@ -219,7 +126,8 @@ func show_enlarged_array(card_array: Array) -> void:
 	$opponent_prize_cards_container.visible = false
 	$player_prize_cards_container.visible = false
 	
-	
+	$player_deck_icon.visible = false
+	$opponent_deck_icon.visible = false
 	
 	# We do however want to show the header and hint labels
 	$small_hint_info_text_label.visible = true
@@ -267,94 +175,8 @@ func show_enlarged_array(card_array: Array) -> void:
 		# Now display the passed through card array to the selection mode container in large pixel format
 		display_hand_cards_array(card_array, $small_selection_mode_container, card_scales[amount_of_cards_to_show])
 
-# Displays both the player and opponents hand cards. Shows players at the top of screen and opponents in top right smaller.
-# Modify display_hand_cards_array to track the card index and style the active Pokemon differently
-func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2):
-	
-	# Load the script that displays card images
-	var card_display_script = load("res://gdscripts/cardimage.gd")
-	
-	# Clear existing cards from container to prevent stale entries when cards leave or enter the hand
-	for child in hand_container.get_children():
-		child.queue_free()
-	
-	# Draw all cards in the hand
-	for index in range(hand.size()):
-		var this_card_in_hand = hand[index]
-		var hand_card_to_display = TextureRect.new()
-		
-		# Attach the loading of the card image script to the newly generated card
-		hand_card_to_display.set_script(card_display_script)
-		
-		# Add the newly generated card to the hand container
-		hand_container.add_child(hand_card_to_display)
-		
-		# Load the card image with pixel sizes for hand cards
-		hand_card_to_display.load_card_image(this_card_in_hand.uid, card_size, this_card_in_hand)
-		
-		# Connect this card's signal to the main script's handler
-		hand_card_to_display.card_clicked.connect(this_card_clicked)
-		
-		# Replace the visual distinction block in display_hand_cards_array():
-
-		# If this is the active Pokemon (last card in attach mode), add visual distinction
-		if card_attach_mode_active and index == hand.size() - 1:
-			# Add large spacer BEFORE the active Pokemon to separate it from bench
-			var spacer = Control.new()
-			spacer.custom_minimum_size = Vector2(25, 0)
-			spacer.mouse_filter = MOUSE_FILTER_IGNORE
-			hand_container.add_child(spacer)
-			hand_container.move_child(spacer, hand_container.get_child_count() - 2)  # Move to second-to-last position
-			
-			# Make the active Pokemon noticeably larger by reloading with bigger card_size
-			var larger_size = Vector2(card_size.x * 1.2, card_size.y * 1.2)
-			hand_card_to_display.load_card_image(this_card_in_hand.uid, larger_size, this_card_in_hand)
-			
-			# Align to bottom
-			hand_card_to_display.size_flags_vertical = Control.SIZE_SHRINK_END
-		else:
-			hand_card_to_display.size_flags_vertical = Control.SIZE_SHRINK_END
-						
-# Display active and bench pokemon for either player or opponent
-# is_opponent: true for opponent, false for player
-func display_pokemon(is_opponent: bool) -> void:
-	var active_pokemon = opponent_active_pokemon if is_opponent else player_active_pokemon
-	var bench_pokemon_array = opponent_bench if is_opponent else player_bench
-	var active_container = $opponent_active_pokemon_container if is_opponent else $player_active_pokemon_container
-	var bench_container = $opponent_bench_container if is_opponent else $player_bench_container
-	
-	# Clear active pokemon container
-	for child in active_container.get_children():
-		child.queue_free()
-	
-	# Display active pokemon if exists
-	if active_pokemon != null:
-		var card_display_script = load("res://gdscripts/cardimage.gd")
-		var active_card_display = TextureRect.new()
-		active_card_display.set_script(card_display_script)
-		active_container.add_child(active_card_display)
-		active_card_display.load_card_image(active_pokemon.uid, card_scales[3.5], active_pokemon)
-		active_card_display.card_clicked.connect(this_card_clicked)
-	
-	# Clear bench container
-	for child in bench_container.get_children():
-		child.queue_free()
-	
-	# Display bench pokemon
-	if bench_pokemon_array.size() > 0:
-		var card_display_script = load("res://gdscripts/cardimage.gd")
-		for bench_pokemon in bench_pokemon_array:
-			var bench_card_display = TextureRect.new()
-			bench_card_display.set_script(card_display_script)
-			bench_container.add_child(bench_card_display)
-			bench_card_display.load_card_image(bench_pokemon.uid, card_scales[11], bench_pokemon)
-			bench_card_display.card_clicked.connect(this_card_clicked)
-			
-	# Display HP circles for active Pokemon
-	display_hp_circles_above_align(active_pokemon, is_opponent)
-
 # Both the cancel button and action button will hide selection mode so function is vaguely named for both actions
-func display_main_components_hide_selection_mode() -> void:
+func hide_selection_mode_display_main() -> void:
 	
 	if selected_card_for_action != null:
 		var card_ui = find_card_ui_for_object(selected_card_for_action)
@@ -404,6 +226,12 @@ func display_main_components_hide_selection_mode() -> void:
 	$opponent_prize_cards_container.visible = true
 	$player_prize_cards_container.visible = true
 	
+	$player_deck_icon.visible = true
+	$opponent_deck_icon.visible = true
+	
+	update_deck_icon(false)
+	update_deck_icon(true)
+	
 	# We do however want to show the header and hint labels
 	$small_hint_info_text_label.visible = false
 	$large_header_text_label.visible = false
@@ -423,6 +251,90 @@ func display_main_components_hide_selection_mode() -> void:
 	for card in $opponent_active_pokemon_container.get_children():
 		card.mouse_filter = MOUSE_FILTER_PASS
 	
+# Displays both the player and opponents hand cards. Shows players at the top of screen and opponents in top right smaller.
+func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2):
+	
+	# Load the script that displays card images
+	var card_display_script = load("res://gdscripts/cardimage.gd")
+	
+	# Clear existing cards from container to prevent stale entries when cards leave or enter the hand
+	for child in hand_container.get_children():
+		child.queue_free()
+	
+	# Draw all cards in the hand
+	for index in range(hand.size()):
+		var this_card_in_hand = hand[index]
+		var hand_card_to_display = TextureRect.new()
+		
+		# Attach the loading of the card image script to the newly generated card
+		hand_card_to_display.set_script(card_display_script)
+		
+		# Add the newly generated card to the hand container
+		hand_container.add_child(hand_card_to_display)
+		
+		# Load the card image with pixel sizes for hand cards
+		hand_card_to_display.load_card_image(this_card_in_hand.uid, card_size, this_card_in_hand)
+		
+		# Connect this card's signal to the main script's handler
+		hand_card_to_display.card_clicked.connect(this_card_clicked)
+		
+		# Replace the visual distinction block in display_hand_cards_array():
+
+		# If this is the active Pokemon (last card in attach mode), add visual distinction
+		if card_attach_mode_active and index == hand.size() - 1:
+			# Add large spacer BEFORE the active Pokemon to separate it from bench
+			var spacer = Control.new()
+			spacer.custom_minimum_size = Vector2(25, 0)
+			spacer.mouse_filter = MOUSE_FILTER_IGNORE
+			hand_container.add_child(spacer)
+			hand_container.move_child(spacer, hand_container.get_child_count() - 2)  # Move to second-to-last position
+			
+			# Make the active Pokemon noticeably larger by reloading with bigger card_size
+			var larger_size = Vector2(card_size.x * 1.2, card_size.y * 1.2)
+			hand_card_to_display.load_card_image(this_card_in_hand.uid, larger_size, this_card_in_hand)
+			
+			# Align to bottom
+			hand_card_to_display.size_flags_vertical = Control.SIZE_SHRINK_END
+		else:
+			hand_card_to_display.size_flags_vertical = Control.SIZE_SHRINK_END
+						
+# Display active and bench pokemon for either player or opponent. is_opponent: true for opponent, false for player
+func display_pokemon(is_opponent: bool) -> void:
+	var active_pokemon = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench_pokemon_array = opponent_bench if is_opponent else player_bench
+	var active_container = $opponent_active_pokemon_container if is_opponent else $player_active_pokemon_container
+	var bench_container = $opponent_bench_container if is_opponent else $player_bench_container
+	
+	# Clear active pokemon container
+	for child in active_container.get_children():
+		child.queue_free()
+	
+	# Display active pokemon if exists
+	if active_pokemon != null:
+		var card_display_script = load("res://gdscripts/cardimage.gd")
+		var active_card_display = TextureRect.new()
+		active_card_display.set_script(card_display_script)
+		active_container.add_child(active_card_display)
+		active_card_display.load_card_image(active_pokemon.uid, card_scales[3.5], active_pokemon)
+		active_card_display.card_clicked.connect(this_card_clicked)
+	
+	# Clear bench container
+	for child in bench_container.get_children():
+		child.queue_free()
+	
+	# Display bench pokemon
+	if bench_pokemon_array.size() > 0:
+		var card_display_script = load("res://gdscripts/cardimage.gd")
+		for bench_pokemon in bench_pokemon_array:
+			var bench_card_display = TextureRect.new()
+			bench_card_display.set_script(card_display_script)
+			bench_container.add_child(bench_card_display)
+			bench_card_display.load_card_image(bench_pokemon.uid, card_scales[11], bench_pokemon)
+			bench_card_display.card_clicked.connect(this_card_clicked)
+			
+	# Display HP circles for active Pokemon
+	display_hp_circles_above_align(active_pokemon, is_opponent)
+
 # Updates the header and hint labels based on what array is being displayed
 func update_selection_mode_labels(array_displayed: Array, is_starting_game: bool = false) -> void:
 	
@@ -734,6 +646,36 @@ func load_deck_from_file(deck_file_path: String) -> Array:
 	# Pass the deck back as a saved variable
 	return deck
 
+# Changes the deck icon to show how many cards are (roughly)
+# Changes the deck icon to show how many cards are (roughly)
+func update_deck_icon(is_opponent: bool) -> void:
+	var deck = opponent_deck if is_opponent else player_deck
+	var widget = $opponent_deck_icon if is_opponent else $player_deck_icon
+	var count = deck.size()
+
+	var count_label = widget.get_node("opponent_deck_count_label") if is_opponent else widget.get_node("player_deck_count_label")
+	count_label.text = str(count)
+
+	if count == 0:
+		widget.texture = null
+		return
+
+	var image_path: String
+	if count >= 50:
+		image_path = "res://cardimages/cardbacksanddecks/1deckfulltrans_clean.png"
+	elif count >= 35:
+		image_path = "res://cardimages/cardbacksanddecks/2deck3quarts.png"
+	elif count >= 15:
+		image_path = "res://cardimages/cardbacksanddecks/3deckhalf.png"
+	elif count >= 5:
+		image_path = "res://cardimages/cardbacksanddecks/4deckquarter.png"
+	else:
+		image_path = "res://cardimages/cardbacksanddecks/cardbacksmall.png"
+	widget.texture = load(image_path)
+	
+######################################################################################################################################################
+############################################################### GAME LOAD FUNCTIONS ##############################################################
+
 # Main function to set up the player's deck and hand at match start
 func setup_player():
 	
@@ -840,6 +782,9 @@ func draw_prize_cards(is_player: bool) -> void:
 	# Display the prize cards
 	display_prize_cards(is_player)
 	
+	# Sync deck icon count after prize cards are removed from deck
+	update_deck_icon(is_player)
+	
 # Initiates the bench setup phase after the active pokemon is selected at game start
 func start_bench_setup_phase() -> void:
 		
@@ -855,10 +800,12 @@ func start_bench_setup_phase() -> void:
 	$cancel_selection_mode_view_button.theme = load("res://uiresources/kenneyUI-green.tres")
 	
 	# Show the hand again for bench pokemon selection
-	show_enlarged_array(player_hand)	
+	show_enlarged_array_selection_mode(player_hand)	
 	
-############################################################## END GAME LOAD FUNCTIONS ###############################################################
+############################################################### END GAME LOAD FUNCTIONS ##############################################################
+######################################################################################################################################################
 
+######################################################################################################################################################
 ############################################################ CORE FUNCTIONALITY FUNCTIONS ############################################################
 
 # Quit the game when called
@@ -1005,12 +952,6 @@ func get_card_action(card: card_object) -> Dictionary:
 	
 	# Default fallback
 	return {"action": "NONE", "button_text": ""}
-
-############################################################### END GAME LOAD FUNCTIONS ##############################################################
-######################################################################################################################################################
-
-######################################################################################################################################################
-############################################################# CORE FUNCTIONALITY FUNCTIONS ###########################################################
 
 # Function to change the text, enabled mode and function of the action button.
 func update_action_button() -> void:
@@ -1206,7 +1147,7 @@ func start_energy_attachment() -> void:
 	
 	# Enter attach mode and show only valid targets
 	card_attach_mode_active = true
-	show_enlarged_array(attachment_targets)
+	show_enlarged_array_selection_mode(attachment_targets)
 	
 	# Update labels for energy attachment context
 	var energy_name = energy_card_awaiting_target.metadata.get("name", "Unknown Energy")
@@ -1250,7 +1191,7 @@ func perform_energy_attachment() -> void:
 	card_attach_mode_active = false
 	
 	# Return to normal UI
-	display_main_components_hide_selection_mode()
+	hide_selection_mode_display_main()
 	
 	# Refresh the hand display to remove the attached energy
 	display_hand_cards_array(player_hand, $player_hand_hbox_container, card_scales[11])
@@ -1372,8 +1313,9 @@ func perform_attack(attack_index: int) -> void:
 
 	for modifier in result["modifiers"]:
 		show_floating_label(modifier, Vector2(1420, 250))
+		await get_tree().create_timer(0.5).timeout
 
-	await get_tree().create_timer(0.5).timeout
+	
 	show_floating_label("-"+str(final_damage) + "HP", Vector2(1420, 250))
 	
 	opponent_active_pokemon.current_hp = max(0, opponent_active_pokemon.current_hp - final_damage)
@@ -1895,7 +1837,7 @@ func get_attack_text_penalty(attack_text: String, pokemon_name: String) -> int:
 	
 	return 0
 	
-####################################################### END AI GENERAL FUNCTIONALITY FUNCTIONS #######################################################
+####################################################### END AI PRIORITISE FUNCTIONALITY FUNCTIONS #######################################################
 ######################################################################################################################################################
 
 ######################################################################################################################################################
@@ -1950,9 +1892,9 @@ func action_button_pressed_perform_action() -> void:
 				# If in bench setup phase, keep the modal open and re-show the hand for more selections
 				if bench_setup_phase_active:
 					selected_card_for_action = null
-					show_enlarged_array(player_hand)
+					show_enlarged_array_selection_mode(player_hand)
 				else:
-					display_main_components_hide_selection_mode()
+					hide_selection_mode_display_main()
 		
 		"PLAY_TRAINER":
 			print("Trainer card play not yet implemented")
@@ -1982,7 +1924,7 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 		card_attach_mode_active = false
 		
 		# Return to main UI screen
-		display_main_components_hide_selection_mode()
+		hide_selection_mode_display_main()
 		return
 	
 	# If we were in bench setup phase, end it and draw prize cards
@@ -1992,27 +1934,27 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 		$cancel_selection_mode_view_button.theme = load("res://uiresources/kenneyUI-red.tres")
 		draw_prize_cards(true)
 	
-	display_main_components_hide_selection_mode()
+	hide_selection_mode_display_main()
 
 # Main function to show all hand cards larger when the player's hand is clicked
 func player_hand_clicked_show_hand(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
-		show_enlarged_array(player_hand)
+		show_enlarged_array_selection_mode(player_hand)
 
 # Main function to show all hand cards larger when the opponent's hand is clicked		
 func opponent_hand_clicked_show_hidden_hand(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
-		show_enlarged_array(opponent_hand)
+		show_enlarged_array_selection_mode(opponent_hand)
 
 # Main function to show all of player's bench cards larger when clicked
 func player_bench_clicked_show_bench(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
-		show_enlarged_array(player_bench)
+		show_enlarged_array_selection_mode(player_bench)
 
 # Main function to show all of opponent's bench cards larger when clicked
 func opponent_bench_clicked_show_bench(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
-		show_enlarged_array(opponent_bench)
+		show_enlarged_array_selection_mode(opponent_bench)
 
 # Called when a card in selection mode is clicked
 func this_card_clicked(clicked_card: card_object) -> void:
@@ -2068,13 +2010,8 @@ func this_card_clicked(clicked_card: card_object) -> void:
 ########################################################### USER INPUT ON CLICK FUNCTIONS ############################################################
 ######################################################################################################################################################
 
-######################################################################################################################################################			
-################################################################# END OF FUNCTIONS ###################################################################
-######################################################################################################################################################
-
 ######################################################################################################################################################
 ####################################################### START OF MAIN GAME RUNNING FUNCTIONS #########################################################
-######################################################################################################################################################
 	
 func _input(event: InputEvent) -> void:
 	
@@ -2128,7 +2065,7 @@ func _input(event: InputEvent) -> void:
 			
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	
+		
 	# Connect all the signals so that when parts of the UI are clicked by mouse they can perform actions
 	$player_hand_hbox_container.gui_input.connect(player_hand_clicked_show_hand)
 	$opponent_hand_hbox_container.gui_input.connect(opponent_hand_clicked_show_hidden_hand)
@@ -2149,11 +2086,18 @@ func _ready() -> void:
 	setup_player()
 	setup_opponent("testing1")
 	opponent_setup_pokemon_from_hand()
-	draw_prize_cards(false)  # false = opponent
+	draw_prize_cards(false)
 	update_action_button()
-	show_enlarged_array(player_hand)
-	display_pokemon(false)  # false = player
-
-######################################################################################################################################################
+	
+	update_deck_icon(false)
+	update_deck_icon(true)
+	
+	show_enlarged_array_selection_mode(player_hand)
+	display_pokemon(false)
+	
 ######################################################## END OF MAIN GAME RUNNING FUNCTIONS ##########################################################
+######################################################################################################################################################
+
+######################################################################################################################################################			
+################################################################# END OF FUNCTIONS ###################################################################
 ######################################################################################################################################################

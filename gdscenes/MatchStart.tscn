@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://dqwekyllekveg"]
+[gd_scene load_steps=10 format=3 uid="uid://dqwekyllekveg"]
 
 [ext_resource type="Script" uid="uid://du6jwng7w7fn4" path="res://gdscripts/main_match_script.gd" id="1_c6k6o"]
 [ext_resource type="Texture2D" uid="uid://cpbbo8tyee1n4" path="res://backgrounds/background2.png" id="2_1cpm0"]
@@ -6,6 +6,8 @@
 [ext_resource type="Theme" uid="uid://bnhngmri4tfgr" path="res://uiresources/kenneyUI-green.tres" id="3_x7i8m"]
 [ext_resource type="Theme" uid="uid://bb6vwl0h1flws" path="res://uiresources/kenneyUI-blue.tres" id="5_1cpm0"]
 [ext_resource type="Texture2D" uid="uid://41l5prxtsvdk" path="res://gameimageassets/menutiles/bluesquaremessagebox.png" id="6_4pfsb"]
+[ext_resource type="Texture2D" uid="uid://dmay144mc3hmo" path="res://cardimages/cardbacksanddecks/1deckfulltrans_clean.png" id="7_e1lyu"]
+[ext_resource type="Theme" uid="uid://6shp5ck1tnja" path="res://uiresources/kenneyUI.tres" id="8_fkw2w"]
 
 [sub_resource type="StyleBoxLine" id="StyleBoxLine_1cpm0"]
 
@@ -378,3 +380,54 @@ theme_override_font_sizes/font_size = 45
 text = "YOUR OPPONENT'S FERALIGATR USED SUPER MEGA RIPTIDE"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="player_deck_icon" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 14.0
+offset_right = 134.0
+offset_bottom = 155.0
+texture = ExtResource("7_e1lyu")
+stretch_mode = 2
+
+[node name="player_deck_count_label" type="Label" parent="player_deck_icon"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -40.0
+offset_top = -23.0
+grow_horizontal = 0
+grow_vertical = 0
+theme = ExtResource("8_fkw2w")
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 27
+text = "60"
+
+[node name="opponent_deck_icon" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 1684.0
+offset_top = 16.0
+offset_right = 1794.0
+offset_bottom = 157.0
+texture = ExtResource("7_e1lyu")
+stretch_mode = 2
+
+[node name="opponent_deck_count_label" type="Label" parent="opponent_deck_icon"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -40.0
+offset_top = -23.0
+grow_horizontal = 0
+grow_vertical = 0
+theme = ExtResource("8_fkw2w")
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 27
+text = "60"
