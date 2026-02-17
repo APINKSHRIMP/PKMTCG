@@ -31,7 +31,9 @@ var card_was_clicked_this_frame: bool = false
 var match_just_started_basic_pokemon_required = true
 var bench_setup_phase_active = false
 
-var has_energy_been_played_this_turn: bool = false
+var player_energy_played_this_turn: bool = false
+var opponent_energy_played_this_turn: bool = false
+
 var energy_card_awaiting_target: card_object = null  # Stores the energy card while selecting its target
 var card_attach_mode_active: bool = false
 
@@ -583,6 +585,32 @@ func show_floating_label(message: String, spawn_position: Vector2) -> void:
 	
 	await tween.finished
 	label.queue_free()
+
+# Changes the deck icon to show how many cards are (roughly)
+func update_deck_icon(is_opponent: bool) -> void:
+	var deck = opponent_deck if is_opponent else player_deck
+	var widget = $opponent_deck_icon if is_opponent else $player_deck_icon
+	var count = deck.size()
+
+	var count_label = widget.get_node("opponent_deck_count_label") if is_opponent else widget.get_node("player_deck_count_label")
+	count_label.text = str(count)
+
+	if count == 0:
+		widget.texture = null
+		return
+
+	var image_path: String
+	if count >= 42:
+		image_path = "res://cardimages/cardbacksanddecks/1deckfulltrans_clean.png"
+	elif count >= 35:
+		image_path = "res://cardimages/cardbacksanddecks/2deck3quarts.png"
+	elif count >= 20:
+		image_path = "res://cardimages/cardbacksanddecks/3deckhalf.png"
+	elif count >= 10:
+		image_path = "res://cardimages/cardbacksanddecks/4deckquarter.png"
+	else:
+		image_path = "res://cardimages/cardbacksanddecks/cardbacksmall.png"
+	widget.texture = load(image_path)
 	
 ############################################################### END DISPLAY FUNCTIONS ################################################################
 ######################################################################################################################################################
@@ -645,36 +673,6 @@ func load_deck_from_file(deck_file_path: String) -> Array:
 	
 	# Pass the deck back as a saved variable
 	return deck
-
-# Changes the deck icon to show how many cards are (roughly)
-# Changes the deck icon to show how many cards are (roughly)
-func update_deck_icon(is_opponent: bool) -> void:
-	var deck = opponent_deck if is_opponent else player_deck
-	var widget = $opponent_deck_icon if is_opponent else $player_deck_icon
-	var count = deck.size()
-
-	var count_label = widget.get_node("opponent_deck_count_label") if is_opponent else widget.get_node("player_deck_count_label")
-	count_label.text = str(count)
-
-	if count == 0:
-		widget.texture = null
-		return
-
-	var image_path: String
-	if count >= 50:
-		image_path = "res://cardimages/cardbacksanddecks/1deckfulltrans_clean.png"
-	elif count >= 35:
-		image_path = "res://cardimages/cardbacksanddecks/2deck3quarts.png"
-	elif count >= 15:
-		image_path = "res://cardimages/cardbacksanddecks/3deckhalf.png"
-	elif count >= 5:
-		image_path = "res://cardimages/cardbacksanddecks/4deckquarter.png"
-	else:
-		image_path = "res://cardimages/cardbacksanddecks/cardbacksmall.png"
-	widget.texture = load(image_path)
-	
-######################################################################################################################################################
-############################################################### GAME LOAD FUNCTIONS ##############################################################
 
 # Main function to set up the player's deck and hand at match start
 func setup_player():
@@ -1005,7 +1003,7 @@ func update_action_button() -> void:
 	# If the card selected was an energy card
 	elif action_info["action"] == "ATTACH_ENERGY":
 		# Energy card is selected and we're ready to attach it
-		if has_energy_been_played_this_turn:
+		if player_energy_played_this_turn:
 			action_button.text = "ENERGY PLAYED"
 			action_button.disabled = true
 			action_button.theme = load("res://uiresources/kenneyUI.tres")
@@ -1050,6 +1048,8 @@ func set_player_active_pokemon() -> void:
 	
 	# Update the card's location to "active"
 	player_active_pokemon.current_location = "active"
+	player_active_pokemon.placed_on_field_this_turn = true
+	
 	
 	# Now remove from the appropriate location based on where it came from
 	match original_location:
@@ -1085,6 +1085,7 @@ func add_pokemon_to_bench(pokemon: card_object) -> void:
 	
 	# Update the card's location to "bench"
 	pokemon.current_location = "bench"
+	pokemon.placed_on_field_this_turn = true
 	
 	# Remove from the appropriate location based on where it came from
 	match original_location:
@@ -1181,7 +1182,7 @@ func perform_energy_attachment() -> void:
 	player_hand.erase(energy_card_awaiting_target)
 	
 	# Set the flag so no more energies can be attached this turn
-	has_energy_been_played_this_turn = true
+	player_energy_played_this_turn = true
 	
 	# Clear the attachment variables
 	energy_card_awaiting_target = null
@@ -1201,6 +1202,60 @@ func perform_energy_attachment() -> void:
 	
 	# Display the attached energies on the active Pokemon
 	display_active_pokemon_energies()
+
+# Called when any win/loss condition is met to end the match
+func game_end_logic(loser_is_player: bool) -> void:
+	if loser_is_player:
+		print("GAME OVER: Player has lost the game!")
+		await show_message("CONGRATULATIONS: YOU WON!!!!!")
+		end_game()
+	else:
+		print("GAME OVER: Opponent has lost the game!")
+		await show_message("GAME OVER: YOU LOST!!!!!")
+		end_game()
+
+# Draws one card from the top of the deck and adds it to the hand
+func draw_card_from_deck(is_opponent: bool) -> card_object:
+	var deck = opponent_deck if is_opponent else player_deck
+	var hand = opponent_hand if is_opponent else player_hand
+
+	if deck.size() == 0:
+		game_end_logic(not is_opponent)
+		return null
+
+	var drawn_card = deck.pop_front()
+	drawn_card.current_location = "hand"
+	hand.append(drawn_card)
+
+	return drawn_card
+
+# Resets placed_on_field_this_turn to false for all pokemon on the specified player's field
+func reset_field_pokemon_turn_flags(is_opponent: bool) -> void:
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench = opponent_bench if is_opponent else player_bench
+
+	if active != null:
+		active.placed_on_field_this_turn = false
+
+	for bench_pokemon in bench:
+		bench_pokemon.placed_on_field_this_turn = false
+
+# Called when the player presses the end turn button to reset per-turn variables and begin next turn
+func player_end_turn_checks() -> void:
+	player_energy_played_this_turn = false
+	reset_field_pokemon_turn_flags(false)
+	player_start_turn_checks()
+
+# Called at the start of the player's turn to perform mandatory actions
+func player_start_turn_checks() -> void:
+	var drawn_card = draw_card_from_deck(false)
+
+	if drawn_card == null:
+		return
+
+	display_hand_cards_array(player_hand, $player_hand_hbox_container, card_scales[11])
+	update_deck_icon(false)
+
 
 ########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
 ######################################################################################################################################################
@@ -1767,10 +1822,12 @@ func opponent_setup_pokemon_from_hand() -> void:
 	# Remove active pokemon from hand and set it as active
 	opponent_hand.erase(active_pokemon)
 	opponent_active_pokemon = active_pokemon
+	opponent_active_pokemon.placed_on_field_this_turn = true
 	
 	# Remove bench pokemon from hand and add to bench
 	for bench_pokemon in bench_pokemon_list:
 		opponent_hand.erase(bench_pokemon)
+		bench_pokemon.placed_on_field_this_turn = true
 		opponent_bench.append(bench_pokemon)
 	
 	# Update displays
@@ -2082,6 +2139,8 @@ func _ready() -> void:
 	$main_screen_buttons_container/button_main_attack.pressed.connect(show_attack_buttons)
 	$main_screen_attack_buttons_container/cancel_attack_mode_button.pressed.connect(hide_attack_buttons)
 	$main_screen_attack_buttons_container.visible = false
+	
+	$main_screen_buttons_container/button_main_endturn.pressed.connect(player_end_turn_checks)
 
 	setup_player()
 	setup_opponent("testing1")

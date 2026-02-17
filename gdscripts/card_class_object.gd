@@ -10,6 +10,9 @@ var metadata: Dictionary
 var attached_energies: Array = []
 var current_location: String = "deck"  # "hand", "deck", "bench", "discard", etc.
 
+# Tracks whether this pokemon was placed on the field during the current turn
+var placed_on_field_this_turn: bool = false
+
 # self metadata addition to track hp damage
 var current_hp: int = 0
 
