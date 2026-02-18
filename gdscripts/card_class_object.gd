@@ -6,8 +6,11 @@ var uid: String
 # The card's metadata from JSON
 var metadata: Dictionary
 
-# State tracking
+# attached cards tracking
 var attached_energies: Array = []
+var attached_pre_evolutions: Array = []
+
+# Tracks the location of the card in player/opponents control.
 var current_location: String = "deck"  # "hand", "deck", "bench", "discard", etc.
 
 # Tracks whether this pokemon was placed on the field during the current turn

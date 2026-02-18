@@ -37,6 +37,9 @@ var opponent_energy_played_this_turn: bool = false
 var energy_card_awaiting_target: card_object = null  # Stores the energy card while selecting its target
 var card_attach_mode_active: bool = false
 
+var evolution_card_awaiting_target: card_object = null
+var evolution_mode_active: bool = false
+
 var opponents_turn_active: bool = false
 
 # UI VARIABLES
@@ -626,7 +629,8 @@ func update_main_screen_buttons() -> void:
 		bench_setup_phase_active or
 		card_selection_mode_enabled or
 		opponents_turn_active or
-		card_attach_mode_active
+		card_attach_mode_active or
+		evolution_mode_active
 	)
 
 	if should_disable:
@@ -1045,6 +1049,17 @@ func update_action_button() -> void:
 			action_button.disabled = false
 			action_button.theme = load("res://uiresources/kenneyUI-green.tres")
 	
+	elif action_info["action"] == "EVOLVE":
+		var valid_targets = get_valid_evolution_targets(selected_card_for_action, false)
+		if valid_targets.size() > 0:
+			action_button.text = "EVOLVE"
+			action_button.disabled = false
+			action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+		else:
+			action_button.text = "CANNOT EVOLVE"
+			action_button.disabled = true
+			action_button.theme = load("res://uiresources/kenneyUI.tres")
+	
 	# For 99% of other cases, if a card has been selected from the hand AND it isn't turn 1 requiring a basic, then display the action the card can take	
 	else:
 		# Normal match play - use action_info
@@ -1299,6 +1314,99 @@ func player_start_turn_checks() -> void:
 	update_deck_icon(false)
 	show_floating_label("Start turn", Vector2(800, 850))
 	
+# Scans active and bench for Pokemon that the given evolution card can legally evolve from
+func get_valid_evolution_targets(evolution_card: card_object, is_opponent: bool) -> Array:
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench = opponent_bench if is_opponent else player_bench
+	var valid_targets = []
+	
+	if active != null and not active.placed_on_field_this_turn:
+		if can_evolve_from(evolution_card, active):
+			valid_targets.append(active)
+	
+	for bench_pokemon in bench:
+		if not bench_pokemon.placed_on_field_this_turn:
+			if can_evolve_from(evolution_card, bench_pokemon):
+				valid_targets.append(bench_pokemon)
+	
+	return valid_targets
+
+# Stores the evolution card and enters target selection mode for the player to pick which Pokemon to evolve
+func start_evolution() -> void:
+	if selected_card_for_action == null:
+		print("Error: No evolution card selected")
+		return
+	
+	evolution_card_awaiting_target = selected_card_for_action
+	
+	var valid_targets = get_valid_evolution_targets(evolution_card_awaiting_target, false)
+	
+	if valid_targets.size() == 0:
+		print("Error: No valid evolution targets found")
+		evolution_card_awaiting_target = null
+		return
+	
+	evolution_mode_active = true
+	show_enlarged_array_selection_mode(valid_targets)
+	
+	var evo_name = evolution_card_awaiting_target.metadata.get("name", "Unknown")
+	$large_header_text_label.text = "EVOLVING INTO " + evo_name.to_upper()
+	$small_hint_info_text_label.text = "Select a Pokémon to evolve into " + evo_name
+	
+	$card_action_button.text = "EVOLVE"
+	$card_action_button.disabled = true
+	$card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+
+# Replaces a Pokemon on the field with its evolution, transferring all attachments and damage
+func perform_evolution(is_opponent: bool) -> void:
+	if evolution_card_awaiting_target == null or selected_card_for_action == null:
+		print("Error: Missing evolution card or target")
+		return
+	
+	var evo_card = evolution_card_awaiting_target
+	var target_card = selected_card_for_action
+	
+	# Calculate damage taken on the pre-evolution to carry over
+	var max_hp_old = int(target_card.metadata.get("hp", "0"))
+	var damage_taken = max_hp_old - target_card.current_hp
+	
+	# Set the new card's HP as its max minus the carried damage
+	var max_hp_new = int(evo_card.metadata.get("hp", "0"))
+	evo_card.current_hp = max(1, max_hp_new - damage_taken)
+	
+	# Transfer all attached energies from old card to new card
+	evo_card.attached_energies = target_card.attached_energies.duplicate()
+	target_card.attached_energies.clear()
+	
+	# Transfer existing pre-evolutions then add the old card itself to the chain
+	evo_card.attached_pre_evolutions = target_card.attached_pre_evolutions.duplicate()
+	target_card.attached_pre_evolutions.clear()
+	evo_card.attached_pre_evolutions.append(target_card)
+	
+	# Mark as played this turn so it can't evolve again immediately
+	evo_card.placed_on_field_this_turn = true
+	
+	# Remove evolution card from the correct hand
+	var hand = opponent_hand if is_opponent else player_hand
+	hand.erase(evo_card)
+	
+	# Replace the target card in its current location
+	evo_card.current_location = target_card.current_location
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench = opponent_bench if is_opponent else player_bench
+	
+	if target_card == active:
+		if is_opponent:
+			opponent_active_pokemon = evo_card
+		else:
+			player_active_pokemon = evo_card
+	else:
+		var bench_index = bench.find(target_card)
+		if bench_index != -1:
+			bench[bench_index] = evo_card
+	
+	print(target_card.metadata["name"], " evolved into ", evo_card.metadata["name"], "! (Damage carried: ", damage_taken, ")")
+
 ########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
 ######################################################################################################################################################
 
@@ -1956,6 +2064,19 @@ func action_button_pressed_perform_action() -> void:
 		# In attach mode, we're attaching the energy to the selected Pokemon
 		perform_energy_attachment()
 		return
+	
+	if evolution_mode_active:
+		perform_evolution(false)
+		
+		evolution_card_awaiting_target = null
+		selected_card_for_action = null
+		evolution_mode_active = false
+		
+		hide_selection_mode_display_main()
+		display_hand_cards_array(player_hand, $player_hand_hbox_container, card_scales[11])
+		display_pokemon(false)
+		display_active_pokemon_energies()
+		return	
 		
 	# Don't do anything if no card is selected
 	if selected_card_for_action == null:
@@ -2005,8 +2126,7 @@ func action_button_pressed_perform_action() -> void:
 			start_energy_attachment()
 		
 		"EVOLVE":
-			print("Evolution not yet implemented")
-			# We'll add this later
+			start_evolution()
 		
 		_:
 			print("Unknown action: ", action_type)
@@ -2025,6 +2145,13 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 		card_attach_mode_active = false
 		
 		# Return to main UI screen
+		hide_selection_mode_display_main()
+		return
+	
+	if evolution_mode_active:
+		print("Evolution cancelled")
+		evolution_card_awaiting_target = null
+		evolution_mode_active = false
 		hide_selection_mode_display_main()
 		return
 	
@@ -2061,7 +2188,7 @@ func opponent_bench_clicked_show_bench(event: InputEvent) -> void:
 func this_card_clicked(clicked_card: card_object) -> void:
 	if card_selection_mode_enabled == true:
 		
-		# NEW: Check if we're in card attach mode (selecting a target Pokemon)
+		# Check if we're in card attach mode (selecting a target Pokemon)
 		if card_attach_mode_active:
 			# In attach mode, we're selecting a target Pokemon, not performing a card action
 			if selected_card_for_action != null:
@@ -2084,7 +2211,26 @@ func this_card_clicked(clicked_card: card_object) -> void:
 			$card_action_button.disabled = false
 			$card_action_button.theme = load("res://uiresources/kenneyUI-green.tres")
 			return
-		
+			
+		elif evolution_mode_active:
+			if selected_card_for_action != null:
+				var prev_card_display = find_card_ui_for_object(selected_card_for_action)
+				if prev_card_display:
+					prev_card_display.set_selected(false)
+			
+			selected_card_for_action = clicked_card
+			
+			print("Selected evolution target: ", selected_card_for_action.metadata["name"])
+			
+			var card_display = find_card_ui_for_object(clicked_card)
+			if card_display:
+				card_display.set_selected(true)
+			
+			$card_action_button.text = "EVOLVE"
+			$card_action_button.disabled = false
+			$card_action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+			return
+			
 		# Normal card selection mode (not in attach mode)
 		# Remove visual effect from previously selected card
 		if selected_card_for_action != null:
