@@ -288,7 +288,7 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2):
 		# Replace the visual distinction block in display_hand_cards_array():
 
 		# If this is the active Pokemon (last card in attach mode), add visual distinction
-		if card_attach_mode_active and index == hand.size() - 1:
+		if (card_attach_mode_active or evolution_mode_active) and index == hand.size() - 1:
 			# Add large spacer BEFORE the active Pokemon to separate it from bench
 			var spacer = Control.new()
 			spacer.custom_minimum_size = Vector2(25, 0)
@@ -1320,14 +1320,14 @@ func get_valid_evolution_targets(evolution_card: card_object, is_opponent: bool)
 	var bench = opponent_bench if is_opponent else player_bench
 	var valid_targets = []
 	
-	if active != null and not active.placed_on_field_this_turn:
-		if can_evolve_from(evolution_card, active):
-			valid_targets.append(active)
-	
 	for bench_pokemon in bench:
 		if not bench_pokemon.placed_on_field_this_turn:
 			if can_evolve_from(evolution_card, bench_pokemon):
 				valid_targets.append(bench_pokemon)
+	
+	if active != null and not active.placed_on_field_this_turn:
+		if can_evolve_from(evolution_card, active):
+			valid_targets.append(active)
 	
 	return valid_targets
 
