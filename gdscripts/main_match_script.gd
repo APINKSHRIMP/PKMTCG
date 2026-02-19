@@ -259,7 +259,7 @@ func hide_selection_mode_display_main() -> void:
 		card.mouse_filter = MOUSE_FILTER_PASS
 	
 # Displays both the player and opponents hand cards. Shows players at the top of screen and opponents in top right smaller.
-func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2):
+func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2, face_down: bool = false):
 	
 	# Load the script that displays card images
 	var card_display_script = load("res://gdscripts/cardimage.gd")
@@ -280,7 +280,7 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2):
 		hand_container.add_child(hand_card_to_display)
 		
 		# Load the card image with pixel sizes for hand cards
-		hand_card_to_display.load_card_image(this_card_in_hand.uid, card_size, this_card_in_hand)
+		hand_card_to_display.load_card_image(this_card_in_hand.uid, card_size, this_card_in_hand, face_down)
 		
 		# Connect this card's signal to the main script's handler
 		hand_card_to_display.card_clicked.connect(this_card_clicked)
@@ -416,7 +416,7 @@ func display_prize_cards(is_player: bool) -> void:
 		prize_cards_container.add_child(prize_card_display)
 		
 		# Load the card image with a size appropriate for prize cards
-		prize_card_display.load_card_image(prize_card.uid, card_scales[11.55], prize_card)
+		prize_card_display.load_card_image(prize_card.uid, card_scales[11.55], prize_card, true)
 		
 		# Connect the signal so prize cards can be clicked if needed
 		prize_card_display.card_clicked.connect(this_card_clicked)	
@@ -741,7 +741,7 @@ func setup_opponent(opponent_id: String):
 	opponent_hand = draw_opening_hand(opponent_deck, "Opponent")
 	
 	# Display the cards in the top right in tiny size just for visual cue
-	display_hand_cards_array(opponent_hand, opponent_hand_container, card_scales[12])
+	display_hand_cards_array(opponent_hand, opponent_hand_container, card_scales[12], true)
 
 # Function to draw opening hand with mulligan logic for both player and opponent
 func draw_opening_hand(deck: Array, player_name: String = "") -> Array:
