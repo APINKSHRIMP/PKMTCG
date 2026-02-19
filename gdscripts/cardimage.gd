@@ -13,7 +13,7 @@ var is_selected: bool = false
 var original_modulate: Color
 
 # Function to load the card image based on the UID (e.g Base1-1)
-func load_card_image(card_passed_uid: String, card_target_size, card_object_ref: card_object = null):	
+func load_card_image(card_passed_uid: String, card_target_size, card_object_ref: card_object = null, face_down: bool = false):	
 	# Store reference to the card object so we can emit it when clicked
 	self.card_ref = card_object_ref
 	
@@ -34,7 +34,9 @@ func load_card_image(card_passed_uid: String, card_target_size, card_object_ref:
 	
 	# Now find the image based on the card card_uid and size
 	# If the image is only being displayed small then no point wasting resources loading large card images and shrinking them down.
-	if card_target_size.x < 250 or card_target_size.y < 350:
+	if face_down:
+		card_image_path = "res://cardimages/cardbacksanddecks/cardbacksmall.png"
+	elif card_target_size.x < 250 or card_target_size.y < 350:
 		card_image_path="res://cardimages/"+card_set+"/Small/"+card_passed_uid+".png"
 	else:
 		card_image_path="res://cardimages/"+card_set+"/Large/"+card_passed_uid+".png"	
