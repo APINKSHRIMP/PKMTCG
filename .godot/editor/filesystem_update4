@@ -7,3 +7,4 @@ res://uiresources/kenneyUI-green.tres
 res://uiresources/kenneyUI-blue.tres
 res://uiresources/kenneyUI.tres
 res://gdscripts/card_class_object.gd
+res://playerdata/CurrentDeck.json

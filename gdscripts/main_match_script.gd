@@ -148,6 +148,9 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 	$player_deck_icon.visible = false
 	$opponent_deck_icon.visible = false
 	
+	$player_discard_pile_icon.visible = false
+	$opponent_discard_pile_icon.visible = false
+	
 	# We do however want to show the header and hint labels
 	$small_hint_info_text_label.visible = true
 	$large_header_text_label.visible = true
@@ -169,11 +172,18 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 		$cancel_selection_mode_view_button.visible = true
 	
 	# Hide action button if viewing opponent's hand
-	if card_array == opponent_hand or card_array == opponent_bench:
-		$card_action_button.visible = false
+	if card_array == opponent_hand or card_array == opponent_bench or card_array == player_discard_pile or card_array == opponent_discard_pile:
+		$card_action_button.visible = false		
 	else:
 		$card_action_button.visible = true
-	
+		
+	if $card_action_button.visible:
+		$cancel_selection_mode_view_button.offset_left = 35.0
+		$cancel_selection_mode_view_button.offset_right = 473.0
+	else:
+		$cancel_selection_mode_view_button.offset_left = -219.0
+		$cancel_selection_mode_view_button.offset_right = 219.0
+		
 	update_selection_mode_labels(card_array, match_just_started_basic_pokemon_required)
 	
 	# If the card array is OVER 7 then use the scroller box. If it's UNDER 7 then just use a box central aligned
@@ -247,6 +257,9 @@ func hide_selection_mode_display_main() -> void:
 	
 	$player_deck_icon.visible = true
 	$opponent_deck_icon.visible = true
+
+	$player_discard_pile_icon.visible = true
+	$opponent_discard_pile_icon.visible = true
 	
 	update_deck_icon(false)
 	update_deck_icon(true)
@@ -391,6 +404,14 @@ func update_selection_mode_labels(array_displayed: Array, is_starting_game: bool
 	elif array_displayed == opponent_prize_cards:
 		$large_header_text_label.text = "Opponent's prize cards"
 		$small_hint_info_text_label.text = "Viewing opponent's prize cards"
+
+	elif array_displayed == player_discard_pile:
+		$large_header_text_label.text = "Your Discard Pile"
+		$small_hint_info_text_label.text = "Viewing your discard pile"
+		
+	elif array_displayed == opponent_discard_pile:
+		$large_header_text_label.text = "Opponent's Discard Pile"
+		$small_hint_info_text_label.text = "Viewing opponent's discard pile"
 
 # Displays the prize cards for the specified player in their prize cards container
 func display_prize_cards(is_player: bool) -> void:
@@ -688,6 +709,7 @@ func update_discard_pile_display(is_opponent: bool) -> void:
 	top_display.mouse_filter = MOUSE_FILTER_IGNORE
 	icon.add_child(top_display)
 	top_display.load_card_image(top_card.uid, Vector2(110, 141), top_card)
+	icon.move_child(icon.get_node(label_name), -1)
 	
 ############################################################### END DISPLAY FUNCTIONS ################################################################
 ######################################################################################################################################################
@@ -1307,11 +1329,11 @@ func perform_energy_attachment() -> void:
 func game_end_logic(loser_is_player: bool) -> void:
 	if loser_is_player:
 		print("GAME OVER: Player has lost the game!")
-		await show_message("CONGRATULATIONS: YOU WON!!!!!")
+		await show_message("GAME OVER: YOU LOST!!!!!")
 		end_game()
 	else:
 		print("GAME OVER: Opponent has lost the game!")
-		await show_message("GAME OVER: YOU LOST!!!!!")
+		await show_message("CONGRATULATIONS: YOU WON!!!!!")
 		end_game()
 
 # Draws one card from the top of the deck and adds it to the hand
@@ -1348,7 +1370,9 @@ func player_end_turn_checks() -> void:
 	update_main_screen_buttons()
 	show_floating_label("End turn", Vector2(800, 850))
 	
-	await get_tree().create_timer(1.5).timeout
+	await check_all_knockouts()
+	
+	await get_tree().create_timer(0.5).timeout
 	player_energy_played_this_turn = false
 	reset_field_pokemon_turn_flags(false)
 	player_start_turn_checks()
@@ -1605,7 +1629,6 @@ func perform_attack(attack_index: int) -> void:
 		show_floating_label(modifier, Vector2(1420, 250))
 		await get_tree().create_timer(0.5).timeout
 
-	
 	show_floating_label("-"+str(final_damage) + "HP", Vector2(1420, 250))
 	
 	opponent_active_pokemon.current_hp = max(0, opponent_active_pokemon.current_hp - final_damage)
@@ -1615,6 +1638,8 @@ func perform_attack(attack_index: int) -> void:
 	
 	display_hp_circles_above_align(opponent_active_pokemon, true)
 	hide_attack_buttons()
+	
+	await check_all_knockouts()
 	
 	player_end_turn_checks()
 	
@@ -1641,6 +1666,87 @@ func calculate_final_damage(base_damage: int, attacking_types: Array, defending_
 			modifiers_applied.append("RESISTANCE " + resistance["value"])
 	
 	return {"damage": damage, "modifiers": modifiers_applied}
+
+# Checks a single Pokemon's HP and if zero or below, discards it and clears its field position
+func check_and_handle_knockout(pokemon: card_object, is_opponent: bool) -> bool:
+	if pokemon == null or pokemon.current_hp > 0:
+		return false
+	
+	var ko_name = pokemon.metadata.get("name", "Unknown")
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench = opponent_bench if is_opponent else player_bench
+	
+	await show_message(ko_name.to_upper() + " WAS KNOCKED OUT!")
+	
+	send_card_to_discard(pokemon, is_opponent)
+	
+	if pokemon == active:
+		if is_opponent:
+			opponent_active_pokemon = null
+		else:
+			player_active_pokemon = null
+	elif pokemon in bench:
+		bench.erase(pokemon)
+	
+	display_pokemon(is_opponent)
+	display_hp_circles_above_align(active if pokemon != active else null, is_opponent)
+	
+	return true
+
+# Scans all Pokemon on the field for both players, handles each KO, and returns a summary of what was knocked out
+func check_all_knockouts() -> Dictionary:
+	var results = {"player_kos": 0, "opponent_kos": 0}
+	
+	var player_to_check = []
+	if player_active_pokemon != null:
+		player_to_check.append(player_active_pokemon)
+	player_to_check.append_array(player_bench.duplicate())
+	
+	var opponent_to_check = []
+	if opponent_active_pokemon != null:
+		opponent_to_check.append(opponent_active_pokemon)
+	opponent_to_check.append_array(opponent_bench.duplicate())
+	
+	for pokemon in opponent_to_check:
+		if await check_and_handle_knockout(pokemon, true):
+			results["opponent_kos"] += 1
+	
+	for pokemon in player_to_check:
+		if await check_and_handle_knockout(pokemon, false):
+			results["player_kos"] += 1
+	
+	if results["opponent_kos"] > 0:
+		await handle_post_knockout(true)
+	if results["player_kos"] > 0:
+		await handle_post_knockout(false)
+	
+	return results
+
+##########################################################################################################
+# TESTING - THIS FUNCTION NEEDS AMENDING TO SWITCH IN BENCH POKEMON TO ACTIVE PROPERLY THROUGH CHOICE
+##########################################################################################################
+#### vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv #######
+# After KOs are processed, promotes a bench Pokemon to active or ends the game if none remain
+func handle_post_knockout(is_opponent: bool) -> void:
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench = opponent_bench if is_opponent else player_bench
+	
+	if active != null:
+		return
+	
+	if bench.size() == 0:
+		await show_message("NO POKEMON REMAINING!")
+		game_end_logic(not is_opponent)
+		return
+	
+	if is_opponent:
+		opponent_active_pokemon = bench.pop_front()
+		opponent_active_pokemon.current_location = "active"
+		display_pokemon(true)
+		await show_message("OPPONENT SET " + opponent_active_pokemon.metadata["name"].to_upper() + "AS THEIR ACTIVE POKEMON!")
+	else:
+		pass
+
 
 ########################################################## END ATTACK AND DAMAGE FUNCTIONS ###########################################################
 ######################################################################################################################################################
