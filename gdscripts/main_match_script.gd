@@ -33,6 +33,7 @@ var opponent_discard_pile: Array = []
 var card_selection_mode_enabled = false
 var selected_card_for_action = null
 var card_was_clicked_this_frame: bool = false
+var prize_card_selection_active: bool = false
 
 var match_just_started_basic_pokemon_required = true
 var bench_setup_phase_active = false
@@ -54,6 +55,7 @@ var small_hint_info_text_label: Label
 
 #signals
 signal message_acknowledged
+signal prize_card_taken
 
 # QUICK REFERENCE VECTORS JUST USED FOR EASY SWAPPING OF SIZES FOR DEVELOPMENT
 var card_scales: Dictionary = {
@@ -90,11 +92,11 @@ var card_scales: Dictionary = {
 ################################################################ START OF FUNCTIONS ##################################################################
 ######################################################################################################################################################
 
-# #####     ######  #####   #####    ##         ##    ##   ##
-# ##   ##     ##   ##       ##   ##  ##        ####    ##  ##
-# ##     ##   ##     ###    #####    ##       ##  ##     ###
-# ##   ##     ##        ##  ##       ##      ########     ##
-# #####     ######  #####   ##       #####  ##      ##   ###
+#       #####     ######  #####   #####    ##         ##    ##   ##
+#       ##   ##     ##   ##       ##   ##  ##        ####    ##  ##
+#       ##     ##   ##     ###    #####    ##       ##  ##     ###
+#       ##   ##     ##        ##  ##       ##      ########     ##
+#       #####     ######  #####   ##       #####  ##      ##   ###
 
 ######################################################################################################################################################
 ################################################################# DISPLAY FUNCTIONS ##################################################################
@@ -185,6 +187,9 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 		$cancel_selection_mode_view_button.offset_right = 219.0
 		
 	update_selection_mode_labels(card_array, match_just_started_basic_pokemon_required)
+	
+	$selection_mode_scroller.visible = false
+	$selection_mode_scroller/large_selection_mode_container.visible = false
 	
 	# If the card array is OVER 7 then use the scroller box. If it's UNDER 7 then just use a box central aligned
 	if amount_of_cards_to_show > 7:
@@ -414,19 +419,19 @@ func update_selection_mode_labels(array_displayed: Array, is_starting_game: bool
 		$small_hint_info_text_label.text = "Viewing opponent's discard pile"
 
 # Displays the prize cards for the specified player in their prize cards container
-func display_prize_cards(is_player: bool) -> void:
+func display_prize_cards(is_opponent: bool) -> void:
 	
 	# Get the appropriate container and prize cards array
 	var prize_cards_container: HBoxContainer
 	var prize_cards: Array
 	
-	if is_player:
+	if is_opponent:
+		prize_cards_container = $opponent_prize_cards_container
+		prize_cards = opponent_prize_cards		
+	else:
 		prize_cards_container = $player_prize_cards_container
 		prize_cards = player_prize_cards
-	else:
-		prize_cards_container = $opponent_prize_cards_container
-		prize_cards = opponent_prize_cards
-	
+
 	# Clear any existing cards from the container
 	for child in prize_cards_container.get_children():
 		child.queue_free()
@@ -714,11 +719,11 @@ func update_discard_pile_display(is_opponent: bool) -> void:
 ############################################################### END DISPLAY FUNCTIONS ################################################################
 ######################################################################################################################################################
 
-# ##     #####      ##     #####
-# ##    ##   ##    ####    ##   ##
-# ##    ##   ##   ##  ##   ##    ##
-# ##    ##   ##  ########  ##   ##
-# #####  #####  ##      ## #####
+#                    ##     #####      ##     #####
+#                    ##    ##   ##    ####    ##   ##
+#                    ##    ##   ##   ##  ##   ##    ##
+#                    ##    ##   ##  ########  ##   ##
+#                    #####  #####  ##      ## #####
 
 ######################################################################################################################################################
 ################################################################ GAME LOAD FUNCTIONS #################################################################
@@ -859,18 +864,18 @@ func draw_opening_hand(deck: Array, player_name: String = "") -> Array:
 	return hand
 
 # Draws the top 6 cards from the specified player's deck and adds them to prize cards
-func draw_prize_cards(is_player: bool) -> void:
+func draw_prize_cards(is_opponent: bool) -> void:
 	
 	# Get the appropriate deck and prize cards array based on whether it's player or opponent
 	var deck: Array
 	var prize_cards: Array
 	
-	if is_player:
-		deck = player_deck
-		prize_cards = player_prize_cards
-	else:
+	if is_opponent:
 		deck = opponent_deck
 		prize_cards = opponent_prize_cards
+	else:
+		deck = player_deck
+		prize_cards = player_prize_cards
 	
 	# Check if there are at least 6 cards in the deck
 	if deck.size() < 6:
@@ -883,10 +888,10 @@ func draw_prize_cards(is_player: bool) -> void:
 		prize_cards.append(prize_card)
 	
 	# Display the prize cards
-	display_prize_cards(is_player)
+	display_prize_cards(is_opponent)
 	
 	# Sync deck icon count after prize cards are removed from deck
-	update_deck_icon(is_player)
+	update_deck_icon(is_opponent)
 	
 # Initiates the bench setup phase after the active pokemon is selected at game start
 func start_bench_setup_phase() -> void:
@@ -908,11 +913,11 @@ func start_bench_setup_phase() -> void:
 ############################################################### END GAME LOAD FUNCTIONS ##############################################################
 ######################################################################################################################################################
 
-# ######  #####    ###### ######
-# ##     ##   ##  ##      ##
-# ##     ##   ##  ##      ######
-# ##     ##   ##  ##      ##
-# ######  #####   ##      ######
+#                    #######  #######    #######  #######
+#                    ##      ##     ##  ##        ##
+#                    ##      ##     ##  ##        #######
+#                    ##      ##     ##  ##        ##
+#                    #######  #######   ##        #######
 
 ######################################################################################################################################################
 ############################################################ CORE FUNCTIONALITY FUNCTIONS ############################################################
@@ -1005,6 +1010,9 @@ func get_card_action(card: card_object) -> Dictionary:
 	# This function returns a dictionary with the action name and whether it's available
 	if card == null:
 		return {"action": "NONE", "button_text": ""}
+	
+	if prize_card_selection_active:
+		return {"action": "TAKE_PRIZE", "button_text": "TAKE PRIZE"}
 	
 	# We need to get the cards type whether it's trainer pokemon or energy
 	var card_metadata = card.metadata
@@ -1510,14 +1518,39 @@ func send_card_to_discard(card: card_object, is_opponent: bool) -> void:
 	
 	update_discard_pile_display(is_opponent)
 
+# Removes a prize card from the specified player's prizes and adds it to their hand
+func take_prize_card(card: card_object, is_opponent: bool) -> void:
+	var prizes = opponent_prize_cards if is_opponent else player_prize_cards
+	var hand = opponent_hand if is_opponent else player_hand
+	
+	prizes.erase(card)
+	card.current_location = "hand"
+	hand.append(card)
+	
+	display_prize_cards(is_opponent)
+	var hand_container = $opponent_hand_hbox_container if is_opponent else $player_hand_hbox_container
+	var hand_scale = card_scales[12] if is_opponent else card_scales[11]
+	display_hand_cards_array(hand, hand_container, hand_scale)
+
+func player_pick_prize_card() -> void:
+	prize_card_selection_active = true
+	$card_action_button.position.x += 210
+	show_enlarged_array_selection_mode(player_prize_cards)
+	$large_header_text_label.text = "TAKE A PRIZE CARD"
+	$small_hint_info_text_label.text = "Select a prize card to add to your hand"
+	$cancel_selection_mode_view_button.visible = false
+	$card_action_button.text = "TAKE PRIZE"
+	$card_action_button.disabled = true
+	$card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+
 ########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
 ######################################################################################################################################################
 
-#	  ##    ########  #######     ##     ######  ##   ##
-#    ####      ##       ##       ####    ##      ##  ##
-#   ##  ##     ##       ##      ##  ##   ##      ####
-#  ########    ##       ##     ########  ##      ##  ##
-# ##      ##   ##       ##    ##      ## ######  ##    ##
+#	           ##    ########  #######     ##     ######  ##   ##
+#             ####      ##       ##       ####    ##      ##  ##
+#            ##  ##     ##       ##      ##  ##   ##      ####
+#           ########    ##       ##     ########  ##      ##  ##
+#          ##      ##   ##       ##    ##      ## ######  ##    ##
 
 ######################################################################################################################################################
 ############################################################# ATTACK AND DAMAGE FUNCTIONS ############################################################
@@ -1694,6 +1727,7 @@ func check_and_handle_knockout(pokemon: card_object, is_opponent: bool) -> bool:
 	return true
 
 # Scans all Pokemon on the field for both players, handles each KO, and returns a summary of what was knocked out
+
 func check_all_knockouts() -> Dictionary:
 	var results = {"player_kos": 0, "opponent_kos": 0}
 	
@@ -1715,8 +1749,14 @@ func check_all_knockouts() -> Dictionary:
 		if await check_and_handle_knockout(pokemon, false):
 			results["player_kos"] += 1
 	
+	for i in range(results["opponent_kos"]):
+		if player_prize_cards.size() > 0:
+			await player_pick_prize_card()
+			await prize_card_taken
+	
 	if results["opponent_kos"] > 0:
 		await handle_post_knockout(true)
+	
 	if results["player_kos"] > 0:
 		await handle_post_knockout(false)
 	
@@ -1751,11 +1791,11 @@ func handle_post_knockout(is_opponent: bool) -> void:
 ########################################################## END ATTACK AND DAMAGE FUNCTIONS ###########################################################
 ######################################################################################################################################################
 
-#     ##      ##      ########  ####    ##  ########
-#    ####    ####        ##     ## ##   ##     ##
-#   ##  ##  ##  ##       ##     ##  ##  ##     ##
-#  ##    ####    ##      ##     ##   ## ##     ##
-# ##      ##      ##  ########  ##    ####   #######
+#                ##      ##      ########  ####    ##  ########
+#               ####    ####        ##     ## ##   ##     ##
+#              ##  ##  ##  ##       ##     ##  ##  ##     ##
+#             ##    ####    ##      ##     ##   ## ##     ##
+#            ##      ##      ##  ########  ##    ####   #######
 
 ######################################################################################################################################################
 ################################################### SMALL FUNCTIONS TO HELP WITH CODE READABILITY ####################################################
@@ -2258,11 +2298,11 @@ func get_attack_text_penalty(attack_text: String, pokemon_name: String) -> int:
 ################################################## END OPPONENT PRIORITISE FUNCTIONALITY FUNCTIONS ###################################################
 ######################################################################################################################################################
 
-# ########  ####    ##  #######  ##   ##  ########
-#    ##     ## ##   ##  ##    ## ##   ##     ##
-#    ##     ##  ##  ##  #######  ##   ##     ##
-#    ##     ##   ## ##  ##       ##   ##     ##
-# ########  ##    ####  ##       #######     ##
+#           ########  ####    ##  #######  ##   ##  ########
+#              ##     ## ##   ##  ##    ## ##   ##     ##
+#              ##     ##  ##  ##  #######  ##   ##     ##
+#              ##     ##   ## ##  ##       ##   ##     ##
+#           ########  ##    ####  ##       #######     ##
 ######################################################################################################################################################
 ########################################################### USER INPUT ON CLICK FUNCTIONS ############################################################
 
@@ -2291,6 +2331,16 @@ func action_button_pressed_perform_action() -> void:
 		display_pokemon(false)
 		display_active_pokemon_energies()
 		return	
+	
+	if prize_card_selection_active:
+		take_prize_card(selected_card_for_action, false)
+		prize_card_selection_active = false
+		selected_card_for_action = null
+		
+		$card_action_button.position.x -= 210
+		hide_selection_mode_display_main()
+		prize_card_taken.emit()
+		return
 		
 	# Don't do anything if no card is selected
 	if selected_card_for_action == null:
@@ -2484,11 +2534,11 @@ func player_discard_clicked(event: InputEvent) -> void:
 ########################################################### USER INPUT ON CLICK FUNCTIONS ############################################################
 ######################################################################################################################################################
 
-#  ######  ##   ##  ####    ##
-# ##       ##   ##  ## ##   ##
-# ##       ##   ##  ##  ##  ##
-# ##       ##   ##  ##   ## ##
-# ##       #######  ##    ####
+#                       ######  ##   ##  ####    ##
+#                      ##       ##   ##  ## ##   ##
+#                      ##       ##   ##  ##  ##  ##
+#                      ##       ##   ##  ##   ## ##
+#                      ##       #######  ##    ####
 
 ######################################################################################################################################################
 ####################################################### START OF MAIN GAME RUNNING FUNCTIONS #########################################################
