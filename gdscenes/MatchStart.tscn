@@ -414,6 +414,31 @@ theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 27
 text = "60"
 
+[node name="player_discard_pile_icon" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 143.0
+offset_top = 14.0
+offset_right = 253.0
+offset_bottom = 155.0
+stretch_mode = 2
+
+[node name="player_discard_pile_label" type="Label" parent="player_discard_pile_icon"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -40.0
+offset_top = -23.0
+grow_horizontal = 0
+grow_vertical = 0
+theme = ExtResource("8_fkw2w")
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 27
+text = "0"
+
 [node name="opponent_deck_icon" type="TextureRect" parent="."]
 layout_mode = 0
 offset_left = 1684.0
@@ -438,3 +463,27 @@ theme = ExtResource("8_fkw2w")
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 27
 text = "60"
+
+[node name="opponent_discard_pile_icon" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 1801.0
+offset_top = 17.0
+offset_right = 1911.0
+offset_bottom = 158.0
+stretch_mode = 2
+
+[node name="opponent_discard_pile_label" type="Label" parent="opponent_discard_pile_icon"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -40.0
+offset_top = -23.0
+grow_horizontal = 0
+grow_vertical = 0
+theme = ExtResource("8_fkw2w")
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 27
+text = "0"

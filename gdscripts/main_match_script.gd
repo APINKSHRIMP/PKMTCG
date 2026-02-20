@@ -6,12 +6,20 @@ extends Control
 
 # GLOBAL VARIABLES FOR FULL MATCH VARIABLES AND CHANGABLES. MOST ARE SELF EXPLANATORY BY NAME
 
+# TESTING VARIABLES
+var amount_of_cards_to_draw = 7		# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
+var hide_hidden_cards = false      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
+
+# Game Variables
+var turn_number: int = 1
+
 # PLAYER VARIABLES
 var player_hand: Array = []
 var player_deck: Array = []
 var player_bench: Array = []
 var player_prize_cards = []
 var player_active_pokemon: card_object = null
+var player_discard_pile: Array = []
 
 # OPPONENT VARIABLES
 var opponent_hand: Array = []
@@ -19,9 +27,7 @@ var opponent_deck: Array = []
 var opponent_bench: Array = []
 var opponent_prize_cards = []
 var opponent_active_pokemon: card_object = null
-
-# GAME VARIABLES
-var amount_of_cards_to_draw = 7
+var opponent_discard_pile: Array = []
 
 # FUNCTIONAL REQUIREMENT VARIABLES
 var card_selection_mode_enabled = false
@@ -46,7 +52,7 @@ var opponents_turn_active: bool = false
 var large_header_text_label: Label
 var small_hint_info_text_label: Label
 
-#signaLS
+#signals
 signal message_acknowledged
 
 # QUICK REFERENCE VECTORS JUST USED FOR EASY SWAPPING OF SIZES FOR DEVELOPMENT
@@ -83,6 +89,12 @@ var card_scales: Dictionary = {
 ######################################################################################################################################################
 ################################################################ START OF FUNCTIONS ##################################################################
 ######################################################################################################################################################
+
+# #####     ######  #####   #####    ##         ##    ##   ##
+# ##   ##     ##   ##       ##   ##  ##        ####    ##  ##
+# ##     ##   ##     ###    #####    ##       ##  ##     ###
+# ##   ##     ##        ##  ##       ##      ########     ##
+# #####     ######  #####   ##       #####  ##      ##   ###
 
 ######################################################################################################################################################
 ################################################################# DISPLAY FUNCTIONS ##################################################################
@@ -416,7 +428,7 @@ func display_prize_cards(is_player: bool) -> void:
 		prize_cards_container.add_child(prize_card_display)
 		
 		# Load the card image with a size appropriate for prize cards
-		prize_card_display.load_card_image(prize_card.uid, card_scales[11.55], prize_card, true)
+		prize_card_display.load_card_image(prize_card.uid, card_scales[11.55], prize_card, hide_hidden_cards)
 		
 		# Connect the signal so prize cards can be clicked if needed
 		prize_card_display.card_clicked.connect(this_card_clicked)	
@@ -518,6 +530,11 @@ func display_hp_circles_above_align(active_pokemon: card_object, is_opponent: bo
 # Hides the main action buttons and generates one attack button per attack the pokemon has
 func show_attack_buttons() -> void:
 	if player_active_pokemon == null:
+		return
+	
+	if turn_number <= 1:
+		await show_message("You cannot attack on the first turn!")
+		hide_attack_buttons()
 		return
 	
 	$main_screen_buttons_container.visible = false
@@ -648,9 +665,38 @@ func update_main_screen_buttons() -> void:
 	$main_screen_buttons_container/button_main_power.disabled = should_disable
 	$main_screen_buttons_container/button_main_retreat.disabled = should_disable
 	$main_screen_buttons_container/button_main_endturn.disabled = should_disable	
+
+# Updates the discard pile icon to show the top card and count for the specified player
+func update_discard_pile_display(is_opponent: bool) -> void:
+	var discard = opponent_discard_pile if is_opponent else player_discard_pile
+	var icon = $opponent_discard_pile_icon if is_opponent else $player_discard_pile_icon
+	var label_name = "opponent_discard_pile_label" if is_opponent else "player_discard_pile_label"
+	
+	icon.get_node(label_name).text = str(discard.size())
+	
+	for child in icon.get_children():
+		if child is TextureRect:
+			child.queue_free()
+	
+	if discard.size() == 0:
+		return
+	
+	var card_display_script = load("res://gdscripts/cardimage.gd")
+	var top_card = discard.back()
+	var top_display = TextureRect.new()
+	top_display.set_script(card_display_script)
+	top_display.mouse_filter = MOUSE_FILTER_IGNORE
+	icon.add_child(top_display)
+	top_display.load_card_image(top_card.uid, Vector2(110, 141), top_card)
 	
 ############################################################### END DISPLAY FUNCTIONS ################################################################
 ######################################################################################################################################################
+
+# ##     #####      ##     #####
+# ##    ##   ##    ####    ##   ##
+# ##    ##   ##   ##  ##   ##    ##
+# ##    ##   ##  ########  ##   ##
+# #####  #####  ##      ## #####
 
 ######################################################################################################################################################
 ################################################################ GAME LOAD FUNCTIONS #################################################################
@@ -741,7 +787,7 @@ func setup_opponent(opponent_id: String):
 	opponent_hand = draw_opening_hand(opponent_deck, "Opponent")
 	
 	# Display the cards in the top right in tiny size just for visual cue
-	display_hand_cards_array(opponent_hand, opponent_hand_container, card_scales[12], true)
+	display_hand_cards_array(opponent_hand, opponent_hand_container, card_scales[12], hide_hidden_cards)
 
 # Function to draw opening hand with mulligan logic for both player and opponent
 func draw_opening_hand(deck: Array, player_name: String = "") -> Array:
@@ -839,6 +885,12 @@ func start_bench_setup_phase() -> void:
 	
 ############################################################### END GAME LOAD FUNCTIONS ##############################################################
 ######################################################################################################################################################
+
+# ######  #####    ###### ######
+# ##     ##   ##  ##      ##
+# ##     ##   ##  ##      ######
+# ##     ##   ##  ##      ##
+# ######  #####   ##      ######
 
 ######################################################################################################################################################
 ############################################################ CORE FUNCTIONALITY FUNCTIONS ############################################################
@@ -1291,6 +1343,7 @@ func reset_field_pokemon_turn_flags(is_opponent: bool) -> void:
 # Called when the player presses the end turn button to reset per-turn variables and begin next turn
 func player_end_turn_checks() -> void:
 	opponents_turn_active = true
+	turn_number += 1
 	
 	update_main_screen_buttons()
 	show_floating_label("End turn", Vector2(800, 850))
@@ -1302,6 +1355,8 @@ func player_end_turn_checks() -> void:
 
 # Called at the start of the player's turn to perform mandatory actions
 func player_start_turn_checks() -> void:
+
+	turn_number += 1
 	var drawn_card = draw_card_from_deck(false)
 	
 	opponents_turn_active = false
@@ -1407,8 +1462,38 @@ func perform_evolution(is_opponent: bool) -> void:
 	
 	print(target_card.metadata["name"], " evolved into ", evo_card.metadata["name"], "! (Damage carried: ", damage_taken, ")")
 
+# Sends a card and all its attachments (energies, pre-evolutions, attached cards) to the discard pile
+func send_card_to_discard(card: card_object, is_opponent: bool) -> void:
+	var discard = opponent_discard_pile if is_opponent else player_discard_pile
+	
+	for energy in card.attached_energies:
+		energy.current_location = "discard"
+		discard.append(energy)
+	card.attached_energies.clear()
+	
+	for pre_evo in card.attached_pre_evolutions:
+		pre_evo.current_location = "discard"
+		discard.append(pre_evo)
+	card.attached_pre_evolutions.clear()
+	
+	for attached in card.attached_cards:
+		attached.current_location = "discard"
+		discard.append(attached)
+	card.attached_cards.clear()
+	
+	card.current_location = "discard"
+	discard.append(card)
+	
+	update_discard_pile_display(is_opponent)
+
 ########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
 ######################################################################################################################################################
+
+#	  ##    ########  #######     ##     ######  ##   ##
+#    ####      ##       ##       ####    ##      ##  ##
+#   ##  ##     ##       ##      ##  ##   ##      ####
+#  ########    ##       ##     ########  ##      ##  ##
+# ##      ##   ##       ##    ##      ## ######  ##    ##
 
 ######################################################################################################################################################
 ############################################################# ATTACK AND DAMAGE FUNCTIONS ############################################################
@@ -1560,6 +1645,12 @@ func calculate_final_damage(base_damage: int, attacking_types: Array, defending_
 ########################################################## END ATTACK AND DAMAGE FUNCTIONS ###########################################################
 ######################################################################################################################################################
 
+#     ##      ##      ########  ####    ##  ########
+#    ####    ####        ##     ## ##   ##     ##
+#   ##  ##  ##  ##       ##     ##  ##  ##     ##
+#  ##    ####    ##      ##     ##   ## ##     ##
+# ##      ##      ##  ########  ##    ####   #######
+
 ######################################################################################################################################################
 ################################################### SMALL FUNCTIONS TO HELP WITH CODE READABILITY ####################################################
 
@@ -1607,8 +1698,14 @@ func has_evolution(base_pokemon: card_object, card_array: Array, stage_type: Str
 ################################################# END SMALL FUNCTIONS TO HELP WITH CODE READABILITY ##################################################
 ######################################################################################################################################################
 
+# #######  ######   ##   ##        #######  ##   ##    ######    ########  #######  #######
+# ##       ##   ##  ##   ##        ##       ##   ##  ##      ##     ##     ##       ## 
+# ##       ######   ##   ##  ##### ##       #######  ##      ##     ##     ##       #######
+# ##       ##       ##   ##        ##       ##   ##  ##      ##     ##     ##       ##
+# #######  ##       #######        #######  ##   ##    ######     #######  #######  #######
+
 ######################################################################################################################################################
-####################################################### AI PRIORITISE FUNCTIONALITY FUNCTIONS ########################################################
+#################################################### OPPONENT PRIORITISE FUNCTIONALITY FUNCTIONS #####################################################
 
 # THESE FUNCTIONS ARE SPECIFICALLY FOR DECIDING THE BEST POKEMON FROM A GIVEN ARRAY.
 # USED TO CHOOSE THE FIRST ACTIVE POKEMON AT MATCH START, REPLACING ACTIVE POKEMON FROM BENCH, AND CHOOSING BEST CARD FOR DECK SEARCHING EFFECTS
@@ -1797,11 +1894,17 @@ func criterion_5_attack_damage(basic_pokemon: card_object) -> Dictionary:
 		"reason": reason
 	}	
 			
-###################################################### END AI PRIORITISE FUNCTIONALITY FUNCTIONS #####################################################
+################################################### END OPPONENT PRIORITISE FUNCTIONALITY FUNCTIONS ##################################################
 ######################################################################################################################################################
+ 
+# #######  ######   ##   ##        ######   #######    ####### #######
+# ##       ##   ##  ##   ##        ##      ##     ##  ##       ##
+# ##       ######   ##   ##  ##### ##      ##     ##  ##       #######
+# ##       ##       ##   ##        ##      ##     ##  ##       ##
+# #######  ##       #######        #######  #######   ##       #######
 
 ######################################################################################################################################################
-######################################################### AI GENERAL FUNCTIONALITY FUNCTIONS #########################################################
+###################################################### OPPONENT GENERAL FUNCTIONALITY FUNCTIONS ######################################################
 
 # Function to get lowest cost attack for a pokemon by looping through all attacks. Returns a dictionary with "cost" (convertedEnergyCost), "damage" (as int), and "attack_name"
 func get_minimum_cost_attack(pokemon_card: card_object) -> Dictionary:
@@ -1984,7 +2087,7 @@ func opponent_setup_pokemon_from_hand() -> void:
 	
 	# Update displays
 	display_pokemon(true)  # true = opponent
-	display_hand_cards_array(opponent_hand, $opponent_hand_hbox_container, card_scales[12])
+	display_hand_cards_array(opponent_hand, $opponent_hand_hbox_container, card_scales[12], hide_hidden_cards)
 
 # Helper function to check attack text for negative self-inflicted effects
 # Only penalizes exact patterns where energy is discarded from the attacking pokemon
@@ -2046,9 +2149,14 @@ func get_attack_text_penalty(attack_text: String, pokemon_name: String) -> int:
 	
 	return 0
 	
-####################################################### END AI PRIORITISE FUNCTIONALITY FUNCTIONS #######################################################
+################################################## END OPPONENT PRIORITISE FUNCTIONALITY FUNCTIONS ###################################################
 ######################################################################################################################################################
 
+# ########  ####    ##  #######  ##   ##  ########
+#    ##     ## ##   ##  ##    ## ##   ##     ##
+#    ##     ##  ##  ##  #######  ##   ##     ##
+#    ##     ##   ## ##  ##       ##   ##     ##
+# ########  ##    ####  ##       #######     ##
 ######################################################################################################################################################
 ########################################################### USER INPUT ON CLICK FUNCTIONS ############################################################
 
@@ -2253,9 +2361,28 @@ func this_card_clicked(clicked_card: card_object) -> void:
 			
 	else:
 		selected_card_for_action = null
-		
+
+# Opens the opponent's discard pile for viewing in selection mode
+func opponent_discard_clicked(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		if opponent_discard_pile.size() > 0:
+			show_enlarged_array_selection_mode(opponent_discard_pile)
+			
+# Opens the player's discard pile for viewing in selection mode
+func player_discard_clicked(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		if player_discard_pile.size() > 0:
+			show_enlarged_array_selection_mode(player_discard_pile)
+
+######################################################################################################################################################
 ########################################################### USER INPUT ON CLICK FUNCTIONS ############################################################
 ######################################################################################################################################################
+
+#  ######  ##   ##  ####    ##
+# ##       ##   ##  ## ##   ##
+# ##       ##   ##  ##  ##  ##
+# ##       ##   ##  ##   ## ##
+# ##       #######  ##    ####
 
 ######################################################################################################################################################
 ####################################################### START OF MAIN GAME RUNNING FUNCTIONS #########################################################
@@ -2319,6 +2446,9 @@ func _ready() -> void:
 	
 	$player_bench_container.gui_input.connect(player_bench_clicked_show_bench)
 	$opponent_bench_container.gui_input.connect(opponent_bench_clicked_show_bench)
+	
+	$player_discard_pile_icon.gui_input.connect(player_discard_clicked)
+	$opponent_discard_pile_icon.gui_input.connect(opponent_discard_clicked)
 	
 	$cancel_selection_mode_view_button.pressed.connect(cancel_button_pressed_hide_selection_mode)
 	$card_action_button.pressed.connect(action_button_pressed_perform_action)

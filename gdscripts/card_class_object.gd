@@ -9,6 +9,7 @@ var metadata: Dictionary
 # attached cards tracking
 var attached_energies: Array = []
 var attached_pre_evolutions: Array = []
+var attached_cards: Array = [] # This is a generic catch all for tools, special cards, attached pokemon etc
 
 # Tracks the location of the card in player/opponents control.
 var current_location: String = "deck"  # "hand", "deck", "bench", "discard", etc.
