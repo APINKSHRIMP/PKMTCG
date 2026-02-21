@@ -132,9 +132,11 @@ func _input(event: InputEvent) -> void:
 			# Tell main script a card was clicked
 			get_tree().root.get_child(0).card_was_clicked_this_frame = true
 			
-			# CRITICAL: Get reference to the main script to check if we're in selection mode
+			# Get reference to the main script to check if we're in selection mode
 			var main_script = get_tree().root.get_child(0)
-			
+			if main_script.get_node("messagebox_container").visible:
+				return
+				
 			# If in selection mode, consume the input so it doesn't propagate to other cards
 			if main_script.card_selection_mode_enabled:
 				get_tree().get_root().set_input_as_handled()		

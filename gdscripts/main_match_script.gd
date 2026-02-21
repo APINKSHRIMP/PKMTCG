@@ -605,11 +605,12 @@ func hide_attack_buttons() -> void:
 # Displays the message box with given text and pauses execution until the player clicks
 func show_message(message_text: String) -> void:
 	$messagebox_container.visible = true
+	$messagebox_container/messagebox_texture.visible = true
+	$messagebox_container/messagebox_text_label.visible = true
 	$messagebox_container/messagebox_text_label.text = message_text
-	
-	# Suspend this function here — engine keeps running until signal fires
 	await message_acknowledged
-	
+	$messagebox_container/messagebox_text_label.visible = false
+	$messagebox_container/messagebox_texture.visible = false
 	$messagebox_container.visible = false
 
 # Creates a floating label at a given position that drifts upward and fades out over 2 seconds
@@ -2430,26 +2431,36 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 
 # Main function to show all hand cards larger when the player's hand is clicked
 func player_hand_clicked_show_hand(event: InputEvent) -> void:
+	if $messagebox_container.visible: return
+	
 	if event is InputEventMouseButton and event.pressed:
 		show_enlarged_array_selection_mode(player_hand)
 
 # Main function to show all hand cards larger when the opponent's hand is clicked		
 func opponent_hand_clicked_show_hidden_hand(event: InputEvent) -> void:
+	if $messagebox_container.visible: return
+	
 	if event is InputEventMouseButton and event.pressed:
 		show_enlarged_array_selection_mode(opponent_hand)
 
 # Main function to show all of player's bench cards larger when clicked
 func player_bench_clicked_show_bench(event: InputEvent) -> void:
+	if $messagebox_container.visible: return
+	
 	if event is InputEventMouseButton and event.pressed:
 		show_enlarged_array_selection_mode(player_bench)
 
 # Main function to show all of opponent's bench cards larger when clicked
 func opponent_bench_clicked_show_bench(event: InputEvent) -> void:
+	if $messagebox_container.visible: return
+	
 	if event is InputEventMouseButton and event.pressed:
 		show_enlarged_array_selection_mode(opponent_bench)
 
 # Called when a card in selection mode is clicked
 func this_card_clicked(clicked_card: card_object) -> void:
+	if $messagebox_container.visible: return
+	
 	if card_selection_mode_enabled == true:
 		
 		# Check if we're in card attach mode (selecting a target Pokemon)
@@ -2520,12 +2531,16 @@ func this_card_clicked(clicked_card: card_object) -> void:
 
 # Opens the opponent's discard pile for viewing in selection mode
 func opponent_discard_clicked(event: InputEvent) -> void:
+	if $messagebox_container.visible: return
+	
 	if event is InputEventMouseButton and event.pressed:
 		if opponent_discard_pile.size() > 0:
 			show_enlarged_array_selection_mode(opponent_discard_pile)
 			
 # Opens the player's discard pile for viewing in selection mode
 func player_discard_clicked(event: InputEvent) -> void:
+	if $messagebox_container.visible: return
+	
 	if event is InputEventMouseButton and event.pressed:
 		if player_discard_pile.size() > 0:
 			show_enlarged_array_selection_mode(player_discard_pile)
@@ -2553,6 +2568,7 @@ func _input(event: InputEvent) -> void:
 		
 		if $messagebox_container.visible:
 			message_acknowledged.emit()
+			get_viewport().set_input_as_handled()
 			return
 		
 		var mouse_pos = get_global_mouse_position()
