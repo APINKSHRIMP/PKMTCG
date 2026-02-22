@@ -49,6 +49,13 @@ var evolution_mode_active: bool = false
 
 var opponents_turn_active: bool = false
 
+var retreat_mode_active: bool = false
+var retreat_bench_selection_active: bool = false
+var retreat_energies_selected: Array = []
+var retreat_cost_remaining: int = 0
+var player_retreat_disabled: bool = false
+var opponent_retreat_disabled: bool = false
+
 # UI VARIABLES
 var large_header_text_label: Label
 var small_hint_info_text_label: Label
@@ -315,10 +322,8 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2, f
 		# Connect this card's signal to the main script's handler
 		hand_card_to_display.card_clicked.connect(this_card_clicked)
 		
-		# Replace the visual distinction block in display_hand_cards_array():
-
 		# If this is the active Pokemon (last card in attach mode), add visual distinction
-		if (card_attach_mode_active or evolution_mode_active) and index == hand.size() - 1:
+		if (card_attach_mode_active or evolution_mode_active or retreat_mode_active) and index == hand.size() - 1:
 			# Add large spacer BEFORE the active Pokemon to separate it from bench
 			var spacer = Control.new()
 			spacer.custom_minimum_size = Vector2(25, 0)
@@ -674,7 +679,9 @@ func update_main_screen_buttons() -> void:
 		card_selection_mode_enabled or
 		opponents_turn_active or
 		card_attach_mode_active or
-		evolution_mode_active
+		evolution_mode_active or
+		retreat_mode_active or
+		retreat_bench_selection_active
 	)
 
 	if should_disable:
@@ -1533,6 +1540,7 @@ func take_prize_card(card: card_object, is_opponent: bool) -> void:
 	var hand_scale = card_scales[12] if is_opponent else card_scales[11]
 	display_hand_cards_array(hand, hand_container, hand_scale)
 
+# Opens selection mode to choose a prize card and return that as the object to put into hand
 func player_pick_prize_card() -> void:
 	prize_card_selection_active = true
 	$card_action_button.position.x += 210
@@ -1544,6 +1552,66 @@ func player_pick_prize_card() -> void:
 	$card_action_button.disabled = true
 	$card_action_button.theme = load("res://uiresources/kenneyUI.tres")
 
+# Checks if a Pokemon can retreat, returning a dictionary with "can_retreat" and "reason" if blocked
+func can_retreat(is_opponent: bool) -> Dictionary:
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench = opponent_bench if is_opponent else player_bench
+	var is_disabled = opponent_retreat_disabled if is_opponent else player_retreat_disabled
+	
+	if active == null:
+		return {"can_retreat": false, "reason": "No active Pokemon!"}
+	if bench.size() == 0:
+		return {"can_retreat": false, "reason": "Cannot retreat with no Pokemon on your bench!"}
+	if is_disabled:
+		return {"can_retreat": false, "reason": "You have been prevented from retreating!"}
+	if active.attached_energies.size() < get_retreat_cost(active):
+		return {"can_retreat": false, "reason": "Not enough energy to retreat!"}
+	
+	return {"can_retreat": true, "reason": ""}
+
+# Initiates the retreat flow: validates, then shows attached energies for the player to select for discarding
+func start_retreat() -> void:
+	var retreat_check = can_retreat(false)
+	
+	if not retreat_check["can_retreat"]:
+		await show_message(retreat_check["reason"])
+		return
+	
+	var cost = get_retreat_cost(player_active_pokemon)
+	
+	if cost == 0:
+		start_retreat_bench_selection()
+		return
+	
+	retreat_mode_active = true
+	retreat_energies_selected.clear()
+	retreat_cost_remaining = cost
+	
+	var display_array = player_active_pokemon.attached_energies.duplicate()
+	display_array.append(player_active_pokemon)
+	
+	show_enlarged_array_selection_mode(display_array)
+	
+	$large_header_text_label.text = "RETREAT - SELECT ENERGY TO DISCARD"
+	$small_hint_info_text_label.text = "Select " + str(retreat_cost_remaining) + " energy card(s) to discard"
+	$card_action_button.text = str(retreat_cost_remaining) + " ENERGY REMAINING"
+	$card_action_button.disabled = true
+	$card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+
+# Shows the player's bench for selecting which Pokemon to swap into the active spot
+func start_retreat_bench_selection() -> void:
+	selected_card_for_action = null
+	retreat_mode_active = false
+	retreat_bench_selection_active = true
+	
+	show_enlarged_array_selection_mode(player_bench)
+	
+	$large_header_text_label.text = "SELECT NEW ACTIVE POKEMON"
+	$small_hint_info_text_label.text = "Choose a bench Pokemon to switch into the active spot"
+	$card_action_button.text = "MAKE ACTIVE"
+	$card_action_button.disabled = true
+	$card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+	
 ########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
 ######################################################################################################################################################
 
@@ -1728,7 +1796,6 @@ func check_and_handle_knockout(pokemon: card_object, is_opponent: bool) -> bool:
 	return true
 
 # Scans all Pokemon on the field for both players, handles each KO, and returns a summary of what was knocked out
-
 func check_all_knockouts() -> Dictionary:
 	var results = {"player_kos": 0, "opponent_kos": 0}
 	
@@ -1841,6 +1908,12 @@ func has_evolution(base_pokemon: card_object, card_array: Array, stage_type: Str
 			if can_evolve_from(card, base_pokemon):
 				return true
 	return false
+
+# Returns the retreat cost count for a Pokemon, or 0 if no retreat cost exists
+func get_retreat_cost(pokemon: card_object) -> int:
+	if pokemon == null:
+		return 0
+	return pokemon.metadata.get("retreatCost", []).size()
 
 ################################################# END SMALL FUNCTIONS TO HELP WITH CODE READABILITY ##################################################
 ######################################################################################################################################################
@@ -2314,6 +2387,34 @@ func action_button_pressed_perform_action() -> void:
 	$card_action_button.disabled = true
 	$card_action_button.theme = load("res://uiresources/kenneyUI.tres")
 	
+	if retreat_mode_active:
+		retreat_mode_active = false
+		start_retreat_bench_selection()
+		return
+	
+	if retreat_bench_selection_active:
+		var new_active = selected_card_for_action
+		
+		for energy in retreat_energies_selected:
+			player_active_pokemon.attached_energies.erase(energy)
+			send_card_to_discard(energy, false)
+		
+		player_bench.erase(new_active)
+		player_bench.append(player_active_pokemon)
+		
+		player_active_pokemon.current_location = "bench"
+		new_active.current_location = "active"
+		player_active_pokemon = new_active
+		
+		retreat_energies_selected.clear()
+		retreat_bench_selection_active = false
+		selected_card_for_action = null
+		
+		hide_selection_mode_display_main()
+		display_pokemon(false)
+		display_active_pokemon_energies()
+		return
+	
 	# Check if we're in attach mode - handle differently
 	if card_attach_mode_active:
 		# In attach mode, we're attaching the energy to the selected Pokemon
@@ -2420,6 +2521,22 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 		hide_selection_mode_display_main()
 		return
 	
+	if retreat_mode_active:
+		print("Retreat energy selection cancelled")
+		retreat_mode_active = false
+		retreat_energies_selected.clear()
+		retreat_cost_remaining = 0
+		hide_selection_mode_display_main()
+		return
+	
+	if retreat_bench_selection_active:
+		print("Retreat bench selection cancelled")
+		retreat_bench_selection_active = false
+		retreat_energies_selected.clear()
+		retreat_cost_remaining = 0
+		hide_selection_mode_display_main()
+		return
+	
 	# If we were in bench setup phase, end it and draw prize cards
 	if bench_setup_phase_active:
 		bench_setup_phase_active = false
@@ -2463,7 +2580,7 @@ func this_card_clicked(clicked_card: card_object) -> void:
 	
 	if card_selection_mode_enabled == true:
 		
-		# Check if we're in card attach mode (selecting a target Pokemon)
+		# ATTACHMENT MODE ATTACHMENT MODE ATTACHMENT MODE ATTACHMENT MODE ATTACHMENT MODE ATTACHMENT MODE ATTACHMENT MODE
 		if card_attach_mode_active:
 			# In attach mode, we're selecting a target Pokemon, not performing a card action
 			if selected_card_for_action != null:
@@ -2486,7 +2603,8 @@ func this_card_clicked(clicked_card: card_object) -> void:
 			$card_action_button.disabled = false
 			$card_action_button.theme = load("res://uiresources/kenneyUI-green.tres")
 			return
-			
+		
+		# EVOLUTION MODE EVOLUTION MODE EVOLUTION MODE EVOLUTION MODE EVOLUTION MODE EVOLUTION MODE EVOLUTION MODE	
 		elif evolution_mode_active:
 			if selected_card_for_action != null:
 				var prev_card_display = find_card_ui_for_object(selected_card_for_action)
@@ -2502,6 +2620,54 @@ func this_card_clicked(clicked_card: card_object) -> void:
 				card_display.set_selected(true)
 			
 			$card_action_button.text = "EVOLVE"
+			$card_action_button.disabled = false
+			$card_action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+			return
+		
+		# RETREAT MODE RETREAT MODE RETREAT MODE RETREAT MODE RETREAT MODE RETREAT MODE RETREAT MODE RETREAT MODE
+		elif retreat_mode_active:
+			if clicked_card == player_active_pokemon:
+				return
+			
+			if clicked_card in retreat_energies_selected:
+				retreat_energies_selected.erase(clicked_card)
+				var card_display = find_card_ui_for_object(clicked_card)
+				if card_display:
+					card_display.set_selected(false)
+			else:
+				if retreat_energies_selected.size() >= get_retreat_cost(player_active_pokemon):
+					return
+				retreat_energies_selected.append(clicked_card)
+				var card_display = find_card_ui_for_object(clicked_card)
+				if card_display:
+					card_display.set_selected(true)
+			
+			retreat_cost_remaining = get_retreat_cost(player_active_pokemon) - retreat_energies_selected.size()
+			$small_hint_info_text_label.text = "Select " + str(retreat_cost_remaining) + " energy card(s) to discard"
+			
+			if retreat_cost_remaining <= 0:
+				$card_action_button.text = "DISCARD & RETREAT"
+				$card_action_button.disabled = false
+				$card_action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+			else:
+				$card_action_button.text = str(retreat_cost_remaining) + " ENERGY REMAINING"
+				$card_action_button.disabled = true
+				$card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+			return
+		
+		elif retreat_bench_selection_active:
+			if selected_card_for_action != null:
+				var prev_card_display = find_card_ui_for_object(selected_card_for_action)
+				if prev_card_display:
+					prev_card_display.set_selected(false)
+			
+			selected_card_for_action = clicked_card
+			
+			var card_display = find_card_ui_for_object(clicked_card)
+			if card_display:
+				card_display.set_selected(true)
+			
+			$card_action_button.text = "MAKE ACTIVE"
 			$card_action_button.disabled = false
 			$card_action_button.theme = load("res://uiresources/kenneyUI-green.tres")
 			return
@@ -2544,6 +2710,7 @@ func player_discard_clicked(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		if player_discard_pile.size() > 0:
 			show_enlarged_array_selection_mode(player_discard_pile)
+
 
 ######################################################################################################################################################
 ########################################################### USER INPUT ON CLICK FUNCTIONS ############################################################
@@ -2631,6 +2798,8 @@ func _ready() -> void:
 	$main_screen_buttons_container/button_main_attack.pressed.connect(show_attack_buttons)
 	$main_screen_attack_buttons_container/cancel_attack_mode_button.pressed.connect(hide_attack_buttons)
 	$main_screen_attack_buttons_container.visible = false
+	
+	$main_screen_buttons_container/button_main_retreat.pressed.connect(start_retreat)
 	
 	$main_screen_buttons_container/button_main_endturn.pressed.connect(player_end_turn_checks)
 

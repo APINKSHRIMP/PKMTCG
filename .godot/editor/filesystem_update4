@@ -1,10 +1,7 @@
-res://gdscripts/cardimage.gd
-res://gdscripts/main_match_script.gd
 res://gdscenes/MatchStart.tscn
 res://gdscenes/backgroundscroll.gdshader
 res://uiresources/kenneyUI-red.tres
 res://uiresources/kenneyUI-green.tres
 res://uiresources/kenneyUI-blue.tres
 res://uiresources/kenneyUI.tres
-res://gdscripts/card_class_object.gd
-res://playerdata/CurrentDeck.json
+res://gdscripts/main_match_script.gd
