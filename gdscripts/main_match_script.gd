@@ -188,8 +188,12 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 	else:
 		$cancel_selection_mode_view_button.visible = true
 	
-	# Hide action button if viewing opponent's hand
-	if card_array == opponent_hand or card_array == opponent_bench or card_array == player_discard_pile or card_array == opponent_discard_pile:
+	# Hide action button for view-only arrays (prize cards are only actionable during prize selection)
+	var is_view_only_array = card_array in [opponent_hand, opponent_bench, player_discard_pile, opponent_discard_pile]
+	if not prize_card_selection_active:
+		is_view_only_array = is_view_only_array or card_array in [player_prize_cards, opponent_prize_cards]
+		
+	if is_view_only_array:
 		$card_action_button.visible = false		
 	else:
 		$card_action_button.visible = true
@@ -307,7 +311,7 @@ func hide_selection_mode_display_main() -> void:
 		card.mouse_filter = MOUSE_FILTER_PASS
 	
 # Displays both the player and opponents hand cards. Shows players at the top of screen and opponents in top right smaller.
-func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2, face_down: bool = false):
+func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2, face_down: bool = false, max_hand_width: float = 1300.0, max_before_overlap: int = 12):
 	
 	# Load the script that displays card images
 	var card_display_script = load("res://gdscripts/cardimage.gd")
@@ -316,11 +320,10 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2, f
 	for child in hand_container.get_children():
 		child.queue_free()
 		
-	if hand_container is HBoxContainer and hand.size() > 12:
-		var card_width = card_scales[11].x
-		var target_width = 1300.0
+	if hand_container is HBoxContainer and hand.size() > max_before_overlap:
+		var card_width = card_size.x
 		var n = hand.size()
-		var sep = (target_width - (n * card_width)) / (n - 1)
+		var sep = (max_hand_width - (n * card_width)) / (n - 1)
 		hand_container.add_theme_constant_override("separation", int(sep))
 	elif hand_container is HBoxContainer:
 		hand_container.add_theme_constant_override("separation", 3)
@@ -940,6 +943,24 @@ func start_bench_setup_phase() -> void:
 	
 	# Show the hand again for bench pokemon selection
 	show_enlarged_array_selection_mode(player_hand)	
+
+# Animates a card back image sliding from one node's position to another
+func animate_card_draw(from_node: Control, to_node: Control, animation_speed: float = 0.8) -> void:
+	var card_back = TextureRect.new()
+	card_back.texture = load("res://cardimages/cardbacksanddecks/cardbacksmall.png")
+	card_back.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	card_back.custom_minimum_size = Vector2(83, 113)
+	card_back.size = Vector2(83, 113)
+	card_back.z_index = 100
+	add_child(card_back)
+	
+	card_back.global_position = from_node.global_position
+	var target_pos = to_node.global_position + Vector2(to_node.size.x / 2, 0)
+	
+	var tween = create_tween()
+	tween.tween_property(card_back, "global_position", target_pos, animation_speed).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_callback(card_back.queue_free)
+	await tween.finished
 	
 ############################################################### END GAME LOAD FUNCTIONS ##############################################################
 ######################################################################################################################################################
@@ -1388,6 +1409,11 @@ func draw_card_from_deck(is_opponent: bool) -> card_object:
 	drawn_card.current_location = "hand"
 	hand.append(drawn_card)
 
+	if is_opponent:
+		await animate_card_draw($opponent_deck_icon, $opponent_hand_hbox_container, 0.2)
+	else:
+		await animate_card_draw($player_deck_icon, $player_hand_hbox_container,0.5)
+
 	return drawn_card
 
 # Resets placed_on_field_this_turn to false for all pokemon on the specified player's field
@@ -1401,28 +1427,11 @@ func reset_field_pokemon_turn_flags(is_opponent: bool) -> void:
 	for bench_pokemon in bench:
 		bench_pokemon.placed_on_field_this_turn = false
 
-# Called when the player presses the end turn button to reset per-turn variables and begin next turn
-func player_end_turn_checks() -> void:
-	opponents_turn_active = true
-	turn_number += 1
-	update_main_screen_buttons()
-	show_floating_label("End turn", Vector2(800, 850))
-	
-	await check_all_knockouts()
-	
-	# TESTING - WE DON'T HAVE CPU LOGIC YET SO JUST PAUSE QUICKLY
-	await get_tree().create_timer(0.5).timeout
-	
-	player_energy_played_this_turn = false
-	player_retreated_this_turn = false
-	
-	reset_field_pokemon_turn_flags(false)
-	player_start_turn_checks()
-
 # Called at the start of the player's turn to perform mandatory actions
 func player_start_turn_checks() -> void:
+	show_floating_label("Start turn", Vector2(800, 850))
 	turn_number += 1
-	var drawn_card = draw_card_from_deck(false)
+	var drawn_card = await draw_card_from_deck(false)
 	
 	opponents_turn_active = false
 	update_main_screen_buttons()
@@ -1432,8 +1441,47 @@ func player_start_turn_checks() -> void:
 
 	display_hand_cards_array(player_hand, $player_hand_hbox_container, card_scales[11])
 	update_deck_icon(false)
-	show_floating_label("Start turn", Vector2(800, 850))
 	
+# Handles the opponent's turn: draw a card with animation, then pass back to player
+func opponent_start_turn_checks() -> void:
+	opponents_turn_active = true
+	reset_field_pokemon_turn_flags(true)
+	
+	await show_message("Your opponent draws a card")
+	var drawn_card = await draw_card_from_deck(true)
+	
+	if drawn_card == null:
+		return
+	
+	display_hand_cards_array(opponent_hand, $opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500,6)
+	update_deck_icon(true)
+	
+	await get_tree().create_timer(0.5).timeout
+	await show_message("Your opponent ends their turn")
+	player_start_turn_checks()
+
+# Called when the player presses the end turn button to reset per-turn variables and begin next turn
+func player_end_turn_checks() -> void:
+	opponents_turn_active = true
+	turn_number += 1
+	update_main_screen_buttons()
+	show_floating_label("End turn", Vector2(800, 850))
+	
+	await check_all_knockouts()
+	
+	reset_field_pokemon_turn_flags(false)
+	inbetween_turn_checks()
+
+# Resets shared state between turns before the next player begins
+func inbetween_turn_checks() -> void:
+	player_energy_played_this_turn = false
+	player_retreated_this_turn = false
+	opponent_energy_played_this_turn = false
+	opponent_retreated_this_turn = false
+	reset_field_pokemon_turn_flags(false)
+	reset_field_pokemon_turn_flags(true)
+	opponent_start_turn_checks()
+
 # Scans active and bench for Pokemon that the given evolution card can legally evolve from
 func get_valid_evolution_targets(evolution_card: card_object, is_opponent: bool) -> Array:
 	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
@@ -2448,7 +2496,7 @@ func opponent_setup_pokemon_from_hand() -> void:
 	
 	# Update displays
 	display_pokemon(true)  # true = opponent
-	display_hand_cards_array(opponent_hand, $opponent_hand_hbox_container, card_scales[12], hide_hidden_cards)
+	display_hand_cards_array(opponent_hand, $opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500,6)
 
 ################################################## END OPPONENT PRIORITISE FUNCTIONALITY FUNCTIONS ###################################################
 ######################################################################################################################################################
@@ -2637,7 +2685,9 @@ func array_container_clicked(event: InputEvent, card_array: Array) -> void:
 
 # Called when a card in selection mode is clicked
 func this_card_clicked(clicked_card: card_object) -> void:
+	# Don't allow card selection if action button is hidden (view-only mode) or messagebox is being displayed
 	if $messagebox_container.visible or $coin_flip_container.visible: return
+	if not $card_action_button.visible: return
 	
 	if card_selection_mode_enabled == true:
 		
