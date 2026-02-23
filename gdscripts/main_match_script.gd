@@ -55,6 +55,8 @@ var retreat_energies_selected: Array = []
 var retreat_cost_remaining: int = 0
 var player_retreat_disabled: bool = false
 var opponent_retreat_disabled: bool = false
+var player_retreated_this_turn: bool = false
+var opponent_retreated_this_turn: bool = false
 
 # UI VARIABLES
 var large_header_text_label: Label
@@ -63,6 +65,12 @@ var small_hint_info_text_label: Label
 #signals
 signal message_acknowledged
 signal prize_card_taken
+
+# Customisable in game textures
+# Load coin textures
+var tex_heads = load("res://gameimageassets/coins/coin_snom_blue.png")
+var tex_tails = load("res://gameimageassets/coins/coin_back_basic.png")
+	
 
 # QUICK REFERENCE VECTORS JUST USED FOR EASY SWAPPING OF SIZES FOR DEVELOPMENT
 var card_scales: Dictionary = {
@@ -489,7 +497,13 @@ func display_active_pokemon_energies() -> void:
 	
 	var card_display_script = load("res://gdscripts/cardimage.gd")
 	var energy_card_size = card_scales[11]
-	var overlap_offset = 60
+	var card_width = energy_card_size.x
+	var overlap_offset = 80
+	
+	if player_active_pokemon.attached_energies.size() > 6:
+		var target_width = 480.0
+		var n = player_active_pokemon.attached_energies.size()
+		overlap_offset = (target_width - card_width) / (n - 1)
 	
 	for i in range(player_active_pokemon.attached_energies.size()):
 		var attached_energy = player_active_pokemon.attached_energies[i]
@@ -1391,20 +1405,22 @@ func reset_field_pokemon_turn_flags(is_opponent: bool) -> void:
 func player_end_turn_checks() -> void:
 	opponents_turn_active = true
 	turn_number += 1
-	
 	update_main_screen_buttons()
 	show_floating_label("End turn", Vector2(800, 850))
 	
 	await check_all_knockouts()
 	
-	await get_tree().create_timer(0.1).timeout
+	# TESTING - WE DON'T HAVE CPU LOGIC YET SO JUST PAUSE QUICKLY
+	await get_tree().create_timer(0.5).timeout
+	
 	player_energy_played_this_turn = false
+	player_retreated_this_turn = false
+	
 	reset_field_pokemon_turn_flags(false)
 	player_start_turn_checks()
 
 # Called at the start of the player's turn to perform mandatory actions
 func player_start_turn_checks() -> void:
-
 	turn_number += 1
 	var drawn_card = draw_card_from_deck(false)
 	
@@ -1423,6 +1439,9 @@ func get_valid_evolution_targets(evolution_card: card_object, is_opponent: bool)
 	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
 	var bench = opponent_bench if is_opponent else player_bench
 	var valid_targets = []
+	
+	if turn_number <= 2:
+		return []
 	
 	for bench_pokemon in bench:
 		if not bench_pokemon.placed_on_field_this_turn:
@@ -1566,7 +1585,10 @@ func can_retreat(is_opponent: bool) -> Dictionary:
 	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
 	var bench = opponent_bench if is_opponent else player_bench
 	var is_disabled = opponent_retreat_disabled if is_opponent else player_retreat_disabled
+	var already_retreated = opponent_retreated_this_turn if is_opponent else player_retreated_this_turn
 	
+	if already_retreated:
+		return {"can_retreat": false, "reason": "You have already retreated this turn!"}
 	if active == null:
 		return {"can_retreat": false, "reason": "No active Pokemon!"}
 	if bench.size() == 0:
@@ -1620,6 +1642,57 @@ func start_retreat_bench_selection() -> void:
 	$card_action_button.text = "MAKE ACTIVE"
 	$card_action_button.disabled = true
 	$card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+
+# Flips a coin with animation, blocks input, shows result message, returns true for heads
+func flip_coin() -> bool:
+	var result: bool = (randi() % 2 == 0)
+
+	# Show the input-blocking overlay and set initial coin image to heads
+	$coin_flip_container.visible = true
+	var coin = $coin_flip_container/coin_flip_texture
+	coin.texture = tex_heads
+	coin.visible = true
+	
+	# Force coin to a fixed display size regardless of source image dimensions
+	coin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	coin.custom_minimum_size = Vector2(129, 129)
+	coin.size = Vector2(129, 129)
+	
+	# Set pivot to center so the squish effect scales from the middle, not the top edge
+	coin.pivot_offset = coin.size / 2
+	var start_y = coin.position.y
+	var flip_count = 12
+	var half_flip_time = 0.04
+	var total_time = flip_count * half_flip_time * 1.5
+	
+	# Position tween: arc up then back down
+	var pos_tween = create_tween()
+	pos_tween.tween_property(coin, "position:y", start_y - 400, total_time / 1.5).set_ease(Tween.EASE_OUT)
+	pos_tween.tween_property(coin, "position:y", start_y, total_time / 1.5).set_ease(Tween.EASE_IN)
+	
+	# Flip tween: squish scale.y to 0, swap texture, unsquish back to 1
+	var flip_tween = create_tween()
+	var textures = [tex_tails, tex_heads]
+	for i in flip_count:
+		flip_tween.tween_property(coin, "scale:y", 0.0, half_flip_time)
+		flip_tween.tween_callback(coin.set.bind("texture", textures[i % 2]))
+		flip_tween.tween_property(coin, "scale:y", 1.0, half_flip_time)
+	
+	await flip_tween.finished
+	
+	# Set the final coin face to match the actual result
+	coin.texture = tex_heads if result else tex_tails
+	coin.scale.y = 1.0
+	
+	# Show result message using existing message system
+	var result_text = "HEADS" if result else "TAILS"
+	await show_message("Coin landed on " + result_text + "!")
+	
+	# Clean up: hide the coin overlay
+	$coin_flip_container.visible = false
+	coin.visible = false
+	
+	return result
 	
 ########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
 ######################################################################################################################################################
@@ -1863,7 +1936,6 @@ func handle_post_knockout(is_opponent: bool) -> void:
 		await show_message("OPPONENT SET " + opponent_active_pokemon.metadata["name"].to_upper() + "AS THEIR ACTIVE POKEMON!")
 	else:
 		pass
-
 
 ########################################################## END ATTACK AND DAMAGE FUNCTIONS ###########################################################
 ######################################################################################################################################################
@@ -2122,6 +2194,66 @@ func criterion_5_attack_damage(basic_pokemon: card_object) -> Dictionary:
 		"score_change": score_bonus,
 		"reason": reason
 	}	
+
+# Helper function to check attack text for negative self-inflicted effects
+# Only penalizes exact patterns where energy is discarded from the attacking pokemon
+# Returns the penalty score (negative value) if found, 0 if no penalty
+func get_attack_text_penalty(attack_text: String, pokemon_name: String) -> int:
+	if attack_text == "":
+		return 0
+	
+	var text = attack_text
+	
+	# Check for "discard all" attached to THIS pokemon (-70)
+	if ("Discard all Energy cards attached to " + pokemon_name in text) or \
+	   ("Discard all basic Energy cards attached to " + pokemon_name in text) or \
+	   ("Discard all" in text and "Energy cards attached to " + pokemon_name in text):
+		return -70
+	
+	# Check for "discard 3" attached to THIS pokemon (-50)
+	if ("Discard 3 Energy cards attached to " + pokemon_name in text) or \
+	   ("Discard 3 basic Energy cards attached to " + pokemon_name in text) or \
+	   ("Discard 3" in text and "Energy cards attached to " + pokemon_name in text):
+		return -50
+	
+	# Check for "discard 2" attached to THIS pokemon (-30)
+	if ("Discard 2 Energy cards attached to " + pokemon_name in text) or \
+	   ("Discard 2 basic Energy cards attached to " + pokemon_name in text) or \
+	   ("Discard 2" in text and "Energy cards attached to " + pokemon_name in text):
+		return -30
+	
+	# Check for "discard 1" or "discard a" attached to THIS pokemon (-10)
+	if ("Discard 1" in text and "Energy card attached to " + pokemon_name in text) or \
+	   ("Discard a" in text and "Energy card attached to " + pokemon_name in text) or \
+	   ("Discard a basic Energy card attached to " + pokemon_name in text):
+		return -10
+	
+	# Check for damage reduction effects (-20)
+	if "damage minus" in text.to_lower():
+		return -20
+	
+	# Check for self-damage effects (X damage to itself = -X*0.5)
+	if pokemon_name in text and "damage to itself" in text.to_lower():
+		var pattern = "does "
+		var lower_text = text.to_lower()
+		var start_index = lower_text.find(pattern)
+		
+		if start_index != -1:
+			start_index += pattern.length()
+			var number_str = ""
+			for i in range(start_index, lower_text.length()):
+				var numericalchar = lower_text[i]
+				if numericalchar.is_valid_int():
+					number_str += numericalchar
+				elif number_str != "":
+					break
+			
+			if number_str != "":
+				var damage = int(number_str)
+				var penalty = int(damage * 0.5)
+				return -penalty
+	
+	return 0
 			
 ################################################### END OPPONENT PRIORITISE FUNCTIONALITY FUNCTIONS ##################################################
 ######################################################################################################################################################
@@ -2318,66 +2450,6 @@ func opponent_setup_pokemon_from_hand() -> void:
 	display_pokemon(true)  # true = opponent
 	display_hand_cards_array(opponent_hand, $opponent_hand_hbox_container, card_scales[12], hide_hidden_cards)
 
-# Helper function to check attack text for negative self-inflicted effects
-# Only penalizes exact patterns where energy is discarded from the attacking pokemon
-# Returns the penalty score (negative value) if found, 0 if no penalty
-func get_attack_text_penalty(attack_text: String, pokemon_name: String) -> int:
-	if attack_text == "":
-		return 0
-	
-	var text = attack_text
-	
-	# Check for "discard all" attached to THIS pokemon (-70)
-	if ("Discard all Energy cards attached to " + pokemon_name in text) or \
-	   ("Discard all basic Energy cards attached to " + pokemon_name in text) or \
-	   ("Discard all" in text and "Energy cards attached to " + pokemon_name in text):
-		return -70
-	
-	# Check for "discard 3" attached to THIS pokemon (-50)
-	if ("Discard 3 Energy cards attached to " + pokemon_name in text) or \
-	   ("Discard 3 basic Energy cards attached to " + pokemon_name in text) or \
-	   ("Discard 3" in text and "Energy cards attached to " + pokemon_name in text):
-		return -50
-	
-	# Check for "discard 2" attached to THIS pokemon (-30)
-	if ("Discard 2 Energy cards attached to " + pokemon_name in text) or \
-	   ("Discard 2 basic Energy cards attached to " + pokemon_name in text) or \
-	   ("Discard 2" in text and "Energy cards attached to " + pokemon_name in text):
-		return -30
-	
-	# Check for "discard 1" or "discard a" attached to THIS pokemon (-10)
-	if ("Discard 1" in text and "Energy card attached to " + pokemon_name in text) or \
-	   ("Discard a" in text and "Energy card attached to " + pokemon_name in text) or \
-	   ("Discard a basic Energy card attached to " + pokemon_name in text):
-		return -10
-	
-	# Check for damage reduction effects (-20)
-	if "damage minus" in text.to_lower():
-		return -20
-	
-	# Check for self-damage effects (X damage to itself = -X*0.5)
-	if pokemon_name in text and "damage to itself" in text.to_lower():
-		var pattern = "does "
-		var lower_text = text.to_lower()
-		var start_index = lower_text.find(pattern)
-		
-		if start_index != -1:
-			start_index += pattern.length()
-			var number_str = ""
-			for i in range(start_index, lower_text.length()):
-				var numericalchar = lower_text[i]
-				if numericalchar.is_valid_int():
-					number_str += numericalchar
-				elif number_str != "":
-					break
-			
-			if number_str != "":
-				var damage = int(number_str)
-				var penalty = int(damage * 0.5)
-				return -penalty
-	
-	return 0
-	
 ################################################## END OPPONENT PRIORITISE FUNCTIONALITY FUNCTIONS ###################################################
 ######################################################################################################################################################
 
@@ -2415,6 +2487,7 @@ func action_button_pressed_perform_action() -> void:
 		new_active.current_location = "active"
 		player_active_pokemon = new_active
 		
+		player_retreated_this_turn = true
 		retreat_energies_selected.clear()
 		retreat_bench_selection_active = false
 		selected_card_for_action = null
@@ -2558,13 +2631,13 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 # Opens any card array in enlarged selection mode when its container is clicked
 func array_container_clicked(event: InputEvent, card_array: Array) -> void:
 	if event is InputEventMouseButton and event.pressed:
-		if $messagebox_container.visible: return
+		if $messagebox_container.visible or $coin_flip_container.visible: return
 		if card_array.size() > 0:
 			show_enlarged_array_selection_mode(card_array)
 
 # Called when a card in selection mode is clicked
 func this_card_clicked(clicked_card: card_object) -> void:
-	if $messagebox_container.visible: return
+	if $messagebox_container.visible or $coin_flip_container.visible: return
 	
 	if card_selection_mode_enabled == true:
 		
@@ -2757,7 +2830,7 @@ func _ready() -> void:
 	$opponent_prize_cards_container.gui_input.connect(array_container_clicked.bind(opponent_prize_cards))
 	$player_discard_pile_icon.gui_input.connect(array_container_clicked.bind(player_discard_pile))
 	$opponent_discard_pile_icon.gui_input.connect(array_container_clicked.bind(opponent_discard_pile))
-	
+
 	$cancel_selection_mode_view_button.pressed.connect(cancel_button_pressed_hide_selection_mode)
 	$card_action_button.pressed.connect(action_button_pressed_perform_action)
 	$main_screen_attack_buttons_container/cancel_attack_mode_button.pressed.connect(hide_attack_buttons)
@@ -2767,6 +2840,8 @@ func _ready() -> void:
 	$main_screen_buttons_container/button_main_attack.pressed.connect(show_attack_buttons)
 	$main_screen_attack_buttons_container/cancel_attack_mode_button.pressed.connect(hide_attack_buttons)
 	$main_screen_attack_buttons_container.visible = false
+	
+	$main_screen_buttons_container/button_main_power.pressed.connect(flip_coin)
 	
 	$main_screen_buttons_container/button_main_retreat.pressed.connect(start_retreat)
 	

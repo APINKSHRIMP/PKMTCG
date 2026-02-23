@@ -1,7 +1,7 @@
-Control
-ColorRect
-Label
 TextureRect
+ColorRect
+Control
+Label
 GridContainer
 Button
 HBoxContainer

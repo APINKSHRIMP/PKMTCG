@@ -450,6 +450,20 @@ theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 27
 text = "0"
 
+[node name="player_active_pokemon_energies" type="Control" parent="."]
+anchors_preset = 0
+offset_left = 414.0
+offset_top = 364.0
+offset_right = 454.0
+offset_bottom = 404.0
+
+[node name="opponent_active_pokemon_energies" type="Control" parent="."]
+anchors_preset = 0
+offset_left = 1322.0
+offset_top = 374.0
+offset_right = 1362.0
+offset_bottom = 414.0
+
 [node name="messagebox_container" type="ColorRect" parent="."]
 visible = false
 layout_mode = 0
@@ -491,16 +505,17 @@ text = "YOUR OPPONENT'S FERALIGATR USED SUPER MEGA RIPTIDE"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="player_active_pokemon_energies" type="Control" parent="."]
-anchors_preset = 0
-offset_left = 414.0
-offset_top = 364.0
-offset_right = 454.0
-offset_bottom = 404.0
+[node name="coin_flip_container" type="ColorRect" parent="."]
+visible = false
+layout_mode = 0
+offset_right = 1922.0
+offset_bottom = 1082.0
+color = Color(1, 1, 1, 0)
 
-[node name="opponent_active_pokemon_energies" type="Control" parent="."]
-anchors_preset = 0
-offset_left = 1322.0
-offset_top = 391.0
-offset_right = 1362.0
-offset_bottom = 431.0
+[node name="coin_flip_texture" type="TextureRect" parent="coin_flip_container"]
+visible = false
+layout_mode = 0
+offset_left = 891.0
+offset_top = 785.0
+offset_right = 931.0
+offset_bottom = 825.0
