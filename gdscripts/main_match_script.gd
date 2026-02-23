@@ -7,8 +7,8 @@ extends Control
 # GLOBAL VARIABLES FOR FULL MATCH VARIABLES AND CHANGABLES. MOST ARE SELF EXPLANATORY BY NAME
 
 # TESTING VARIABLES
-var amount_of_cards_to_draw = 7		# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
-var hide_hidden_cards = false      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
+var amount_of_cards_to_draw = 7	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
+var hide_hidden_cards = true      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
 
 # Game Variables
 var turn_number: int = 1
@@ -198,6 +198,9 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 	$selection_mode_scroller.visible = false
 	$selection_mode_scroller/large_selection_mode_container.visible = false
 	
+	# Hide opponents hand but show player's
+	var should_hide = hide_hidden_cards and (card_array == opponent_hand or card_array == player_prize_cards or card_array == opponent_prize_cards)
+	
 	# If the card array is OVER 7 then use the scroller box. If it's UNDER 7 then just use a box central aligned
 	if amount_of_cards_to_show > 7:
 		# If OVER 7 cards then use a scrolling box container
@@ -205,7 +208,7 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 		$selection_mode_scroller/large_selection_mode_container.visible = true
 		
 		# Now display the passed through card array to the selection mode container in large pixel format
-		display_hand_cards_array(card_array, $selection_mode_scroller/large_selection_mode_container, card_scales[5])
+		display_hand_cards_array(card_array, $selection_mode_scroller/large_selection_mode_container, card_scales[5], should_hide)
 		
 		# If UNDER 8 cards (small array)	
 	else:
@@ -214,7 +217,7 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 		$small_selection_mode_container.custom_minimum_size = Vector2(0, 0)
 		
 		# Now display the passed through card array to the selection mode container in large pixel format
-		display_hand_cards_array(card_array, $small_selection_mode_container, card_scales[amount_of_cards_to_show])
+		display_hand_cards_array(card_array, $small_selection_mode_container, card_scales[amount_of_cards_to_show], should_hide)
 
 # Both the cancel button and action button will hide selection mode so function is vaguely named for both actions
 func hide_selection_mode_display_main() -> void:
@@ -304,6 +307,15 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2, f
 	# Clear existing cards from container to prevent stale entries when cards leave or enter the hand
 	for child in hand_container.get_children():
 		child.queue_free()
+		
+	if hand_container is HBoxContainer and hand.size() > 12:
+		var card_width = card_scales[11].x
+		var target_width = 1300.0
+		var n = hand.size()
+		var sep = (target_width - (n * card_width)) / (n - 1)
+		hand_container.add_theme_constant_override("separation", int(sep))
+	elif hand_container is HBoxContainer:
+		hand_container.add_theme_constant_override("separation", 3)
 	
 	# Draw all cards in the hand
 	for index in range(hand.size()):
@@ -464,31 +476,28 @@ func display_prize_cards(is_opponent: bool) -> void:
 		# Connect the signal so prize cards can be clicked if needed
 		prize_card_display.card_clicked.connect(this_card_clicked)	
 
-# Add this new function after display_pokemon()
+# Displays attached energy cards next to the player's active Pokemon, stacking right to left
 func display_active_pokemon_energies() -> void:
-	# Clear the energies container first
 	for child in $player_active_pokemon_energies.get_children():
 		child.queue_free()
 	
-	# If no active pokemon, nothing to display
 	if player_active_pokemon == null:
 		return
 	
-	# If active pokemon has no attached energies, nothing to display
 	if player_active_pokemon.attached_energies.size() == 0:
 		return
 	
-	# Load the card display script for energy cards
 	var card_display_script = load("res://gdscripts/cardimage.gd")
+	var energy_card_size = card_scales[11]
+	var overlap_offset = 60
 	
-	# Display each attached energy
-	for attached_energy in player_active_pokemon.attached_energies:
+	for i in range(player_active_pokemon.attached_energies.size()):
+		var attached_energy = player_active_pokemon.attached_energies[i]
 		var energy_display = TextureRect.new()
 		energy_display.set_script(card_display_script)
 		$player_active_pokemon_energies.add_child(energy_display)
-		
-		# Display energy cards smaller than the Pokemon (use card_scales[10])
-		energy_display.load_card_image(attached_energy.uid, card_scales[11], attached_energy)
+		energy_display.load_card_image(attached_energy.uid, energy_card_size, attached_energy)
+		energy_display.position.x = -(i * overlap_offset)
 
 # Displays HP circles above the active pokemon, colouring red from damage taken
 func display_hp_circles_above_align(active_pokemon: card_object, is_opponent: bool) -> void:
@@ -1388,7 +1397,7 @@ func player_end_turn_checks() -> void:
 	
 	await check_all_knockouts()
 	
-	await get_tree().create_timer(0.5).timeout
+	await get_tree().create_timer(0.1).timeout
 	player_energy_played_this_turn = false
 	reset_field_pokemon_turn_flags(false)
 	player_start_turn_checks()
@@ -2548,31 +2557,31 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 
 # Main function to show all hand cards larger when the player's hand is clicked
 func player_hand_clicked_show_hand(event: InputEvent) -> void:
-	if $messagebox_container.visible: return
-	
 	if event is InputEventMouseButton and event.pressed:
 		show_enlarged_array_selection_mode(player_hand)
 
 # Main function to show all hand cards larger when the opponent's hand is clicked		
 func opponent_hand_clicked_show_hidden_hand(event: InputEvent) -> void:
-	if $messagebox_container.visible: return
-	
 	if event is InputEventMouseButton and event.pressed:
 		show_enlarged_array_selection_mode(opponent_hand)
 
 # Main function to show all of player's bench cards larger when clicked
 func player_bench_clicked_show_bench(event: InputEvent) -> void:
-	if $messagebox_container.visible: return
-	
 	if event is InputEventMouseButton and event.pressed:
 		show_enlarged_array_selection_mode(player_bench)
 
 # Main function to show all of opponent's bench cards larger when clicked
 func opponent_bench_clicked_show_bench(event: InputEvent) -> void:
-	if $messagebox_container.visible: return
-	
 	if event is InputEventMouseButton and event.pressed:
 		show_enlarged_array_selection_mode(opponent_bench)
+
+func player_prize_cards_clicked(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		show_enlarged_array_selection_mode(player_prize_cards)
+
+func opponent_prize_cards_clicked(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		show_enlarged_array_selection_mode(opponent_prize_cards)
 
 # Called when a card in selection mode is clicked
 func this_card_clicked(clicked_card: card_object) -> void:
@@ -2785,6 +2794,9 @@ func _ready() -> void:
 	
 	$player_bench_container.gui_input.connect(player_bench_clicked_show_bench)
 	$opponent_bench_container.gui_input.connect(opponent_bench_clicked_show_bench)
+	
+	$player_prize_cards_container.gui_input.connect(player_prize_cards_clicked)
+	$opponent_prize_cards_container.gui_input.connect(opponent_prize_cards_clicked)
 	
 	$player_discard_pile_icon.gui_input.connect(player_discard_clicked)
 	$opponent_discard_pile_icon.gui_input.connect(opponent_discard_clicked)

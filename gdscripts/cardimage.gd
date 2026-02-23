@@ -34,12 +34,17 @@ func load_card_image(card_passed_uid: String, card_target_size, card_object_ref:
 	
 	# Now find the image based on the card card_uid and size
 	# If the image is only being displayed small then no point wasting resources loading large card images and shrinking them down.
-	if face_down:
-		card_image_path = "res://cardimages/cardbacksanddecks/cardbacksmall.png"
-	elif card_target_size.x < 250 or card_target_size.y < 350:
-		card_image_path="res://cardimages/"+card_set+"/Small/"+card_passed_uid+".png"
+	
+	if card_target_size.x < 250 or card_target_size.y < 350:
+		if face_down:
+			card_image_path = "res://cardimages/cardbacksanddecks/cardbacksmall.png"
+		else:
+			card_image_path="res://cardimages/"+card_set+"/Small/"+card_passed_uid+".png"
 	else:
-		card_image_path="res://cardimages/"+card_set+"/Large/"+card_passed_uid+".png"	
+		if face_down:
+			card_image_path = "res://cardimages/cardbacksanddecks/cardback.png"
+		else:
+			card_image_path="res://cardimages/"+card_set+"/Large/"+card_passed_uid+".png"	
 	
 	# Now find the image from the path provided
 	var card_texture = load(card_image_path)

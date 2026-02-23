@@ -189,16 +189,6 @@ offset_top = 260.0
 offset_right = 914.0
 offset_bottom = 780.0
 
-[node name="player_active_pokemon_energies" type="HBoxContainer" parent="."]
-layout_direction = 3
-layout_mode = 0
-offset_left = 1297.0
-offset_top = 381.0
-offset_right = 1530.0
-offset_bottom = 443.0
-theme_override_constants/separation = -16
-alignment = 2
-
 [node name="player_active_pokemon_hp_container" type="GridContainer" parent="."]
 layout_mode = 0
 offset_left = 525.0
@@ -213,13 +203,6 @@ offset_left = 986.0
 offset_top = 260.0
 offset_right = 1412.0
 offset_bottom = 837.0
-
-[node name="opponent_active_pokemon_energies" type="HBoxContainer" parent="."]
-layout_mode = 0
-offset_left = 1495.0
-offset_top = 430.0
-offset_right = 1880.0
-offset_bottom = 584.0
 
 [node name="opponent_active_pokemon_hp_container" type="GridContainer" parent="."]
 layout_mode = 0
@@ -507,3 +490,17 @@ theme_override_font_sizes/font_size = 45
 text = "YOUR OPPONENT'S FERALIGATR USED SUPER MEGA RIPTIDE"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="player_active_pokemon_energies" type="Control" parent="."]
+anchors_preset = 0
+offset_left = 414.0
+offset_top = 364.0
+offset_right = 454.0
+offset_bottom = 404.0
+
+[node name="opponent_active_pokemon_energies" type="Control" parent="."]
+anchors_preset = 0
+offset_left = 1322.0
+offset_top = 391.0
+offset_right = 1362.0
+offset_bottom = 431.0
