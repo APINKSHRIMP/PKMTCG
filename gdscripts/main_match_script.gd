@@ -2555,33 +2555,12 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 	
 	hide_selection_mode_display_main()
 
-# Main function to show all hand cards larger when the player's hand is clicked
-func player_hand_clicked_show_hand(event: InputEvent) -> void:
+# Opens any card array in enlarged selection mode when its container is clicked
+func array_container_clicked(event: InputEvent, card_array: Array) -> void:
 	if event is InputEventMouseButton and event.pressed:
-		show_enlarged_array_selection_mode(player_hand)
-
-# Main function to show all hand cards larger when the opponent's hand is clicked		
-func opponent_hand_clicked_show_hidden_hand(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed:
-		show_enlarged_array_selection_mode(opponent_hand)
-
-# Main function to show all of player's bench cards larger when clicked
-func player_bench_clicked_show_bench(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed:
-		show_enlarged_array_selection_mode(player_bench)
-
-# Main function to show all of opponent's bench cards larger when clicked
-func opponent_bench_clicked_show_bench(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed:
-		show_enlarged_array_selection_mode(opponent_bench)
-
-func player_prize_cards_clicked(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed:
-		show_enlarged_array_selection_mode(player_prize_cards)
-
-func opponent_prize_cards_clicked(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed:
-		show_enlarged_array_selection_mode(opponent_prize_cards)
+		if $messagebox_container.visible: return
+		if card_array.size() > 0:
+			show_enlarged_array_selection_mode(card_array)
 
 # Called when a card in selection mode is clicked
 func this_card_clicked(clicked_card: card_object) -> void:
@@ -2704,23 +2683,6 @@ func this_card_clicked(clicked_card: card_object) -> void:
 	else:
 		selected_card_for_action = null
 
-# Opens the opponent's discard pile for viewing in selection mode
-func opponent_discard_clicked(event: InputEvent) -> void:
-	if $messagebox_container.visible: return
-	
-	if event is InputEventMouseButton and event.pressed:
-		if opponent_discard_pile.size() > 0:
-			show_enlarged_array_selection_mode(opponent_discard_pile)
-			
-# Opens the player's discard pile for viewing in selection mode
-func player_discard_clicked(event: InputEvent) -> void:
-	if $messagebox_container.visible: return
-	
-	if event is InputEventMouseButton and event.pressed:
-		if player_discard_pile.size() > 0:
-			show_enlarged_array_selection_mode(player_discard_pile)
-
-
 ######################################################################################################################################################
 ########################################################### USER INPUT ON CLICK FUNCTIONS ############################################################
 ######################################################################################################################################################
@@ -2789,17 +2751,12 @@ func _input(event: InputEvent) -> void:
 func _ready() -> void:
 		
 	# Connect all the signals so that when parts of the UI are clicked by mouse they can perform actions
-	$player_hand_hbox_container.gui_input.connect(player_hand_clicked_show_hand)
-	$opponent_hand_hbox_container.gui_input.connect(opponent_hand_clicked_show_hidden_hand)
-	
-	$player_bench_container.gui_input.connect(player_bench_clicked_show_bench)
-	$opponent_bench_container.gui_input.connect(opponent_bench_clicked_show_bench)
-	
-	$player_prize_cards_container.gui_input.connect(player_prize_cards_clicked)
-	$opponent_prize_cards_container.gui_input.connect(opponent_prize_cards_clicked)
-	
-	$player_discard_pile_icon.gui_input.connect(player_discard_clicked)
-	$opponent_discard_pile_icon.gui_input.connect(opponent_discard_clicked)
+	$player_bench_container.gui_input.connect(array_container_clicked.bind(player_bench))
+	$opponent_bench_container.gui_input.connect(array_container_clicked.bind(opponent_bench))
+	$player_prize_cards_container.gui_input.connect(array_container_clicked.bind(player_prize_cards))
+	$opponent_prize_cards_container.gui_input.connect(array_container_clicked.bind(opponent_prize_cards))
+	$player_discard_pile_icon.gui_input.connect(array_container_clicked.bind(player_discard_pile))
+	$opponent_discard_pile_icon.gui_input.connect(array_container_clicked.bind(opponent_discard_pile))
 	
 	$cancel_selection_mode_view_button.pressed.connect(cancel_button_pressed_hide_selection_mode)
 	$card_action_button.pressed.connect(action_button_pressed_perform_action)
@@ -2817,6 +2774,11 @@ func _ready() -> void:
 
 	setup_player()
 	setup_opponent("testing1")
+	
+	# Player hand and opponent hand have to be connected after the intiial setup to prevent bugs on clicking
+	$player_hand_hbox_container.gui_input.connect(array_container_clicked.bind(player_hand))
+	$opponent_hand_hbox_container.gui_input.connect(array_container_clicked.bind(opponent_hand))
+	
 	opponent_setup_pokemon_from_hand()
 	draw_prize_cards(false)
 	update_action_button()
