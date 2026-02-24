@@ -10,11 +10,11 @@ extends Control
 var amount_of_cards_to_draw = 25	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
 var hide_hidden_cards = true      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
 var opponent_deck_name = "testing1"
-var player_deck_name = "Magikarp"
+var player_deck_name = "GrassFire"
 
 # Customisable in game textures
 # Load coin textures
-var tex_heads = load("res://gameimageassets/coins/coin_pikachu_silver_1.png")
+var tex_heads = load("res://gameimageassets/coins/coin_groudon_red.png")
 var tex_tails = load("res://gameimageassets/coins/coin_back_basic.png")
 
 # Game Variables
@@ -804,8 +804,8 @@ func animate_energies_to_discard(energy_cards: Array, pokemon: card_object, is_o
 	
 	for energy in energy_cards:
 		var energy_texture = get_card_texture(energy)
-		await animate_card_a_to_b(from_node, discard_node, 0.2, energy_texture, card_scales[10])
-		await get_tree().create_timer(0.1).timeout		
+		animate_card_a_to_b(from_node, discard_node, 0.2, energy_texture, card_scales[10])
+		await get_tree().create_timer(0.2).timeout		
 
 # Animates the retreat sequence: energies to discard, message, then swap pokemon positions
 func animate_retreat(old_active: card_object, new_active: card_object, discarded_energies: Array, is_opponent: bool) -> void:
@@ -823,8 +823,8 @@ func animate_retreat(old_active: card_object, new_active: card_object, discarded
 	var old_texture = get_card_texture(old_active)
 	var new_texture = get_card_texture(new_active)
 	
-	animate_card_a_to_b(active_container, bench_container, 0.4, old_texture, card_scales[10])
-	await animate_card_a_to_b(bench_container, active_container, 0.4, new_texture, card_scales[10])
+	animate_card_a_to_b(active_container, bench_container, 0.3, old_texture, card_scales[10])
+	await animate_card_a_to_b(bench_container, active_container, 0.3, new_texture, card_scales[10])
 
 # Creates continuous sparkle particles around a given node, returns the node for manual cleanup
 func start_sparkle_effect(target_node: Control) -> CPUParticles2D:
@@ -912,7 +912,7 @@ func play_evolution_effect(pokemon: card_object) -> void:
 	particles.global_position = card_ui.global_position + Vector2(card_ui.size.x / 2, card_ui.size.y)
 	particles.z_index = 101
 	particles.amount = 750
-	particles.lifetime = 0.3
+	particles.lifetime = 0.25
 	particles.one_shot = true
 	particles.explosiveness = 0.3
 	particles.emitting = true
@@ -1863,7 +1863,7 @@ func take_prize_card(card: card_object, is_opponent: bool) -> void:
 	
 	display_prize_cards(is_opponent)
 	
-	await animate_card_a_to_b(prize_container, hand_container, 0.4, card_texture, card_scales[11])
+	await animate_card_a_to_b(prize_container, hand_container, 0.3, card_texture, card_scales[11])
 	
 	var hand_scale = card_scales[12] if is_opponent else card_scales[11]
 	display_hand_cards_array(hand, hand_container, hand_scale)
@@ -2198,7 +2198,7 @@ func check_and_handle_knockout(pokemon: card_object, is_opponent: bool) -> bool:
 	# Now do the actual array manipulation
 	send_card_to_discard(pokemon, is_opponent)
 	
-	await get_tree().create_timer(0.5).timeout
+	await get_tree().create_timer(0.3).timeout
 	display_hp_circles_above_align(active if pokemon != active else null, is_opponent)
 	
 	return true
@@ -2261,7 +2261,7 @@ func handle_post_knockout(is_opponent: bool) -> void:
 		var new_active = bench.pop_front()
 		var new_texture = get_card_texture(new_active)
 		
-		await animate_card_a_to_b(bench_container, active_container, 0.4, new_texture, card_scales[9])
+		await animate_card_a_to_b(bench_container, active_container, 0.3, new_texture, card_scales[9])
 		
 		new_active.current_location = "active"
 		opponent_active_pokemon = new_active
@@ -2872,7 +2872,7 @@ func action_button_pressed_perform_action() -> void:
 			card_scale_to_animate = card_scales[11]
 			
 		var evo_texture = get_card_texture(evo_card)
-		await animate_card_a_to_b($player_hand_hbox_container, target_node, 0.4, evo_texture, card_scale_to_animate)
+		await animate_card_a_to_b($player_hand_hbox_container, target_node, 0.3, evo_texture, card_scale_to_animate)
 		
 		display_pokemon(false)
 		await get_tree().process_frame

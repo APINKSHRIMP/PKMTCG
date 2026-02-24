@@ -7,3 +7,4 @@ res://uiresources/kenneyUI.tres
 res://gdscripts/main_match_script.gd
 res://playerdata/Magikarp.json
 res://playerdata/Evolutions.json
+res://playerdata/GrassFire.json
