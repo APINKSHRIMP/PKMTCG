@@ -7,9 +7,15 @@ extends Control
 # GLOBAL VARIABLES FOR FULL MATCH VARIABLES AND CHANGABLES. MOST ARE SELF EXPLANATORY BY NAME
 
 # TESTING VARIABLES
-var amount_of_cards_to_draw = 7	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
+var amount_of_cards_to_draw = 25	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
 var hide_hidden_cards = true      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
-var testing_deck = "testingchanseyonly"
+var opponent_deck_name = "testing1"
+var player_deck_name = "Magikarp"
+
+# Customisable in game textures
+# Load coin textures
+var tex_heads = load("res://gameimageassets/coins/coin_pikachu_silver_1.png")
+var tex_tails = load("res://gameimageassets/coins/coin_back_basic.png")
 
 # Game Variables
 var turn_number: int = 1
@@ -66,12 +72,6 @@ var small_hint_info_text_label: Label
 #signals
 signal message_acknowledged
 signal prize_card_taken
-
-# Customisable in game textures
-# Load coin textures
-var tex_heads = load("res://gameimageassets/coins/coin_snom_blue.png")
-var tex_tails = load("res://gameimageassets/coins/coin_back_basic.png")
-	
 
 # QUICK REFERENCE VECTORS JUST USED FOR EASY SWAPPING OF SIZES FOR DEVELOPMENT
 var card_scales: Dictionary = {
@@ -325,13 +325,15 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2, f
 	for child in hand_container.get_children():
 		child.queue_free()
 		
-	if hand_container is HBoxContainer and hand.size() > max_before_overlap:
-		var card_width = card_size.x
-		var n = hand.size()
-		var sep = (max_hand_width - (n * card_width)) / (n - 1)
-		hand_container.add_theme_constant_override("separation", int(sep))
-	elif hand_container is HBoxContainer:
-		hand_container.add_theme_constant_override("separation", 3)
+	if hand_container is HBoxContainer:
+		var is_inside_scroller = hand_container.get_parent() is ScrollContainer
+		if not is_inside_scroller and hand.size() > max_before_overlap:
+			var card_width = card_size.x
+			var n = hand.size()
+			var sep = (max_hand_width - (n * card_width)) / (n - 1)
+			hand_container.add_theme_constant_override("separation", int(sep))
+		else:
+			hand_container.add_theme_constant_override("separation", 3)
 	
 	# Draw all cards in the hand
 	for index in range(hand.size()):
@@ -351,7 +353,7 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2, f
 		hand_card_to_display.card_clicked.connect(this_card_clicked)
 		
 		# If this is the active Pokemon (last card in attach mode), add visual distinction
-		if (card_attach_mode_active or evolution_mode_active or retreat_mode_active) and index == hand.size() - 1:
+		if (card_attach_mode_active or evolution_mode_active or retreat_mode_active) and index == hand.size() - 1 and this_card_in_hand.current_location == "active":
 			# Add large spacer BEFORE the active Pokemon to separate it from bench
 			var spacer = Control.new()
 			spacer.custom_minimum_size = Vector2(25, 0)
@@ -824,6 +826,169 @@ func animate_retreat(old_active: card_object, new_active: card_object, discarded
 	animate_card_a_to_b(active_container, bench_container, 0.4, old_texture, card_scales[10])
 	await animate_card_a_to_b(bench_container, active_container, 0.4, new_texture, card_scales[10])
 
+# Creates continuous sparkle particles around a given node, returns the node for manual cleanup
+func start_sparkle_effect(target_node: Control) -> CPUParticles2D:
+	var particles = CPUParticles2D.new()
+	add_child(particles)
+	
+	particles.global_position = target_node.global_position + target_node.size / 2
+	particles.z_index = 101
+	particles.amount = 20
+	particles.lifetime = 0.9
+	particles.one_shot = false
+	particles.explosiveness = 0.0
+	particles.emitting = true
+
+	particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	particles.emission_rect_extents = target_node.size / 2
+	
+	particles.direction = Vector2(0, 0)
+	particles.initial_velocity_min = 0.0
+	particles.initial_velocity_max = 0.0
+	particles.gravity = Vector2(0, 0)
+	
+	particles.scale_amount_min = 3.0
+	particles.scale_amount_max = 6.0
+	
+	var sparkle_colour = get_coin_sparkle_colour()
+	var bright = sparkle_colour.lightened(1)
+	
+	var gradient = Gradient.new()
+	gradient.set_color(0, Color(bright.r, bright.g, bright.b, 0.0))
+	gradient.add_point(0.3, sparkle_colour)
+	gradient.add_point(0.5, bright)
+	gradient.set_color(3, Color(sparkle_colour.r, sparkle_colour.g, sparkle_colour.b, 0.0))
+	particles.color_ramp = gradient
+	
+	return particles
+
+# Each coin can be one of a few colours so make the sparkles match	
+func get_coin_sparkle_colour() -> Color:
+	var coin_name = tex_heads.resource_path.to_lower()
+	if "_red" in coin_name:
+		return Color(1.0, 0.2, 0.2)
+	elif "_gold" in coin_name:
+		return Color(1.0, 0.85, 0.2)
+	elif "_silver" in coin_name:
+		return Color(0.85, 0.85, 0.9)
+	elif "_blue" in coin_name:
+		return Color(0.3, 0.5, 1.0)
+	elif "_green" in coin_name:
+		return Color(0.2, 0.9, 0.3)
+	elif "_pink" in coin_name:
+		return Color(1.0, 0.2, 0.7)
+	elif "_purple" in coin_name:
+		return Color(0.55, 0.1, 1)
+	elif "_black" in coin_name:
+		return Color(0, 0, 0)
+	elif "_brown" in coin_name:
+		return Color(0.5, 0.3, 0.2)
+	return Color(1.0, 1.0, 1.0)
+
+# Returns a colour for a given Pokemon type string
+func get_type_colour(type_name: String) -> Color:
+	match type_name.to_lower():
+		"fire": return Color(1.0, 0.2, 0.1)
+		"water": return Color(0.2, 0.5, 1.0)
+		"grass": return Color(0.2, 0.8, 0.3)
+		"lightning": return Color(1.0, 0.9, 0.1)
+		"darkness": return Color(0.15, 0.1, 0.2)
+		"psychic": return Color(0.55, 0.1, 1)
+		"metal": return Color(0.6, 0.6, 0.65)
+		"fighting": return Color(0.5, 0.3, 0.2)
+		"dragon": return Color(0.9, 0.7, 0.2)
+		"fairy": return Color(1.0, 0.4, 0.7)
+		_: return Color(1.0, 1.0, 1.0)
+
+# Plays a one-shot upward particle burst over a pokemon card for evolution
+func play_evolution_effect(pokemon: card_object) -> void:
+	var card_ui = find_card_ui_for_object(pokemon)
+	if card_ui == null:
+		return
+	
+	var particles = CPUParticles2D.new()
+	add_child(particles)
+	
+	particles.global_position = card_ui.global_position + Vector2(card_ui.size.x / 2, card_ui.size.y)
+	particles.z_index = 101
+	particles.amount = 750
+	particles.lifetime = 0.3
+	particles.one_shot = true
+	particles.explosiveness = 0.3
+	particles.emitting = true
+	
+	particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	particles.emission_rect_extents = Vector2(card_ui.size.x / 2, 0)
+	
+	particles.direction = Vector2(0, -1)
+	particles.spread = 20
+	particles.initial_velocity_min = card_ui.size.y * 3.5
+	particles.initial_velocity_max = card_ui.size.y * 5
+	particles.gravity = Vector2(0, 0)
+	
+	if pokemon.current_location == "active":
+		particles.scale_amount_min = 8.0
+		particles.scale_amount_max = 25.0
+	else:
+		particles.scale_amount_min = 3.0
+		particles.scale_amount_max = 6.0
+	
+	var type_colour = get_pokemon_type_colour(pokemon)
+	var darker = type_colour.darkened(0.4)
+	
+	var gradient = Gradient.new()
+	gradient.set_color(0, darker)
+	gradient.set_color(1, Color(type_colour.r, type_colour.g, type_colour.b, 0.0))
+	particles.color_ramp = gradient
+	
+	await get_tree().create_timer(1).timeout
+	particles.queue_free()
+
+# Plays a one-shot upward particle burst when energy is attached to a pokemon
+func play_energy_attached_effect(pokemon: card_object, energy_card: card_object) -> void:
+	var card_ui = find_card_ui_for_object(pokemon)
+	if card_ui == null:
+		return
+	
+	var particles = CPUParticles2D.new()
+	add_child(particles)
+	
+	particles.global_position = card_ui.global_position + Vector2(card_ui.size.x / 2, card_ui.size.y)
+	particles.z_index = 101
+	particles.amount = 1000
+	particles.lifetime = 0.25
+	particles.one_shot = true
+	particles.explosiveness = 0
+	particles.emitting = true
+	
+	particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	particles.emission_rect_extents = Vector2(card_ui.size.x / 2, 0)
+	
+	particles.direction = Vector2(0, -1)
+	particles.spread = 1
+	particles.initial_velocity_min = card_ui.size.y * 3
+	particles.initial_velocity_max = card_ui.size.y * 4.5
+	particles.gravity = Vector2(0, 0)
+	
+	if pokemon.current_location == "active":
+		particles.scale_amount_min = 4
+		particles.scale_amount_max = 10
+	else:
+		particles.scale_amount_min = 1
+		particles.scale_amount_max = 3
+		particles.lifetime = 0.2
+	
+	var type_colour = get_type_colour(get_energy_type_from_card(energy_card))
+	var darker = type_colour.darkened(0.2)
+	
+	var gradient = Gradient.new()
+	gradient.set_color(0, darker)
+	gradient.set_color(1, Color(type_colour.r, type_colour.g, type_colour.b, 0.0))
+	particles.color_ramp = gradient
+	
+	await get_tree().create_timer(1).timeout
+	particles.queue_free()
+
 ############################################################## END ANIMATION FUNCTIONS ###############################################################
 ######################################################################################################################################################
 
@@ -896,7 +1061,7 @@ func load_deck_from_file(deck_file_path: String) -> Array:
 func setup_player():
 	
 	# Load the players CURRENT deck from saved files
-	var player_deck_path = "res://playerdata/CurrentDeck.json"
+	var player_deck_path = "res://playerdata/"+player_deck_name+".json"
 	var player_hand_container = $player_hand_hbox_container
 	
 	# Load and shuffle deck
@@ -1018,15 +1183,16 @@ func start_bench_setup_phase() -> void:
 	# Show the hand again for bench pokemon selection
 	show_enlarged_array_selection_mode(player_hand)	
 
+
 ############################################################### END GAME LOAD FUNCTIONS ##############################################################
 ######################################################################################################################################################
-
+#
 #                    #######  #######    #######  #######
 #                    ##      ##     ##  ##        ##
 #                    ##      ##     ##  ##        #######
 #                    ##      ##     ##  ##        ##
 #                    #######  #######   ##        #######
-
+#
 ######################################################################################################################################################
 ############################################################ CORE FUNCTIONALITY FUNCTIONS ############################################################
 
@@ -1450,13 +1616,16 @@ func perform_energy_attachment() -> void:
 	var target_node = $player_active_pokemon_energies if target_pokemon == player_active_pokemon else $player_bench_container
 	var energy_set = energy_card.uid.split("-")[0]
 	var energy_texture = load("res://cardimages/" + energy_set + "/Small/" + energy_card.uid + ".png")
-	await animate_card_a_to_b($player_hand_hbox_container, target_node, 0.2, energy_texture, card_scales[11])
-	
+	await animate_card_a_to_b($player_hand_hbox_container, target_node, 0.2, energy_texture, card_scales[12])
+		
 	# Refresh the active Pokemon display to show the attached energy
 	display_pokemon(false)	
 	
 	# Display the attached energies on the active Pokemon
 	display_active_pokemon_energies()
+
+	await get_tree().process_frame
+	await play_energy_attached_effect(target_pokemon, energy_card)
 
 # Called when any win/loss condition is met to end the match
 func game_end_logic(loser_is_player: bool) -> void:
@@ -1518,6 +1687,7 @@ func player_start_turn_checks() -> void:
 	
 # Handles the opponent's turn: draw a card with animation, then pass back to player
 func opponent_start_turn_checks() -> void:
+	await get_tree().create_timer(0.5).timeout
 	opponents_turn_active = true
 	reset_field_pokemon_turn_flags(true)
 	
@@ -1812,11 +1982,18 @@ func flip_coin() -> bool:
 	
 	# Set the final coin face to match the actual result
 	coin.texture = tex_heads if result else tex_tails
+	var sparkles = null
+	if result:
+		sparkles = start_sparkle_effect(coin)
 	coin.scale.y = 1.0
 	
 	# Show result message using existing message system
 	var result_text = "HEADS" if result else "TAILS"
 	await show_message("Coin landed on " + result_text + "!")
+	
+	# Clean up sparkles before hiding coin
+	if sparkles:
+		sparkles.queue_free()
 	
 	# Clean up: hide the coin overlay
 	$coin_flip_container.visible = false
@@ -1955,6 +2132,7 @@ func perform_attack(attack_index: int) -> void:
 	
 	await check_all_knockouts()
 	
+	await get_tree().create_timer(0.5).timeout
 	player_end_turn_checks()
 	
 # Returns final damage and a list of modifiers applied, for display purposes
@@ -2007,9 +2185,6 @@ func check_and_handle_knockout(pokemon: card_object, is_opponent: bool) -> bool:
 
 	await animate_card_a_to_b(from_node, discard_node, 0.3, pokemon_texture, card_scales[10])
 	
-	# Now do the actual array manipulation
-	send_card_to_discard(pokemon, is_opponent)
-	
 	if pokemon == active:
 		if is_opponent:
 			opponent_active_pokemon = null
@@ -2019,6 +2194,11 @@ func check_and_handle_knockout(pokemon: card_object, is_opponent: bool) -> bool:
 		bench.erase(pokemon)
 	
 	display_pokemon(is_opponent)
+	
+	# Now do the actual array manipulation
+	send_card_to_discard(pokemon, is_opponent)
+	
+	await get_tree().create_timer(0.5).timeout
 	display_hp_circles_above_align(active if pokemon != active else null, is_opponent)
 	
 	return true
@@ -2153,6 +2333,11 @@ func get_retreat_cost(pokemon: card_object) -> int:
 func get_card_texture(card: card_object) -> Texture2D:
 	var card_set = card.uid.split("-")[0]
 	return load("res://cardimages/" + card_set + "/Small/" + card.uid + ".png")	
+
+# Returns a colour based on a Pokemon's primary type
+func get_pokemon_type_colour(pokemon: card_object) -> Color:
+	var types = pokemon.metadata.get("types", ["Colorless"])
+	return get_type_colour(types[0])
 
 ################################################# END SMALL FUNCTIONS TO HELP WITH CODE READABILITY ##################################################
 ######################################################################################################################################################
@@ -2690,7 +2875,10 @@ func action_button_pressed_perform_action() -> void:
 		await animate_card_a_to_b($player_hand_hbox_container, target_node, 0.4, evo_texture, card_scale_to_animate)
 		
 		display_pokemon(false)
+		await get_tree().process_frame
+		await play_evolution_effect(evo_card)
 		display_active_pokemon_energies()
+		
 		return
 	
 	if prize_card_selection_active:
@@ -2742,6 +2930,8 @@ func action_button_pressed_perform_action() -> void:
 					show_enlarged_array_selection_mode(player_hand)
 				else:
 					hide_selection_mode_display_main()
+					await get_tree().process_frame
+					await get_tree().process_frame
 					var bench_texture = get_card_texture(bench_card)
 					await animate_card_a_to_b($player_hand_hbox_container, $player_bench_container, 0.3, bench_texture, card_scales[11])
 					display_pokemon(false)
@@ -3029,7 +3219,7 @@ func _ready() -> void:
 	$main_screen_buttons_container/button_main_endturn.pressed.connect(player_end_turn_checks)
 
 	setup_player()
-	setup_opponent(testing_deck)
+	setup_opponent(opponent_deck_name)
 	
 	# Player hand and opponent hand have to be connected after the intiial setup to prevent bugs on clicking
 	$player_hand_hbox_container.gui_input.connect(array_container_clicked.bind(player_hand))
