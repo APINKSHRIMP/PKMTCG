@@ -93,8 +93,10 @@ layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
+offset_left = -11.0
 offset_top = 16.0
-offset_bottom = 16.0
+offset_right = 8.0
+offset_bottom = 36.0
 grow_horizontal = 2
 theme_override_constants/separation = 3
 alignment = 1
@@ -104,10 +106,10 @@ layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -55.0
-offset_top = 184.0
+offset_left = -428.0
+offset_top = 173.0
 offset_right = -15.0
-offset_bottom = 224.0
+offset_bottom = 274.0
 grow_horizontal = 0
 theme_override_constants/separation = -20
 
@@ -186,7 +188,7 @@ alignment = 1
 anchors_preset = 0
 offset_left = 525.0
 offset_top = 260.0
-offset_right = 914.0
+offset_right = 715.0
 offset_bottom = 780.0
 
 [node name="player_active_pokemon_hp_container" type="GridContainer" parent="."]
@@ -234,9 +236,9 @@ vertical_alignment = 1
 layout_mode = 0
 offset_left = 9.0
 offset_top = 611.0
-offset_right = 464.0
-offset_bottom = 784.0
-theme_override_constants/separation = 4
+offset_right = 49.0
+offset_bottom = 749.0
+theme_override_constants/separation = 2
 
 [node name="opponent_bench_cards_label" type="Label" parent="."]
 layout_mode = 0
@@ -260,8 +262,8 @@ vertical_alignment = 1
 layout_mode = 0
 offset_left = 1411.0
 offset_top = 611.0
-offset_right = 1866.0
-offset_bottom = 784.0
+offset_right = 1901.0
+offset_bottom = 752.0
 theme_override_constants/separation = 4
 
 [node name="player_prize_cards_label" type="Label" parent="."]
@@ -286,8 +288,8 @@ vertical_alignment = 1
 layout_mode = 0
 offset_left = 8.0
 offset_top = 799.0
-offset_right = 303.0
-offset_bottom = 890.0
+offset_right = 503.0
+offset_bottom = 909.0
 theme_override_constants/separation = 2
 
 [node name="opponent_prize_cards_label" type="Label" parent="."]
@@ -312,8 +314,8 @@ vertical_alignment = 1
 layout_mode = 0
 offset_left = 1401.0
 offset_top = 799.0
-offset_right = 1696.0
-offset_bottom = 890.0
+offset_right = 1891.0
+offset_bottom = 908.0
 theme_override_constants/separation = 2
 alignment = 2
 
@@ -452,17 +454,37 @@ text = "0"
 
 [node name="player_active_pokemon_energies" type="Control" parent="."]
 anchors_preset = 0
-offset_left = 414.0
+offset_left = 411.0
 offset_top = 364.0
 offset_right = 454.0
-offset_bottom = 404.0
+offset_bottom = 392.0
 
 [node name="opponent_active_pokemon_energies" type="Control" parent="."]
 anchors_preset = 0
 offset_left = 1322.0
 offset_top = 374.0
-offset_right = 1362.0
-offset_bottom = 414.0
+offset_right = 1856.0
+offset_bottom = 545.0
+
+[node name="opponent_turn_input_blocker" type="ColorRect" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 1, 1, 0)
+
+[node name="animation_input_blocker" type="ColorRect" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 1, 1, 0)
 
 [node name="messagebox_container" type="ColorRect" parent="."]
 visible = false
