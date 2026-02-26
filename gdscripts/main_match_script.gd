@@ -494,35 +494,38 @@ func display_prize_cards(is_opponent: bool) -> void:
 		# Connect the signal so prize cards can be clicked if needed
 		prize_card_display.card_clicked.connect(this_card_clicked)	
 
-# Displays attached energy cards next to the player's active Pokemon, stacking right to left
-func display_active_pokemon_energies() -> void:
-	for child in $player_active_pokemon_energies.get_children():
+# Displays attached energy cards next to the active Pokemon, stacking with overlap
+func display_active_pokemon_energies(is_opponent: bool = false) -> void:
+	var energy_container = $opponent_active_pokemon_energies if is_opponent else $player_active_pokemon_energies
+	var active_pokemon = opponent_active_pokemon if is_opponent else player_active_pokemon
+
+	for child in energy_container.get_children():
 		child.queue_free()
-	
-	if player_active_pokemon == null:
+
+	if active_pokemon == null:
 		return
-	
-	if player_active_pokemon.attached_energies.size() == 0:
+
+	if active_pokemon.attached_energies.size() == 0:
 		return
-	
+
 	var card_display_script = load("res://gdscripts/cardimage.gd")
 	var energy_card_size = card_scales[11]
 	var card_width = energy_card_size.x
 	var overlap_offset = 80
-	
-	if player_active_pokemon.attached_energies.size() > 6:
+
+	if active_pokemon.attached_energies.size() > 6:
 		var target_width = 480.0
-		var n = player_active_pokemon.attached_energies.size()
+		var n = active_pokemon.attached_energies.size()
 		overlap_offset = (target_width - card_width) / (n - 1)
-	
-	for i in range(player_active_pokemon.attached_energies.size()):
-		var attached_energy = player_active_pokemon.attached_energies[i]
+
+	for i in range(active_pokemon.attached_energies.size()):
+		var attached_energy = active_pokemon.attached_energies[i]
 		var energy_display = TextureRect.new()
 		energy_display.set_script(card_display_script)
-		$player_active_pokemon_energies.add_child(energy_display)
+		energy_container.add_child(energy_display)
 		energy_display.load_card_image(attached_energy.uid, energy_card_size, attached_energy)
 		energy_display.position.x = -(i * overlap_offset)
-
+		
 # Displays HP circles above the active pokemon, colouring red from damage taken
 func display_hp_circles_above_align(active_pokemon: card_object, is_opponent: bool) -> void:
 	var hp_grid_container = $opponent_active_pokemon_hp_container if is_opponent else $player_active_pokemon_hp_container
@@ -2936,6 +2939,88 @@ func check_viable_bench_attacker() -> bool:
 			return true
 
 	return false
+
+# R.2, R.4: Evaluates whether the energy cost of retreating is worth paying
+func is_retreat_cost_worthwhile(cpu_eval: Dictionary) -> bool:
+	var active = opponent_active_pokemon
+	var retreat_cost = get_retreat_cost(active)
+	var active_key = active.get_instance_id()
+	var active_data = cpu_eval["pokemon_data"].get(active_key, {})
+
+	# Free retreat is always worthwhile
+	if retreat_cost == 0:
+		return true
+
+	# Check what state the active ends up in after losing retreat cost energy
+	var energy_after_retreat = active.attached_energies.size() - retreat_cost
+	var can_attack_after = false
+	for attack in active.metadata.get("attacks", []):
+		# Simulate the energy pool after discarding retreat cost
+		var simulated_pool = []
+		for i in range(energy_after_retreat):
+			simulated_pool.append_array(get_energy_provided_by_card(active.attached_energies[i]))
+		var required = attack.get("cost", [])
+		if simulated_pool.size() >= required.size():
+			can_attack_after = true
+			break
+
+	# R.2 rule of thumb: if retreat strips more than half the energy needed for primary attack
+	var max_attack = get_maximum_damage_attack(active)
+	var primary_attack_cost = max_attack.get("cost", 1)
+	var energy_lost_ratio = float(retreat_cost) / float(max(primary_attack_cost, 1))
+
+	# R.4: High-investment pokemon preservation overrides the ratio check
+	var guaranteed_ko = cpu_eval.get("cpu_active_guaranteed_ko", false)
+	var has_evo = active_data.get("can_evolve_further", false)
+	var high_investment = active.attached_energies.size() >= 3 or has_evo
+	var high_hp = active.current_hp > int(active.metadata.get("hp", "0")) * 0.5
+
+	if guaranteed_ko and high_investment and high_hp:
+		print("CPU retreat worthwhile: preserving high-investment pokemon")
+		return true
+
+	# Losing more than half the energy for primary attack is generally bad
+	if energy_lost_ratio > 0.5 and not can_attack_after:
+		print("CPU retreat not worthwhile: would lose " + str(retreat_cost) + " energy and cannot attack from bench")
+		return false
+
+	# If active can still contribute from the bench after retreating, it's worthwhile
+	if can_attack_after:
+		print("CPU retreat worthwhile: active retains enough energy to attack from bench")
+		return true
+
+	# Default: retreat is worthwhile if there's a real threat
+	if guaranteed_ko:
+		return true
+
+	return false
+
+# Re-evaluates retreat after energy attachment if first pass deferred (R.3)
+func cpu_phase_retreat_second_pass(cpu_eval: Dictionary) -> void:
+	if opponent_active_pokemon == null or opponent_bench.size() == 0:
+		return
+	if opponent_retreated_this_turn:
+		return
+
+	var retreat_cost = get_retreat_cost(opponent_active_pokemon)
+	var current_energy = opponent_active_pokemon.attached_energies.size()
+
+	# Verify retreat is now mechanically possible after energy attachment
+	if current_energy < retreat_cost:
+		print("CPU retreat second pass: still cannot pay retreat cost")
+		return
+
+	# Re-check if retreat reasons still apply with updated board state
+	if not evaluate_retreat_reasons(cpu_eval):
+		print("CPU retreat second pass: reasons no longer apply")
+		return
+
+	# Re-check if the cost is worthwhile
+	if not is_retreat_cost_worthwhile(cpu_eval):
+		print("CPU retreat second pass: cost not worthwhile")
+		return
+
+	await execute_cpu_retreat(cpu_eval)
 	
 ################################################### END OPPONENT PRIORITISE FUNCTIONALITY FUNCTIONS ##################################################
 ######################################################################################################################################################
@@ -3164,7 +3249,7 @@ func cpu_turn_orchestrator() -> void:
 	var cpu_eval = build_cpu_evaluation()
 
 	# Phase 5: First retreat evaluation (before energy attachment)
-	var retreat_deferred = cpu_phase_retreat_first_pass(cpu_eval)
+	var retreat_deferred = await cpu_phase_retreat_first_pass(cpu_eval)
 
 	# Phase 6: Energy attachment
 	await cpu_phase_energy_attachment(cpu_eval)
@@ -3223,21 +3308,647 @@ func cpu_phase_evolution() -> void:
 		evolution_card_awaiting_target = null
 		selected_card_for_action = null
 
-# Evaluates whether active should retreat before energy attachment
+# Evaluates whether active should retreat before energy attachment (R.1-R.4)
 func cpu_phase_retreat_first_pass(cpu_eval: Dictionary) -> bool:
+	if opponent_active_pokemon == null or opponent_bench.size() == 0:
+		return false
+	if opponent_retreated_this_turn:
+		return false
+
+	# R.1: Should the active pokemon retreat?
+	var should_consider = evaluate_retreat_reasons(cpu_eval)
+	if not should_consider:
+		return false
+
+	var retreat_cost = get_retreat_cost(opponent_active_pokemon)
+	var current_energy = opponent_active_pokemon.attached_energies.size()
+
+	# R.3: Exactly 1 energy short — defer to after energy attachment
+	if current_energy == retreat_cost - 1 and not opponent_energy_played_this_turn:
+		print("CPU retreat deferred: 1 energy short, will re-evaluate after attachment")
+		return true
+
+	# R.2: Can the active actually pay retreat cost right now?
+	if current_energy < retreat_cost:
+		print("CPU cannot retreat: not enough energy (" + str(current_energy) + "/" + str(retreat_cost) + ")")
+		return false
+
+	# R.2 continued: Is paying the retreat cost worth the energy loss?
+	if not is_retreat_cost_worthwhile(cpu_eval):
+		print("CPU retreat not worthwhile: energy loss too high")
+		return false
+
+	# R.5: Pick the best replacement and execute
+	await execute_cpu_retreat(cpu_eval)
 	return false
 
-# Scores all (pokemon, energy_card) pairs and attaches the best one
+# R.1: Determines if there is a reason for the active to consider retreating
+func evaluate_retreat_reasons(cpu_eval: Dictionary) -> bool:
+	var active_key = opponent_active_pokemon.get_instance_id()
+	var active_data = cpu_eval["pokemon_data"].get(active_key, {})
+	var can_attack = active_data.get("can_attack", false)
+
+	# Reason 1: Active is guaranteed to be KO'd and can already attack
+	if cpu_eval.get("cpu_active_guaranteed_ko", false) and can_attack:
+		print("CPU considering retreat: guaranteed KO threat")
+		return true
+
+	# Reason 2: Active is at risk of KO (potential or bench threat)
+	if cpu_eval.get("cpu_active_potential_ko", false) or cpu_eval.get("player_bench_ko_threat", false):
+		print("CPU considering retreat: potential KO threat")
+		return true
+
+	# Reason 3: Active cannot attack and has no path to attacking within 1-2 turns
+	if not can_attack:
+		var nearest_attack = 999
+		for attack in active_data.get("attack_data", []):
+			if attack["unmet"] < nearest_attack:
+				nearest_attack = attack["unmet"]
+
+		# Count matching energy cards in hand
+		var matching_energy_in_hand = 0
+		for card in opponent_hand:
+			if card.metadata.get("supertype", "").to_lower() != "energy":
+				continue
+			var energy_types = get_energy_provided_by_card(card)
+			for attack in active_data.get("attack_data", []):
+				for req in attack.get("cost", []):
+					if req == "Colorless" or req in energy_types:
+						matching_energy_in_hand += 1
+						break
+
+		if nearest_attack > matching_energy_in_hand + 1:
+			print("CPU considering retreat: active has no viable attack path")
+			return true
+
+	return false
+
+# Scores all (pokemon, energy_card) pairs and attaches the best one (Phase 0, 2, 3)
 func cpu_phase_energy_attachment(cpu_eval: Dictionary) -> void:
-	pass
+	# Phase 0.1: Skip if no energy cards in hand
+	var energy_cards_in_hand = []
+	for card in opponent_hand:
+		if card.metadata.get("supertype", "").to_lower() == "energy":
+			energy_cards_in_hand.append(card)
 
-# Re-evaluates retreat after energy attachment if first pass deferred
-func cpu_phase_retreat_second_pass(cpu_eval: Dictionary) -> void:
-	pass
+	if energy_cards_in_hand.is_empty() or opponent_energy_played_this_turn:
+		return
 
-# Chooses and executes an attack to end the CPU turn
+	# Phase 0.2: Build candidate targets (active + bench)
+	var candidates = get_all_cpu_field_pokemon()
+
+	# Phase 2: Score every (pokemon, energy_card) pair
+	var scored_pairs = []
+	for pokemon in candidates:
+		var key = pokemon.get_instance_id()
+		var pokemon_data = cpu_eval["pokemon_data"].get(key, {})
+		for energy_card in energy_cards_in_hand:
+			var score = score_energy_pair(pokemon, energy_card, cpu_eval, pokemon_data)
+			scored_pairs.append({
+				"pokemon": pokemon,
+				"energy_card": energy_card,
+				"score": score
+			})
+
+	if scored_pairs.is_empty():
+		return
+
+	# Phase 3.1: Sort by score descending
+	scored_pairs.sort_custom(func(a, b): return a["score"] > b["score"])
+	var best = scored_pairs[0]
+
+	# Phase 3.3: Tiebreaking
+	best = resolve_energy_tiebreak(scored_pairs, cpu_eval)
+
+	# Phase 3.4: Always attach even if score is negative
+	var target = best["pokemon"]
+	var energy = best["energy_card"]
+
+	print("CPU attaching " + energy.metadata["name"] + " to " + target.metadata["name"] + " (Score: " + str(int(best["score"])) + ")")
+
+	# Perform the attachment
+	opponent_hand.erase(energy)
+	target.attached_energies.append(energy)
+	opponent_energy_played_this_turn = true
+
+	await show_message("Opponent attached " + energy.metadata["name"].to_upper() + " to " + target.metadata["name"].to_upper() + "!")
+	display_hand_cards_array(opponent_hand, $opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500, 6)
+	display_pokemon(true)
+	display_active_pokemon_energies(true)
+	await get_tree().process_frame
+	await play_energy_attached_effect(target, energy)
+	
+# Scores a single (pokemon, energy_card) pair using all Phase 2 rules
+func score_energy_pair(pokemon: card_object, energy_card: card_object, cpu_eval: Dictionary, pokemon_data: Dictionary) -> float:
+	var score = 0.0
+	var is_active = (pokemon == opponent_active_pokemon)
+	var energy_types = get_energy_provided_by_card(energy_card)
+
+	# 2.1, 2.2, 2.3: Energy type matching (can disqualify a pair)
+	score += score_energy_type_match(pokemon, energy_types, pokemon_data, is_active)
+
+	# 2.4, 2.5: Active pokemon needs energy
+	if is_active:
+		score += score_active_needs_energy(pokemon, energy_types, pokemon_data)
+
+	# 2.6: Active pokemon already fully powered
+	if is_active:
+		score += score_active_overpowered(pokemon_data, cpu_eval)
+
+	# 2.7, 2.8, 2.9: Active pokemon under KO threat
+	if is_active:
+		score += score_active_ko_threat(pokemon, energy_types, pokemon_data, cpu_eval)
+
+	# 2.10, 2.11: Evolution potential
+	score += score_evolution_potential(pokemon, pokemon_data, cpu_eval, is_active)
+
+	# 2.12, 2.13, 2.14: Bench pokemon scoring
+	if not is_active:
+		score += score_bench_candidate(pokemon, pokemon_data, cpu_eval)
+
+	# 2.15: Attack self-discard consideration
+	score += score_self_discard_penalty(pokemon)
+
+	return score
+	
+# 2.1, 2.2, 2.3: Checks if energy type is useful for this pokemon
+func score_energy_type_match(pokemon: card_object, energy_types: Array, pokemon_data: Dictionary, is_active: bool) -> float:
+	var score = 0.0
+	var attack_data = pokemon_data.get("attack_data", [])
+
+	# Gather all specific (non-colorless) energy types needed across all attacks
+	var needed_types = []
+	for attack in attack_data:
+		for req in attack.get("cost", []):
+			if req != "Colorless" and req not in needed_types:
+				needed_types.append(req)
+
+	# Check if this energy provides a type that matches any attack cost
+	var has_type_match = false
+	for provided in energy_types:
+		if provided in needed_types or provided == "Any":
+			has_type_match = true
+			break
+
+	# Direct type match — this energy is exactly what the pokemon wants
+	if has_type_match:
+		score += 80.0 if is_active else 60.0
+		return score
+
+	# Check if this pokemon has any attacks with unmet colorless slots
+	var has_unmet_colorless_slots = false
+	for attack in attack_data:
+		if attack["unmet"] <= 0:
+			continue
+		# Count how many colorless slots exist in this attack's cost
+		var colorless_in_cost = attack["cost"].count("Colorless")
+		if colorless_in_cost > 0:
+			has_unmet_colorless_slots = true
+			break
+
+	# Any energy can fill colorless slots — moderate positive match
+	if has_unmet_colorless_slots:
+		score += 50.0 if is_active else 35.0
+		return score
+
+	# 2.2: Does attaching this energy fill a colorless slot and unlock an attack?
+	var unlocks_via_colorless = false
+	for attack in attack_data:
+		if attack["unmet"] <= 0:
+			continue
+		var colorless_in_cost = attack["cost"].count("Colorless")
+		if colorless_in_cost == 0:
+			continue
+		if attack["unmet"] == 1:
+			var typed_unmet = attack["unmet"] - colorless_in_cost
+			if typed_unmet <= 0:
+				unlocks_via_colorless = true
+				break
+
+	if unlocks_via_colorless:
+		score += 40.0 if is_active else 30.0
+		return score
+
+	# 2.3: Check if ANY pokemon in play needs this energy type specifically
+	var any_pokemon_needs_type = false
+	for field_pokemon in get_all_cpu_field_pokemon():
+		if field_pokemon == pokemon:
+			continue
+		for attack in field_pokemon.metadata.get("attacks", []):
+			for req in attack.get("cost", []):
+				if req != "Colorless":
+					for provided in energy_types:
+						if provided == req or provided == "Any":
+							any_pokemon_needs_type = true
+
+	if any_pokemon_needs_type:
+		score -= 200.0
+		return score
+
+	# Nobody needs this type — colorless fallback scoring
+	var total_unmet_colorless = 0
+	for attack in attack_data:
+		if attack["unmet"] > 0:
+			total_unmet_colorless += attack["cost"].count("Colorless")
+
+	if total_unmet_colorless > 0:
+		score += total_unmet_colorless * 5.0
+		if is_active:
+			score += 10.0
+		return score
+
+	score -= 200.0
+	return score
+	
+# 2.4, 2.5: Active pokemon has unmet energy requirements
+func score_active_needs_energy(pokemon: card_object, energy_types: Array, pokemon_data: Dictionary) -> float:
+	var score = 0.0
+	var attack_data = pokemon_data.get("attack_data", [])
+
+	# 2.4: Active has at least one attack with unmet energy
+	var has_unmet = false
+	var lowest_unmet = 999
+	for attack in attack_data:
+		if attack["unmet"] > 0:
+			has_unmet = true
+			if attack["unmet"] < lowest_unmet:
+				lowest_unmet = attack["unmet"]
+
+	if has_unmet:
+		score += 80.0
+		# Progress bonus: the closer to unlocking, the more valuable each energy is
+		if lowest_unmet <= 3:
+			score += max(0.0, 80.0 - (lowest_unmet * 20.0))
+
+	# 2.5: Would this specific energy unlock a currently unusable attack?
+	for attack in attack_data:
+		if attack["unmet"] != 1:
+			continue
+		var remaining_type = get_remaining_requirement(attack, pokemon)
+		if remaining_type == null:
+			continue
+		if remaining_type == "Colorless":
+			score += 100.0
+			break
+		for provided in energy_types:
+			if provided == remaining_type or provided == "Any":
+				score += 100.0
+				break
+
+	return score
+	
+# Returns the energy type of the single remaining unmet requirement, or null if not exactly 1 unmet
+func get_remaining_requirement(attack_info: Dictionary, pokemon: card_object) -> String:
+	if attack_info["unmet"] != 1:
+		return ""
+	var cost = attack_info["cost"].duplicate()
+
+	# Build the available energy pool from attached energies
+	var pool = []
+	for attached in pokemon.attached_energies:
+		pool.append_array(get_energy_provided_by_card(attached))
+
+	# Remove typed requirements that are already satisfied
+	for req in cost:
+		if req == "Colorless":
+			continue
+		var idx = pool.find(req)
+		if idx != -1:
+			pool.remove_at(idx)
+			cost[cost.find(req)] = "_SATISFIED_"
+		else:
+			var any_idx = pool.find("Any")
+			if any_idx != -1:
+				pool.remove_at(any_idx)
+				cost[cost.find(req)] = "_SATISFIED_"
+			else:
+				return req
+
+	# All typed requirements met — remaining must be colorless
+	for req in cost:
+		if req == "Colorless":
+			if pool.size() > 0:
+				pool.remove_at(0)
+			else:
+				return "Colorless"
+
+	return ""
+
+# 2.6: Penalises over-investment when active is already fully powered
+func score_active_overpowered(pokemon_data: Dictionary, cpu_eval: Dictionary) -> float:
+	var attack_data = pokemon_data.get("attack_data", [])
+
+	# Check if all attacks already have energy requirements met
+	var all_attacks_met = true
+	for attack in attack_data:
+		if attack["unmet"] > 0:
+			all_attacks_met = false
+			break
+
+	if not all_attacks_met:
+		return 0.0
+
+	# Exception: if this pokemon can evolve and the evolved form needs more energy
+	if pokemon_data.get("can_evolve_further", false) and pokemon_data.get("evolved_form_needs_energy", false):
+		return 0.0
+
+	return -100.0
+
+# 2.7, 2.8, 2.9: Adjusts score when active is threatened with KO
+func score_active_ko_threat(pokemon: card_object, energy_types: Array, pokemon_data: Dictionary, cpu_eval: Dictionary) -> float:
+	var score = 0.0
+	var can_attack = pokemon_data.get("can_attack", false)
+	var guaranteed_ko = cpu_eval.get("cpu_active_guaranteed_ko", false)
+	var potential_ko = cpu_eval.get("cpu_active_potential_ko", false)
+	var bench_ko_threat = cpu_eval.get("player_bench_ko_threat", false)
+
+	if not guaranteed_ko and not potential_ko and not bench_ko_threat:
+		return 0.0
+
+	# 2.8: Check if attaching this energy would enable a KO on the player's active
+	var enables_ko = false
+	if player_active_pokemon != null:
+		var cpu_types = pokemon.metadata.get("types", ["Colorless"])
+		var player_hp = player_active_pokemon.current_hp
+		var attack_data = pokemon_data.get("attack_data", [])
+
+		for attack in attack_data:
+			if attack["unmet"] != 1:
+				continue
+			var remaining = get_remaining_requirement(attack, pokemon)
+			if remaining == "":
+				continue
+			var type_matches = remaining == "Colorless"
+			if not type_matches:
+				for provided in energy_types:
+					if provided == remaining or provided == "Any":
+						type_matches = true
+						break
+			if not type_matches:
+				continue
+			var result = calculate_final_damage(attack["damage_min"], cpu_types, player_active_pokemon)
+			if result["damage"] >= player_hp:
+				enables_ko = true
+				break
+
+	if enables_ko:
+		# Striking first is extremely valuable — override KO threat penalties
+		if cpu_eval.get("cpu_prizes_remaining", 6) == 1:
+			return 500.0
+		return 250.0
+
+	# 2.7a: Guaranteed KO and active can already attack — don't invest further
+	if guaranteed_ko and can_attack:
+		# 2.9: Partial override — extra damage before going down if bench backup exists
+		if cpu_eval.get("has_viable_bench_attacker", false):
+			var unlocks_stronger = false
+			for attack in pokemon_data.get("attack_data", []):
+				if attack["unmet"] == 1:
+					unlocks_stronger = true
+					break
+			if unlocks_stronger:
+				return -80.0
+		return -150.0
+
+	# 2.7b: Potential KO or bench retreat threat — moderate deprioritisation
+	if (potential_ko or bench_ko_threat) and can_attack:
+		return -60.0
+
+	return 0.0
+
+# 2.10, 2.11: Scores evolution potential for energy investment
+func score_evolution_potential(pokemon: card_object, pokemon_data: Dictionary, cpu_eval: Dictionary, is_active: bool) -> float:
+	var score = 0.0
+	var has_evo_in_hand = pokemon_data.get("evolution_in_hand", null) != null
+	var has_evo_in_deck = pokemon_data.get("evolution_in_deck_or_prizes", false)
+	var needs_energy = pokemon_data.get("evolved_form_needs_energy", false)
+
+	# 2.10a: Evolution in hand and evolved form needs more energy
+	if has_evo_in_hand and needs_energy:
+		score += 100.0
+
+	# 2.10b: Evolution in deck/prizes only — less certain
+	elif has_evo_in_deck and needs_energy:
+		score += 50.0
+
+	# 2.11: Active already doing its job — redirect to evolving bench pokemon
+	if is_active and cpu_eval.get("cpu_can_ko_player_active", false):
+		var dominated_by_bench_evo = false
+		for bench_pokemon in opponent_bench:
+			var bench_key = bench_pokemon.get_instance_id()
+			var bench_data = cpu_eval["pokemon_data"].get(bench_key, {})
+			var bench_has_evo = bench_data.get("evolution_in_hand", null) != null or bench_data.get("evolution_in_deck_or_prizes", false)
+			var bench_needs_energy = bench_data.get("evolved_form_needs_energy", false)
+			if bench_has_evo and bench_needs_energy:
+				dominated_by_bench_evo = true
+				break
+
+		if dominated_by_bench_evo:
+			score -= 70.0
+
+	return score
+
+# 2.12, 2.13, 2.14: Scores bench pokemon as energy targets
+func score_bench_candidate(pokemon: card_object, pokemon_data: Dictionary, cpu_eval: Dictionary) -> float:
+	var score = 0.0
+	var attack_data = pokemon_data.get("attack_data", [])
+
+	# 2.12: Base score for bench pokemon with unmet energy
+	var has_unmet = false
+	for attack in attack_data:
+		if attack["unmet"] > 0:
+			has_unmet = true
+			break
+
+	if has_unmet:
+		score += 50.0
+
+	# 2.13: Boost bench when active is doomed and can already attack
+	var active_doomed = cpu_eval.get("cpu_active_guaranteed_ko", false)
+	var active_key = opponent_active_pokemon.get_instance_id() if opponent_active_pokemon != null else -1
+	var active_data = cpu_eval["pokemon_data"].get(active_key, {})
+	var active_can_attack = active_data.get("can_attack", false)
+
+	if active_doomed and active_can_attack:
+		score += 100.0
+
+		# Prefer bench pokemon that can survive the player's strongest usable attack
+		if player_active_pokemon != null:
+			var player_types = player_active_pokemon.metadata.get("types", ["Colorless"])
+			var player_max_damage = 0
+			for attack in player_active_pokemon.metadata.get("attacks", []):
+				if get_unmet_energy_count(attack, player_active_pokemon) > 0:
+					continue
+				var damage_range = get_attack_damage_range(attack)
+				var result = calculate_final_damage(damage_range["max"], player_types, pokemon)
+				player_max_damage = max(player_max_damage, result["damage"])
+
+			if pokemon.current_hp > player_max_damage:
+				score += 40.0
+
+	# 2.14: Proximity bonus — fewer unmet energy means closer to attacking
+	var lowest_unmet = 999
+	for attack in attack_data:
+		if attack["unmet"] > 0 and attack["unmet"] < lowest_unmet:
+			lowest_unmet = attack["unmet"]
+
+	if lowest_unmet < 999:
+		score += max(0.0, 60.0 - (lowest_unmet * 20.0))
+
+	return score
+
+# 2.15: Penalises pokemon whose preferred attack discards attached energy
+func score_self_discard_penalty(pokemon: card_object) -> float:
+	var pokemon_name = pokemon.metadata.get("name", "")
+	var max_attack = get_maximum_damage_attack(pokemon)
+
+	if max_attack.is_empty():
+		return 0.0
+
+	var penalty = get_attack_text_penalty(max_attack.get("text", ""), pokemon_name)
+
+	# Scale down — this is a tiebreaker, not a dealbreaker
+	return penalty * 0.3
+
+# Resolves tiebreaks when multiple pairs share the highest score (3.3)
+func resolve_energy_tiebreak(scored_pairs: Array, cpu_eval: Dictionary) -> Dictionary:
+	var best_score = scored_pairs[0]["score"]
+
+	# Collect all pairs that share the top score
+	var tied = []
+	for pair in scored_pairs:
+		if pair["score"] == best_score:
+			tied.append(pair)
+		else:
+			break
+
+	if tied.size() == 1:
+		return tied[0]
+
+	# Tiebreak 1: Prefer active pokemon over bench
+	var active_only = tied.filter(func(p): return p["pokemon"] == opponent_active_pokemon)
+	if active_only.size() == 1:
+		return active_only[0]
+	if active_only.size() > 1:
+		tied = active_only
+
+	# Tiebreak 2: Prefer pokemon closer to having a usable attack (lowest unmet)
+	var best_unmet = 999
+	for pair in tied:
+		var key = pair["pokemon"].get_instance_id()
+		var pokemon_data = cpu_eval["pokemon_data"].get(key, {})
+		for attack in pokemon_data.get("attack_data", []):
+			if attack["unmet"] > 0 and attack["unmet"] < best_unmet:
+				best_unmet = attack["unmet"]
+
+	var closest = tied.filter(func(p):
+		var key = p["pokemon"].get_instance_id()
+		var pd = cpu_eval["pokemon_data"].get(key, {})
+		var lowest = 999
+		for attack in pd.get("attack_data", []):
+			if attack["unmet"] > 0 and attack["unmet"] < lowest:
+				lowest = attack["unmet"]
+		return lowest == best_unmet
+	)
+	if closest.size() == 1:
+		return closest[0]
+	if closest.size() > 1:
+		tied = closest
+
+	# Tiebreak 3: Prefer pokemon with higher remaining HP
+	var best_hp = -1
+	for pair in tied:
+		if pair["pokemon"].current_hp > best_hp:
+			best_hp = pair["pokemon"].current_hp
+
+	for pair in tied:
+		if pair["pokemon"].current_hp == best_hp:
+			return pair
+
+	return tied[0]
+
+# Chooses and executes an attack to end the CPU turn (Phase 8)
 func cpu_phase_attack(cpu_eval: Dictionary) -> void:
-	pass
+	if opponent_active_pokemon == null or player_active_pokemon == null:
+		return
+
+	# Check attack readiness from live board state, not stale cpu_eval
+	var has_usable_attack = false
+	for attack in opponent_active_pokemon.metadata.get("attacks", []):
+		if get_unmet_energy_count(attack, opponent_active_pokemon) == 0:
+			has_usable_attack = true
+			break
+
+	if not has_usable_attack:
+		print("CPU cannot attack: no usable attacks")
+		return
+
+	var cpu_types = opponent_active_pokemon.metadata.get("types", ["Colorless"])
+	var player_hp = player_active_pokemon.current_hp
+	var attacks = opponent_active_pokemon.metadata.get("attacks", [])
+
+	# Score each usable attack
+	var best_attack_index = -1
+	var best_attack_score = -999.0
+
+	for i in range(attacks.size()):
+		var attack = attacks[i]
+		if get_unmet_energy_count(attack, opponent_active_pokemon) > 0:
+			continue
+
+		var score = 0.0
+		var damage_range = get_attack_damage_range(attack)
+		var min_result = calculate_final_damage(damage_range["min"], cpu_types, player_active_pokemon)
+		var max_result = calculate_final_damage(damage_range["max"], cpu_types, player_active_pokemon)
+
+		# Strongly prefer attacks that guarantee a KO
+		if min_result["damage"] >= player_hp:
+			score += 500.0
+			# Among KO attacks, prefer least overkill (conserve energy discard costs)
+			score -= (min_result["damage"] - player_hp) * 0.5
+
+		# Attacks that might KO with good luck
+		elif max_result["damage"] >= player_hp:
+			score += 200.0
+
+		# Base damage contribution
+		score += min_result["damage"] * 2.0
+
+		# Penalise attacks with self-discard costs
+		var pokemon_name = opponent_active_pokemon.metadata.get("name", "")
+		var discard_penalty = get_attack_text_penalty(attack.get("text", ""), pokemon_name)
+		score += discard_penalty
+
+		if score > best_attack_score:
+			best_attack_score = score
+			best_attack_index = i
+
+	if best_attack_index == -1:
+		print("CPU found no suitable attack")
+		return
+
+	# Execute the chosen attack
+	var chosen_attack = attacks[best_attack_index]
+	var damage_range = get_attack_damage_range(chosen_attack)
+	var result = calculate_final_damage(damage_range["min"], cpu_types, player_active_pokemon)
+	var final_damage = result["damage"]
+
+	await show_message("Opponent's " + opponent_active_pokemon.metadata["name"].to_upper() + " used " + chosen_attack["name"].to_upper() + "!")
+
+	for modifier in result["modifiers"]:
+		show_floating_label(modifier, Vector2(530, 600), false)
+		await get_tree().create_timer(0.5).timeout
+
+	show_floating_label("-" + str(final_damage) + "HP", Vector2(530, 600), false)
+
+	player_active_pokemon.current_hp = max(0, player_active_pokemon.current_hp - final_damage)
+
+	print("CPU used " + chosen_attack["name"] + " for " + str(final_damage) + " damage! Player HP: " + str(player_active_pokemon.current_hp))
+
+	display_hp_circles_above_align(player_active_pokemon, false)
+
+	await check_all_knockouts()
+	display_active_pokemon_energies(true)
 
 # CPU evaluates and plays basic pokemon from hand onto bench using threshold scoring
 func cpu_phase_bench_play() -> void:
@@ -3276,6 +3987,89 @@ func cpu_phase_bench_play() -> void:
 		await animate_card_a_to_b($opponent_hand_hbox_container, $opponent_bench_container, 0.3, card_texture, card_scales[11])
 		display_pokemon(true)
 		display_hand_cards_array(opponent_hand, $opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500, 6)
+
+# R.5: Selects the best bench replacement and performs the retreat
+func execute_cpu_retreat(cpu_eval: Dictionary) -> void:
+	var best_replacement: card_object = null
+	var best_score: float = -999.0
+
+	for bench_pokemon in opponent_bench:
+		var score = 0.0
+		var bench_key = bench_pokemon.get_instance_id()
+		var bench_data = cpu_eval["pokemon_data"].get(bench_key, {})
+
+		# Prefer pokemon that can already attack
+		if bench_data.get("can_attack", false):
+			score += 200.0
+
+		# Among attackers, prefer one that can KO the player's active
+		if bench_data.get("can_attack", false) and player_active_pokemon != null:
+			var bench_types = bench_pokemon.metadata.get("types", ["Colorless"])
+			for attack in bench_data.get("attack_data", []):
+				if attack["unmet"] > 0:
+					continue
+				var result = calculate_final_damage(attack["damage_min"], bench_types, player_active_pokemon)
+				if result["damage"] >= player_active_pokemon.current_hp:
+					score += 150.0
+					break
+
+		# Prefer pokemon closest to attacking if can't attack yet
+		if not bench_data.get("can_attack", false):
+			var lowest_unmet = 999
+			for attack in bench_data.get("attack_data", []):
+				if attack["unmet"] < lowest_unmet:
+					lowest_unmet = attack["unmet"]
+			if lowest_unmet < 999:
+				score += max(0.0, 80.0 - (lowest_unmet * 25.0))
+
+		# Survivability: can this pokemon take a hit from the player's active
+		if player_active_pokemon != null:
+			var player_types = player_active_pokemon.metadata.get("types", ["Colorless"])
+			var player_max_damage = 0
+			for attack in player_active_pokemon.metadata.get("attacks", []):
+				if get_unmet_energy_count(attack, player_active_pokemon) > 0:
+					continue
+				var damage_range = get_attack_damage_range(attack)
+				var result = calculate_final_damage(damage_range["max"], player_types, bench_pokemon)
+				player_max_damage = max(player_max_damage, result["damage"])
+
+			if bench_pokemon.current_hp > player_max_damage:
+				score += 100.0
+
+		# HP tiebreaker
+		score += bench_pokemon.current_hp * 0.1
+
+		if score > best_score:
+			best_score = score
+			best_replacement = bench_pokemon
+
+	if best_replacement == null:
+		print("CPU retreat failed: no valid bench replacement")
+		return
+
+	# Discard energy for retreat cost
+	var retreat_cost = get_retreat_cost(opponent_active_pokemon)
+	var discarded_energies = []
+	for i in range(retreat_cost):
+		if opponent_active_pokemon.attached_energies.size() > 0:
+			var energy = opponent_active_pokemon.attached_energies.pop_back()
+			send_card_to_discard(energy, true)
+			discarded_energies.append(energy)
+
+	# Swap positions
+	var old_active = opponent_active_pokemon
+	opponent_bench.erase(best_replacement)
+	opponent_bench.append(old_active)
+	old_active.current_location = "bench"
+	best_replacement.current_location = "active"
+	opponent_active_pokemon = best_replacement
+	opponent_retreated_this_turn = true
+
+	print("CPU retreated " + old_active.metadata["name"] + " for " + best_replacement.metadata["name"])
+
+	await animate_retreat(old_active, best_replacement, discarded_energies, true)
+	display_pokemon(true)
+	display_active_pokemon_energies(true)
 
 ################################################## END OPPONENT PRIORITISE FUNCTIONALITY FUNCTIONS ###################################################
 ######################################################################################################################################################

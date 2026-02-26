@@ -461,10 +461,10 @@ offset_bottom = 392.0
 
 [node name="opponent_active_pokemon_energies" type="Control" parent="."]
 anchors_preset = 0
-offset_left = 1322.0
-offset_top = 374.0
-offset_right = 1856.0
-offset_bottom = 545.0
+offset_left = 1400.0
+offset_top = 366.0
+offset_right = 1934.0
+offset_bottom = 537.0
 
 [node name="opponent_turn_input_blocker" type="ColorRect" parent="."]
 visible = false
