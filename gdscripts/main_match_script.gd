@@ -10,7 +10,7 @@ extends Control
 var amount_of_cards_to_draw = 7	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
 var hide_hidden_cards = false      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
 var opponent_deck_name = "GrassFire"
-var player_deck_name = "GrassFire"
+var player_deck_name = "testingchanseyonly"
 
 # Customisable in game textures
 # Load coin textures
@@ -524,7 +524,7 @@ func display_active_pokemon_energies(is_opponent: bool = false) -> void:
 		energy_display.set_script(card_display_script)
 		energy_container.add_child(energy_display)
 		energy_display.load_card_image(attached_energy.uid, energy_card_size, attached_energy)
-		energy_display.position.x = -(i * overlap_offset)
+		energy_display.position.x = overlap_offset * i if is_opponent else -(i * overlap_offset)
 		
 # Displays HP circles above the active pokemon, colouring red from damage taken
 func display_hp_circles_above_align(active_pokemon: card_object, is_opponent: bool) -> void:
@@ -905,93 +905,147 @@ func get_type_colour(type_name: String) -> Color:
 
 # Plays a one-shot upward particle burst over a pokemon card for evolution
 func play_evolution_effect(pokemon: card_object) -> void:
-	var card_ui = find_card_ui_for_object(pokemon)
-	if card_ui == null:
+	var target_pos: Vector2
+	var target_size: Vector2
+	var is_active: bool = false
+
+	# Determine position by checking identity against known game variables directly
+	# This avoids relying on current_location or child node lookups which can be stale
+	if pokemon == opponent_active_pokemon:
+		target_pos = $opponent_active_pokemon_container.global_position
+		target_size = card_scales[3.5]
+		is_active = true
+	elif pokemon == player_active_pokemon:
+		target_pos = $player_active_pokemon_container.global_position
+		target_size = card_scales[3.5]
+		is_active = true
+	elif pokemon in opponent_bench:
+		var index = opponent_bench.find(pokemon)
+		target_size = card_scales[11]
+		var separation = $opponent_bench_container.get_theme_constant("separation")
+		target_pos = $opponent_bench_container.global_position + Vector2(index * (target_size.x + separation), 0)
+	elif pokemon in player_bench:
+		var index = player_bench.find(pokemon)
+		target_size = card_scales[11]
+		var separation = $player_bench_container.get_theme_constant("separation")
+		target_pos = $player_bench_container.global_position + Vector2(index * (target_size.x + separation), 0)
+	else:
+		print("WARNING: play_evolution_effect - could not locate pokemon: ", pokemon.metadata["name"])
 		return
-	
+
+	print("EVOLUTION EFFECT: ", pokemon.metadata["name"], " | active=", is_active, " | pos=", target_pos, " | size=", target_size)
+
 	var particles = CPUParticles2D.new()
 	add_child(particles)
-	
-	particles.global_position = card_ui.global_position + Vector2(card_ui.size.x / 2, card_ui.size.y)
+
+	particles.global_position = target_pos + Vector2(target_size.x / 2, target_size.y)
 	particles.z_index = 101
 	particles.amount = 750
 	particles.lifetime = 0.25
 	particles.one_shot = true
 	particles.explosiveness = 0.3
-	particles.emitting = true
-	
+
 	particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	particles.emission_rect_extents = Vector2(card_ui.size.x / 2, 0)
-	
+	particles.emission_rect_extents = Vector2(target_size.x / 2, 0)
+
 	particles.direction = Vector2(0, -1)
 	particles.spread = 20
-	particles.initial_velocity_min = card_ui.size.y * 3.5
-	particles.initial_velocity_max = card_ui.size.y * 5
+	particles.initial_velocity_min = target_size.y * 3.5
+	particles.initial_velocity_max = target_size.y * 5
 	particles.gravity = Vector2(0, 0)
-	
-	if pokemon.current_location == "active":
+
+	if is_active:
 		particles.scale_amount_min = 8.0
 		particles.scale_amount_max = 25.0
 	else:
 		particles.scale_amount_min = 3.0
 		particles.scale_amount_max = 6.0
-	
+
 	var type_colour = get_pokemon_type_colour(pokemon)
 	var darker = type_colour.darkened(0.4)
-	
+
 	var gradient = Gradient.new()
 	gradient.set_color(0, darker)
 	gradient.set_color(1, Color(type_colour.r, type_colour.g, type_colour.b, 0.0))
 	particles.color_ramp = gradient
-	
+
+	# Set emitting AFTER all particle properties are configured
+	particles.emitting = true
+
 	await get_tree().create_timer(1).timeout
 	particles.queue_free()
-
+	
 # Plays a one-shot upward particle burst when energy is attached to a pokemon
 func play_energy_attached_effect(pokemon: card_object, energy_card: card_object) -> void:
-	var card_ui = find_card_ui_for_object(pokemon)
-	if card_ui == null:
+	var target_pos: Vector2
+	var target_size: Vector2
+	var is_active: bool = false
+
+	# Determine position by checking identity against known game variables directly
+	# This avoids relying on current_location or child node lookups which can be stale
+	if pokemon == opponent_active_pokemon:
+		target_pos = $opponent_active_pokemon_container.global_position
+		target_size = card_scales[3.5]
+		is_active = true
+	elif pokemon == player_active_pokemon:
+		target_pos = $player_active_pokemon_container.global_position
+		target_size = card_scales[3.5]
+		is_active = true
+	elif pokemon in opponent_bench:
+		var index = opponent_bench.find(pokemon)
+		target_size = card_scales[11]
+		var separation = $opponent_bench_container.get_theme_constant("separation")
+		target_pos = $opponent_bench_container.global_position + Vector2(index * (target_size.x + separation), 0)
+	elif pokemon in player_bench:
+		var index = player_bench.find(pokemon)
+		target_size = card_scales[11]
+		var separation = $player_bench_container.get_theme_constant("separation")
+		target_pos = $player_bench_container.global_position + Vector2(index * (target_size.x + separation), 0)
+	else:
+		print("WARNING: play_energy_attached_effect - could not locate pokemon: ", pokemon.metadata["name"])
 		return
-	
+
+	print("ENERGY EFFECT: ", pokemon.metadata["name"], " | active=", is_active, " | pos=", target_pos, " | size=", target_size)
+
 	var particles = CPUParticles2D.new()
 	add_child(particles)
-	
-	particles.global_position = card_ui.global_position + Vector2(card_ui.size.x / 2, card_ui.size.y)
+
+	particles.global_position = target_pos + Vector2(target_size.x / 2, target_size.y)
 	particles.z_index = 101
 	particles.amount = 1000
 	particles.lifetime = 0.25
 	particles.one_shot = true
 	particles.explosiveness = 0
-	particles.emitting = true
-	
+
 	particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	particles.emission_rect_extents = Vector2(card_ui.size.x / 2, 0)
-	
+	particles.emission_rect_extents = Vector2(target_size.x / 2, 0)
+
 	particles.direction = Vector2(0, -1)
 	particles.spread = 1
-	particles.initial_velocity_min = card_ui.size.y * 3
-	particles.initial_velocity_max = card_ui.size.y * 4.5
+	particles.initial_velocity_min = target_size.y * 3
+	particles.initial_velocity_max = target_size.y * 4.5
 	particles.gravity = Vector2(0, 0)
-	
-	if pokemon.current_location == "active":
+
+	if is_active:
 		particles.scale_amount_min = 4
 		particles.scale_amount_max = 10
 	else:
 		particles.scale_amount_min = 1
 		particles.scale_amount_max = 3
 		particles.lifetime = 0.2
-	
+
 	var type_colour = get_type_colour(get_energy_type_from_card(energy_card))
 	var darker = type_colour.darkened(0.2)
-	
+
 	var gradient = Gradient.new()
 	gradient.set_color(0, darker)
 	gradient.set_color(1, Color(type_colour.r, type_colour.g, type_colour.b, 0.0))
 	particles.color_ramp = gradient
-	
+
+	particles.emitting = true
 	await get_tree().create_timer(1).timeout
 	particles.queue_free()
-
+	
 ############################################################## END ANIMATION FUNCTIONS ###############################################################
 ######################################################################################################################################################
 
@@ -1806,7 +1860,7 @@ func perform_evolution(is_opponent: bool) -> void:
 			bench[bench_index] = evo_card
 	
 	print(target_card.metadata["name"], " evolved into ", evo_card.metadata["name"], "! (Damage carried: ", damage_taken, ")")
-
+	
 # Sends a card and all its attachments (energies, pre-evolutions, attached cards) to the discard pile
 func send_card_to_discard(card: card_object, is_opponent: bool) -> void:
 	var discard = opponent_discard_pile if is_opponent else player_discard_pile
@@ -3204,11 +3258,13 @@ func opponent_setup_pokemon_from_hand() -> void:
 	# Remove active pokemon from hand and set it as active
 	opponent_hand.erase(active_pokemon)
 	opponent_active_pokemon = active_pokemon
+	opponent_active_pokemon.current_location = "active"
 	opponent_active_pokemon.placed_on_field_this_turn = true
 	
 	# Remove bench pokemon from hand and add to bench
 	for bench_pokemon in bench_pokemon_list:
 		opponent_hand.erase(bench_pokemon)
+		bench_pokemon.current_location = "bench"
 		bench_pokemon.placed_on_field_this_turn = true
 		opponent_bench.append(bench_pokemon)
 	
@@ -3297,11 +3353,18 @@ func cpu_phase_evolution() -> void:
 		perform_evolution(true)
 
 		await show_message("Opponent evolved " + best["target"].metadata["name"].to_upper() + " into " + best["evo_card"].metadata["name"].to_upper() + "!")
+	
+		var evo_target_node = $opponent_active_pokemon_container if best["evo_card"].current_location == "active" else $opponent_bench_container
+		var evo_scale = card_scales[8] if best["evo_card"].current_location == "active" else card_scales[11]
+		var evo_texture = get_card_texture(best["evo_card"])
+		await animate_card_a_to_b($opponent_hand_hbox_container, evo_target_node, 0.3, evo_texture, evo_scale)
 
 		display_pokemon(true)
+		display_active_pokemon_energies(true)
 		display_hand_cards_array(opponent_hand, $opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500, 6)
 
 		await get_tree().process_frame
+	
 		await play_evolution_effect(best["evo_card"])
 
 		# Clean up globals
@@ -3432,6 +3495,12 @@ func cpu_phase_energy_attachment(cpu_eval: Dictionary) -> void:
 	opponent_energy_played_this_turn = true
 
 	await show_message("Opponent attached " + energy.metadata["name"].to_upper() + " to " + target.metadata["name"].to_upper() + "!")
+
+	var energy_target_node = $opponent_active_pokemon_energies if target == opponent_active_pokemon else $opponent_bench_container
+	var energy_set = energy.uid.split("-")[0]
+	var energy_texture = load("res://cardimages/" + energy_set + "/Small/" + energy.uid + ".png")
+	await animate_card_a_to_b($opponent_hand_hbox_container, energy_target_node, 0.2, energy_texture, card_scales[12])
+
 	display_hand_cards_array(opponent_hand, $opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500, 6)
 	display_pokemon(true)
 	display_active_pokemon_energies(true)
@@ -3443,7 +3512,13 @@ func score_energy_pair(pokemon: card_object, energy_card: card_object, cpu_eval:
 	var score = 0.0
 	var is_active = (pokemon == opponent_active_pokemon)
 	var energy_types = get_energy_provided_by_card(energy_card)
-
+	
+	# Flat active/bench modifier: active pokemon almost always takes priority
+	if is_active:
+		score += 40.0
+	else:
+		score -= 20.0
+	
 	# 2.1, 2.2, 2.3: Energy type matching (can disqualify a pair)
 	score += score_energy_type_match(pokemon, energy_types, pokemon_data, is_active)
 
