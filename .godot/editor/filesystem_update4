@@ -1,3 +1,4 @@
+res://gdscripts/main_match_script.gd
 res://gdscenes/MatchStart.tscn
 res://gdscenes/backgroundscroll.gdshader
 res://uiresources/kenneyUI-red.tres
