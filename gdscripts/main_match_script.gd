@@ -3411,10 +3411,25 @@ func evaluate_retreat_reasons(cpu_eval: Dictionary) -> bool:
 	var active_data = cpu_eval["pokemon_data"].get(active_key, {})
 	var can_attack = active_data.get("can_attack", false)
 
-	# Reason 1: Active is guaranteed to be KO'd and can already attack
+	# Reason 1: Mutual guaranteed KO situation
+	# Only ignore the guaranteed KO threat if WE can also guarantee a KO back
 	if cpu_eval.get("cpu_active_guaranteed_ko", false) and can_attack:
-		print("CPU considering retreat: guaranteed KO threat")
-		return true
+		# Check if our attack is guaranteed to KO the player's active
+		var player_hp = player_active_pokemon.current_hp
+		var guaranteed_ko_player = false
+		
+		for attack in active_data.get("attack_data", []):
+			if attack["unmet"] == 0:  # Can use this attack
+				if attack["damage_min"] >= player_hp:  # Guaranteed to KO
+					guaranteed_ko_player = true
+					break
+					
+		if guaranteed_ko_player:
+			print("CPU NOT retreating: mutual KO - will attack and trade")
+			return false  # Don't retreat, attack instead
+		else:
+			print("CPU considering retreat: guaranteed KO threat and cannot KO back")
+			return true  # Do retreat, we'd lose the trade
 
 	# Reason 2: Active is at risk of KO (potential or bench threat)
 	if cpu_eval.get("cpu_active_potential_ko", false) or cpu_eval.get("player_bench_ko_threat", false):
@@ -3785,10 +3800,19 @@ func score_active_ko_threat(pokemon: card_object, energy_types: Array, pokemon_d
 				return -80.0
 		return -150.0
 
-	# 2.7b: Potential KO or bench retreat threat — moderate deprioritisation
-	if (potential_ko or bench_ko_threat) and can_attack:
-		return -60.0
-
+	# 2.7c: Guaranteed KO and cannot attack yet
+	if guaranteed_ko and not can_attack:
+		var would_enable_attack = false
+		for attack in pokemon_data.get("attack_data", []):
+			if attack["unmet"] == 1:
+				would_enable_attack = true
+				break
+		
+		if not would_enable_attack:
+			return -200.0
+		else:
+			return -100.0
+			
 	return 0.0
 
 # 2.10, 2.11: Scores evolution potential for energy investment
