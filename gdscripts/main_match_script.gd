@@ -41,6 +41,7 @@ var card_selection_mode_enabled = false
 var selected_card_for_action = null
 var card_was_clicked_this_frame: bool = false
 var prize_card_selection_active: bool = false
+var knockout_bench_selection_active: bool = false
 
 var match_just_started_basic_pokemon_required = true
 var bench_setup_phase_active = false
@@ -72,6 +73,7 @@ var small_hint_info_text_label: Label
 #signals
 signal message_acknowledged
 signal prize_card_taken
+signal knockout_replacement_chosen
 
 # QUICK REFERENCE VECTORS JUST USED FOR EASY SWAPPING OF SIZES FOR DEVELOPMENT
 var card_scales: Dictionary = {
@@ -188,7 +190,7 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.visible = true
 	
 	# A specific clause for the start of the game, a basic pokemon HAS to be chosen so we cannot allow cancelling out.
-	if match_just_started_basic_pokemon_required == true:
+	if match_just_started_basic_pokemon_required == true or knockout_bench_selection_active == true:
 		$cancel_selection_mode_view_button.visible = false
 	else:
 		$cancel_selection_mode_view_button.visible = true
@@ -2276,10 +2278,6 @@ func check_all_knockouts() -> Dictionary:
 	
 	return results
 
-##########################################################################################################
-# TESTING - THIS FUNCTION NEEDS AMENDING TO SWITCH IN BENCH POKEMON TO ACTIVE PROPERLY THROUGH CHOICE
-##########################################################################################################
-#### vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv #######
 # After KOs are processed, animates a bench Pokemon moving to the active spot or ends the game
 func handle_post_knockout(is_opponent: bool) -> void:
 	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
@@ -2296,7 +2294,12 @@ func handle_post_knockout(is_opponent: bool) -> void:
 		return
 	
 	if is_opponent:
-		var new_active = bench.pop_front()
+		var cpu_eval = build_cpu_evaluation()
+		var new_active = pick_best_bench_replacement(opponent_bench, player_active_pokemon, cpu_eval)
+		if new_active == null:
+			new_active = bench[0]
+
+		bench.erase(new_active)
 		var new_texture = get_card_texture(new_active)
 		
 		await animate_card_a_to_b(bench_container, active_container, 0.3, new_texture, card_scales[9])
@@ -2306,7 +2309,15 @@ func handle_post_knockout(is_opponent: bool) -> void:
 		display_pokemon(true)
 		await show_message("OPPONENT SET " + new_active.metadata["name"].to_upper() + " AS THEIR ACTIVE POKEMON!")
 	else:
-		pass
+		knockout_bench_selection_active = true
+		show_enlarged_array_selection_mode(player_bench)
+		$cancel_selection_mode_view_button.visible = false
+		$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "YOUR ACTIVE POKEMON WAS KNOCKED OUT"
+		$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Choose a bench Pokemon to set as your new active"
+		$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "SET AS ACTIVE"
+		$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
+		$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+		await knockout_replacement_chosen
 
 ########################################################## END ATTACK AND DAMAGE FUNCTIONS ###########################################################
 ######################################################################################################################################################
@@ -3075,6 +3086,93 @@ func cpu_phase_retreat_second_pass(cpu_eval: Dictionary) -> void:
 		return
 
 	await execute_cpu_retreat(cpu_eval)
+	
+# Scores each bench pokemon as a potential active replacement, returns the best choice
+func pick_best_bench_replacement(bench: Array, against_pokemon: card_object, cpu_eval: Dictionary) -> card_object:
+	var best_replacement: card_object = null
+	var best_score: float = -999.0
+
+	for bench_pokemon in bench:
+		var score = score_bench_as_replacement(bench_pokemon, against_pokemon, cpu_eval)
+		if score > best_score:
+			best_score = score
+			best_replacement = bench_pokemon
+
+	return best_replacement
+
+# Scores a single bench pokemon as a potential active replacement considering attacks, survivability, and type matchups
+func score_bench_as_replacement(bench_pokemon: card_object, against_pokemon: card_object, cpu_eval: Dictionary) -> float:
+	var score = 0.0
+	var bench_key = bench_pokemon.get_instance_id()
+	var bench_data = cpu_eval["pokemon_data"].get(bench_key, {})
+	if bench_data.is_empty():
+		bench_data = evaluate_single_pokemon(bench_pokemon)
+
+	var bench_types = bench_pokemon.metadata.get("types", ["Colorless"])
+
+	# Can already attack: strong preference
+	if bench_data.get("can_attack", false):
+		score += 200.0
+
+	# Among attackers, prefer one that can KO the opposing active
+	if bench_data.get("can_attack", false) and against_pokemon != null:
+		for attack in bench_data.get("attack_data", []):
+			if attack["unmet"] > 0:
+				continue
+			var result = calculate_final_damage(attack["damage_min"], bench_types, against_pokemon)
+			if result["damage"] >= against_pokemon.current_hp:
+				score += 150.0
+				break
+
+	# Closest to attacking if can't attack yet
+	if not bench_data.get("can_attack", false):
+		var lowest_unmet = 999
+		for attack in bench_data.get("attack_data", []):
+			if attack["unmet"] < lowest_unmet:
+				lowest_unmet = attack["unmet"]
+		if lowest_unmet < 999:
+			score += max(0.0, 80.0 - (lowest_unmet * 25.0))
+
+	# Survivability: can this pokemon take a hit from the opposing active
+	if against_pokemon != null:
+		var enemy_types = against_pokemon.metadata.get("types", ["Colorless"])
+		var enemy_max_damage = 0
+		for attack in against_pokemon.metadata.get("attacks", []):
+			if get_unmet_energy_count(attack, against_pokemon) > 0:
+				continue
+			var damage_range = get_attack_damage_range(attack)
+			var result = calculate_final_damage(damage_range["max"], enemy_types, bench_pokemon)
+			enemy_max_damage = max(enemy_max_damage, result["damage"])
+		if bench_pokemon.current_hp > enemy_max_damage:
+			score += 100.0
+
+	# Type advantage: our attacks hit the opponent's weakness
+	if against_pokemon != null:
+		for weakness in against_pokemon.metadata.get("weaknesses", []):
+			if weakness["type"] in bench_types:
+				score += 75.0
+				break
+
+	# Type disadvantage: opponent's attacks hit our weakness
+	if against_pokemon != null:
+		var enemy_types = against_pokemon.metadata.get("types", ["Colorless"])
+		for weakness in bench_pokemon.metadata.get("weaknesses", []):
+			if weakness["type"] in enemy_types:
+				score -= 60.0
+				break
+
+	# Resistance bonus: we resist the opponent's type
+	if against_pokemon != null:
+		var enemy_types = against_pokemon.metadata.get("types", ["Colorless"])
+		for resistance in bench_pokemon.metadata.get("resistances", []):
+			if resistance["type"] in enemy_types:
+				score += 50.0
+				break
+
+	# HP tiebreaker
+	score += bench_pokemon.current_hp * 0.1
+
+	return score
 	
 ################################################### END OPPONENT PRIORITISE FUNCTIONALITY FUNCTIONS ##################################################
 ######################################################################################################################################################
@@ -4089,58 +4187,7 @@ func cpu_phase_bench_play() -> void:
 
 # R.5: Selects the best bench replacement and performs the retreat
 func execute_cpu_retreat(cpu_eval: Dictionary) -> void:
-	var best_replacement: card_object = null
-	var best_score: float = -999.0
-
-	for bench_pokemon in opponent_bench:
-		var score = 0.0
-		var bench_key = bench_pokemon.get_instance_id()
-		var bench_data = cpu_eval["pokemon_data"].get(bench_key, {})
-
-		# Prefer pokemon that can already attack
-		if bench_data.get("can_attack", false):
-			score += 200.0
-
-		# Among attackers, prefer one that can KO the player's active
-		if bench_data.get("can_attack", false) and player_active_pokemon != null:
-			var bench_types = bench_pokemon.metadata.get("types", ["Colorless"])
-			for attack in bench_data.get("attack_data", []):
-				if attack["unmet"] > 0:
-					continue
-				var result = calculate_final_damage(attack["damage_min"], bench_types, player_active_pokemon)
-				if result["damage"] >= player_active_pokemon.current_hp:
-					score += 150.0
-					break
-
-		# Prefer pokemon closest to attacking if can't attack yet
-		if not bench_data.get("can_attack", false):
-			var lowest_unmet = 999
-			for attack in bench_data.get("attack_data", []):
-				if attack["unmet"] < lowest_unmet:
-					lowest_unmet = attack["unmet"]
-			if lowest_unmet < 999:
-				score += max(0.0, 80.0 - (lowest_unmet * 25.0))
-
-		# Survivability: can this pokemon take a hit from the player's active
-		if player_active_pokemon != null:
-			var player_types = player_active_pokemon.metadata.get("types", ["Colorless"])
-			var player_max_damage = 0
-			for attack in player_active_pokemon.metadata.get("attacks", []):
-				if get_unmet_energy_count(attack, player_active_pokemon) > 0:
-					continue
-				var damage_range = get_attack_damage_range(attack)
-				var result = calculate_final_damage(damage_range["max"], player_types, bench_pokemon)
-				player_max_damage = max(player_max_damage, result["damage"])
-
-			if bench_pokemon.current_hp > player_max_damage:
-				score += 100.0
-
-		# HP tiebreaker
-		score += bench_pokemon.current_hp * 0.1
-
-		if score > best_score:
-			best_score = score
-			best_replacement = bench_pokemon
+	var best_replacement = pick_best_bench_replacement(opponent_bench, player_active_pokemon, cpu_eval)
 
 	if best_replacement == null:
 		print("CPU retreat failed: no valid bench replacement")
@@ -4218,6 +4265,27 @@ func action_button_pressed_perform_action() -> void:
 		
 		display_pokemon(false)
 		display_active_pokemon_energies()
+		return
+	
+	if knockout_bench_selection_active:
+		var new_active = selected_card_for_action
+		player_bench.erase(new_active)
+		new_active.current_location = "active"
+		player_active_pokemon = new_active
+
+		knockout_bench_selection_active = false
+		selected_card_for_action = null
+
+		hide_selection_mode_display_main()
+
+		var new_texture = get_card_texture(new_active)
+		await animate_card_a_to_b($CARD_COLLECTIONS/PLAYER/player_bench_container, $ACTIVE_POKEMON/PLAYER/player_active_pokemon_container, 0.3, new_texture, card_scales[9])
+
+		display_pokemon(false)
+		display_active_pokemon_energies()
+		display_hp_circles_above_align(player_active_pokemon, false)
+
+		knockout_replacement_chosen.emit()
 		return
 	
 	# Check if we're in attach mode - handle differently
@@ -4466,7 +4534,7 @@ func this_card_clicked(clicked_card: card_object) -> void:
 				$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")
 			return
 		
-		elif retreat_bench_selection_active:
+		elif retreat_bench_selection_active or knockout_bench_selection_active:
 			if selected_card_for_action != null:
 				var prev_card_display = find_card_ui_for_object(selected_card_for_action)
 				if prev_card_display:
@@ -4478,10 +4546,12 @@ func this_card_clicked(clicked_card: card_object) -> void:
 			if card_display:
 				card_display.set_selected(true)
 			
-			$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "MAKE ACTIVE"
+			$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "SET AS ACTIVE"
 			$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = false
 			$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI-green.tres")
 			return
+			
+			
 			
 		# Normal card selection mode (not in attach mode)
 		# Remove visual effect from previously selected card
