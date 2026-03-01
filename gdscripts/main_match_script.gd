@@ -799,7 +799,7 @@ func animate_card_a_to_b(from_node: Control, to_node: Control, animation_speed: 
 	await tween.finished
 	$animation_input_blocker.visible = false
 
-# Animates energy cards moving from a pokemon's position to the discard pile one at a time
+# Animate discarding for reatreat and knockout
 func animate_energies_to_discard(energy_cards: Array, pokemon: card_object, is_opponent: bool) -> void:
 	var discard_node = $CARD_COLLECTIONS/OPPONENT/opponent_discard_pile_icon if is_opponent else $CARD_COLLECTIONS/PLAYER/player_discard_pile_icon
 	var from_node = find_card_ui_for_object(pokemon)
@@ -810,9 +810,14 @@ func animate_energies_to_discard(energy_cards: Array, pokemon: card_object, is_o
 	for energy in energy_cards:
 		var energy_texture = get_card_texture(energy)
 		animate_card_a_to_b(from_node, discard_node, 0.2, energy_texture, card_scales[10])
+		
+		# Remove this energy from the pokemon's attached list NOW,
+		# so the redraw reflects one fewer energy each frame
+		pokemon.attached_energies.erase(energy)
+		
 		display_active_pokemon_energies(is_opponent)
-		await get_tree().create_timer(0.2).timeout		
-
+		await get_tree().create_timer(0.2).timeout
+				
 # Animates the retreat sequence: energies to discard, message, then swap pokemon positions
 func animate_retreat(old_active: card_object, new_active: card_object, discarded_energies: Array, is_opponent: bool) -> void:
 	var active_container = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container if is_opponent else $ACTIVE_POKEMON/PLAYER/player_active_pokemon_container
@@ -4250,9 +4255,9 @@ func action_button_pressed_perform_action() -> void:
 	if retreat_bench_selection_active:
 		var new_active = selected_card_for_action
 		
-		for energy in retreat_energies_selected:
-			player_active_pokemon.attached_energies.erase(energy)
-			send_card_to_discard(energy, false)
+		#for energy in retreat_energies_selected:
+	#		player_active_pokemon.attached_energies.erase(energy)
+#			send_card_to_discard(energy, false)
 		
 		player_bench.erase(new_active)
 		player_bench.append(player_active_pokemon)
@@ -4444,6 +4449,7 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 	
 	# If we were in bench setup phase, end it and draw prize cards
 	elif bench_setup_phase_active:
+		$opponent_turn_input_blocker.visible = true
 		bench_setup_phase_active = false
 		$cancel_selection_mode_view_button.text = "Cancel"
 		$cancel_selection_mode_view_button.theme = load("res://uiresources/kenneyUI-red.tres")
