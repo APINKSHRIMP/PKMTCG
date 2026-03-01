@@ -18,7 +18,7 @@ var tex_heads = load("res://gameimageassets/coins/coin_groudon_red.png")
 var tex_tails = load("res://gameimageassets/coins/coin_back_basic.png")
 
 # Game Variables
-var turn_number: int = 1
+var turn_number: int = 0
 
 # PLAYER VARIABLES
 var player_hand: Array = []
@@ -810,6 +810,7 @@ func animate_energies_to_discard(energy_cards: Array, pokemon: card_object, is_o
 	for energy in energy_cards:
 		var energy_texture = get_card_texture(energy)
 		animate_card_a_to_b(from_node, discard_node, 0.2, energy_texture, card_scales[10])
+		display_active_pokemon_energies(is_opponent)
 		await get_tree().create_timer(0.2).timeout		
 
 # Animates the retreat sequence: energies to discard, message, then swap pokemon positions
@@ -1733,6 +1734,7 @@ func player_start_turn_checks() -> void:
 	$opponent_turn_input_blocker.visible = false
 	show_floating_label("Start turn", Vector2(50, 180), false)
 	turn_number += 1
+	print("PLAYER'S TURN START. TURN NUMBER IS ", turn_number)
 	var drawn_card = await draw_card_from_deck(false)
 	
 	opponents_turn_active = false
@@ -1748,7 +1750,6 @@ func player_start_turn_checks() -> void:
 func player_end_turn_checks() -> void:
 	$opponent_turn_input_blocker.visible = true
 	opponents_turn_active = true
-	turn_number += 1
 	update_main_screen_buttons()
 	show_floating_label("End turn", Vector2(1500, 880))
 	
@@ -2219,6 +2220,7 @@ func check_and_handle_knockout(pokemon: card_object, is_opponent: bool) -> bool:
 	# Animate energies before send_card_to_discard clears them
 	if pokemon.attached_energies.size() > 0:
 		await animate_energies_to_discard(pokemon.attached_energies.duplicate(), pokemon, is_opponent)
+		display_active_pokemon_energies(is_opponent)
 	
 	# Use the container as fallback if pokemon_ui was freed
 	var from_node = pokemon_ui if is_instance_valid(pokemon_ui) else active_container
@@ -2314,11 +2316,13 @@ func handle_post_knockout(is_opponent: bool) -> void:
 		$cancel_selection_mode_view_button.visible = false
 		$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "YOUR ACTIVE POKEMON WAS KNOCKED OUT"
 		$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Choose a bench Pokemon to set as your new active"
-		$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "SET AS ACTIVE"
+		$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "SELECT POKEMON"
 		$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
+		$opponent_turn_input_blocker.visible = false
 		$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")
 		await knockout_replacement_chosen
-
+		$opponent_turn_input_blocker.visible = true
+	
 ########################################################## END ATTACK AND DAMAGE FUNCTIONS ###########################################################
 ######################################################################################################################################################
 
@@ -2400,8 +2404,166 @@ func get_pokemon_type_colour(pokemon: card_object) -> Color:
 ######################################################################################################################################################
 #################################################### OPPONENT PRIORITISE FUNCTIONALITY FUNCTIONS #####################################################
 
-# THESE FUNCTIONS ARE SPECIFICALLY FOR DECIDING THE BEST POKEMON FROM A GIVEN ARRAY.
-# USED TO CHOOSE THE FIRST ACTIVE POKEMON AT MATCH START, REPLACING ACTIVE POKEMON FROM BENCH, AND CHOOSING BEST CARD FOR DECK SEARCHING EFFECTS
+# Function to get lowest cost attack for a pokemon by looping through all attacks. Returns a dictionary with "cost" (convertedEnergyCost), "damage" (as int), and "attack_name"
+func get_minimum_cost_attack(pokemon_card: card_object) -> Dictionary:
+	if not pokemon_card.metadata.has("attacks") or pokemon_card.metadata["attacks"].size() == 0:
+		return {}
+	
+	var min_cost_attack = null
+	var min_cost = 999
+	
+	# Loop through all attacks to find the one with lowest converted energy cost
+	for attack in pokemon_card.metadata["attacks"]:
+		var cost = int(attack.get("convertedEnergyCost", 999))
+		if cost < min_cost:
+			min_cost = cost
+			min_cost_attack = attack
+	
+	if min_cost_attack == null:
+		return {}
+	
+	# Extract damage value - damage can be "30", "40+", "50x", "60-" or other formats
+	var damage_str = min_cost_attack.get("damage", "0")
+	var damage = 0
+	
+	# Only parse the number part, ignoring any suffixes like +, -, or x
+	if damage_str != "" and damage_str[0].is_valid_int():
+		var numeric_part = ""
+		for numberchar in damage_str:
+			if numberchar.is_valid_int():
+				numeric_part += numberchar
+			else:
+				break
+		if numeric_part != "":
+			damage = int(numeric_part)
+	
+		#print("COST: ", min_cost)
+		#print("damage: ", damage)
+		#print("attack_name: ", min_cost_attack.get("name", ""))
+	
+	return {
+		"cost": min_cost,
+		"damage": damage,
+		"attack_name": min_cost_attack.get("name", ""),
+		"text": min_cost_attack.get("text", "")
+	}
+	
+# Helper function to get the highest damage attack and return all its data
+func get_maximum_damage_attack(pokemon_card: card_object) -> Dictionary:
+	if not pokemon_card.metadata.has("attacks") or pokemon_card.metadata["attacks"].size() == 0:
+		return {}
+	
+	var max_damage = 0
+	var max_damage_attack = null
+	
+	for attack in pokemon_card.metadata["attacks"]:
+		var damage_str = attack.get("damage", "")
+		
+		# Skip attacks with no damage value
+		if damage_str == "" or damage_str[0].is_valid_int() == false:
+			continue
+		
+		var numeric_part = ""
+		for numericchar in damage_str:
+			if numericchar.is_valid_int():
+				numeric_part += numericchar
+			else:
+				break
+		
+		if numeric_part != "":
+			var damage = int(numeric_part)
+			if damage > max_damage:
+				max_damage = damage
+				max_damage_attack = attack
+	
+	if max_damage_attack == null:
+		return {}
+	
+	return {
+		"damage": max_damage,
+		"cost": int(max_damage_attack.get("convertedEnergyCost", 1)),
+		"text": max_damage_attack.get("text", ""),
+		"attack_name": max_damage_attack.get("name", "")
+	}
+
+# Main function to evaluate a basic pokemon and return a score by calling criterion 1-5 and returns the total score with breakdown reasoning
+func evaluate_opponents_start_setup_pokemon_choices(basic_pokemon: card_object, hand: Array) -> Dictionary:
+	var total_score = 0.0
+	var score_breakdown = []
+	
+	# Apply all 5 criteria
+	var criterion_1 = criterion_1_single_energy_attack(basic_pokemon)
+	total_score += criterion_1.get("score_change", 0)
+	score_breakdown.append(criterion_1.get("reason", ""))
+	
+	var criterion_2 = criterion_2_evolution_available(basic_pokemon, hand)
+	total_score += criterion_2.get("score_change", 0)
+	score_breakdown.append(criterion_2.get("reason", ""))
+	
+	var criterion_3 = criterion_3_energy_type_match(basic_pokemon, hand)
+	total_score += criterion_3.get("score_change", 0)
+	score_breakdown.append(criterion_3.get("reason", ""))
+	
+	var criterion_4 = criterion_4_pokemon_hp(basic_pokemon)
+	total_score += criterion_4.get("score_change", 0)
+	score_breakdown.append(criterion_4.get("reason", ""))
+	
+	var criterion_5 = criterion_5_attack_damage(basic_pokemon)
+	total_score += criterion_5.get("score_change", 0)
+	score_breakdown.append(criterion_5.get("reason", ""))
+	
+	return {
+		"pokemon_name": basic_pokemon.metadata.get("name", "Unknown"),
+		"total_score": total_score,
+		"breakdown": score_breakdown
+	}
+
+# Evaluates all basic pokemon, returns highest scorer as active and next 3 as bench
+func select_opponent_pokemon_for_setup(hand: Array) -> Dictionary:
+	var all_basic_pokemon = get_all_basic_pokemon(hand)
+	
+	if all_basic_pokemon.size() == 0:
+		print("Error: No basic pokemon found in hand")
+		return {"active": null, "bench": []}
+	
+	# Score all basic pokemon
+	var scored_pokemon = []
+	for pokemon in all_basic_pokemon:
+		var evaluation = evaluate_opponents_start_setup_pokemon_choices(pokemon, hand)
+		scored_pokemon.append({
+			"pokemon": pokemon,
+			"score": evaluation.get("total_score", 0),
+			"breakdown": evaluation.get("breakdown", [])
+		})
+	
+	# Sort by score (highest first)
+	scored_pokemon.sort_custom(func(a, b): return a["score"] > b["score"])
+	
+	# First is active, next up to 3 are bench
+	var active_pokemon = scored_pokemon[0]["pokemon"]
+	var bench_pokemon = []
+	for i in range(1, min(4, scored_pokemon.size())):
+		bench_pokemon.append(scored_pokemon[i]["pokemon"])
+	
+	# Print results
+	print("Opponent AI selected active: " + active_pokemon.metadata.get("name", "Unknown") + " (Score: " + str(int(scored_pokemon[0]["score"])) + ")")
+	for reason in scored_pokemon[0]["breakdown"]:
+		print("  - " + reason)
+		
+	print("__________________________________________________________________")
+	
+	print("Opponent AI selected " + str(bench_pokemon.size()) + " bench pokemon")
+	for i in range(bench_pokemon.size()):
+		print("  " + str(i + 1) + ". " + bench_pokemon[i].metadata.get("name", "Unknown") + " (Score: " + str(int(scored_pokemon[i + 1]["score"])) + ")")
+		for reason in scored_pokemon[i+1]["breakdown"]:
+			print("  - " + reason)
+			
+		print("__________________________________________________________________")
+		
+	return {
+		"active": active_pokemon,
+		"bench": bench_pokemon
+	}
 
 # PRIORITY CRITERION #1: Single energy attack check
 # If pokemon can attack for only 1 energy: big boost (+100)
@@ -3060,6 +3222,40 @@ func is_retreat_cost_worthwhile(cpu_eval: Dictionary) -> bool:
 
 	return false
 
+# Evaluates whether active should retreat before energy attachment (R.1-R.4)
+func cpu_phase_retreat_first_pass(cpu_eval: Dictionary) -> bool:
+	if opponent_active_pokemon == null or opponent_bench.size() == 0:
+		return false
+	if opponent_retreated_this_turn:
+		return false
+
+	# R.1: Should the active pokemon retreat?
+	var should_consider = evaluate_retreat_reasons(cpu_eval)
+	if not should_consider:
+		return false
+
+	var retreat_cost = get_retreat_cost(opponent_active_pokemon)
+	var current_energy = opponent_active_pokemon.attached_energies.size()
+
+	# R.3: Exactly 1 energy short — defer to after energy attachment
+	if current_energy == retreat_cost - 1 and not opponent_energy_played_this_turn:
+		print("CPU retreat deferred: 1 energy short, will re-evaluate after attachment")
+		return true
+
+	# R.2: Can the active actually pay retreat cost right now?
+	if current_energy < retreat_cost:
+		print("CPU cannot retreat: not enough energy (" + str(current_energy) + "/" + str(retreat_cost) + ")")
+		return false
+
+	# R.2 continued: Is paying the retreat cost worth the energy loss?
+	if not is_retreat_cost_worthwhile(cpu_eval):
+		print("CPU retreat not worthwhile: energy loss too high")
+		return false
+
+	# R.5: Pick the best replacement and execute
+	await execute_cpu_retreat(cpu_eval)
+	return false
+
 # Re-evaluates retreat after energy attachment if first pass deferred (R.3)
 func cpu_phase_retreat_second_pass(cpu_eval: Dictionary) -> void:
 	if opponent_active_pokemon == null or opponent_bench.size() == 0:
@@ -3173,453 +3369,7 @@ func score_bench_as_replacement(bench_pokemon: card_object, against_pokemon: car
 	score += bench_pokemon.current_hp * 0.1
 
 	return score
-	
-################################################### END OPPONENT PRIORITISE FUNCTIONALITY FUNCTIONS ##################################################
-######################################################################################################################################################
- 
-# #######  ######   ##   ##        ######   #######    ####### #######
-# ##       ##   ##  ##   ##        ##      ##     ##  ##       ##
-# ##       ######   ##   ##  ##### ##      ##     ##  ##       #######
-# ##       ##       ##   ##        ##      ##     ##  ##       ##
-# #######  ##       #######        #######  #######   ##       #######
 
-######################################################################################################################################################
-###################################################### OPPONENT GENERAL FUNCTIONALITY FUNCTIONS ######################################################
-
-# Function to get lowest cost attack for a pokemon by looping through all attacks. Returns a dictionary with "cost" (convertedEnergyCost), "damage" (as int), and "attack_name"
-func get_minimum_cost_attack(pokemon_card: card_object) -> Dictionary:
-	if not pokemon_card.metadata.has("attacks") or pokemon_card.metadata["attacks"].size() == 0:
-		return {}
-	
-	var min_cost_attack = null
-	var min_cost = 999
-	
-	# Loop through all attacks to find the one with lowest converted energy cost
-	for attack in pokemon_card.metadata["attacks"]:
-		var cost = int(attack.get("convertedEnergyCost", 999))
-		if cost < min_cost:
-			min_cost = cost
-			min_cost_attack = attack
-	
-	if min_cost_attack == null:
-		return {}
-	
-	# Extract damage value - damage can be "30", "40+", "50x", "60-" or other formats
-	var damage_str = min_cost_attack.get("damage", "0")
-	var damage = 0
-	
-	# Only parse the number part, ignoring any suffixes like +, -, or x
-	if damage_str != "" and damage_str[0].is_valid_int():
-		var numeric_part = ""
-		for numberchar in damage_str:
-			if numberchar.is_valid_int():
-				numeric_part += numberchar
-			else:
-				break
-		if numeric_part != "":
-			damage = int(numeric_part)
-	
-		#print("COST: ", min_cost)
-		#print("damage: ", damage)
-		#print("attack_name: ", min_cost_attack.get("name", ""))
-	
-	return {
-		"cost": min_cost,
-		"damage": damage,
-		"attack_name": min_cost_attack.get("name", ""),
-		"text": min_cost_attack.get("text", "")
-	}
-	
-# Helper function to get the highest damage attack and return all its data
-func get_maximum_damage_attack(pokemon_card: card_object) -> Dictionary:
-	if not pokemon_card.metadata.has("attacks") or pokemon_card.metadata["attacks"].size() == 0:
-		return {}
-	
-	var max_damage = 0
-	var max_damage_attack = null
-	
-	for attack in pokemon_card.metadata["attacks"]:
-		var damage_str = attack.get("damage", "")
-		
-		# Skip attacks with no damage value
-		if damage_str == "" or damage_str[0].is_valid_int() == false:
-			continue
-		
-		var numeric_part = ""
-		for numericchar in damage_str:
-			if numericchar.is_valid_int():
-				numeric_part += numericchar
-			else:
-				break
-		
-		if numeric_part != "":
-			var damage = int(numeric_part)
-			if damage > max_damage:
-				max_damage = damage
-				max_damage_attack = attack
-	
-	if max_damage_attack == null:
-		return {}
-	
-	return {
-		"damage": max_damage,
-		"cost": int(max_damage_attack.get("convertedEnergyCost", 1)),
-		"text": max_damage_attack.get("text", ""),
-		"attack_name": max_damage_attack.get("name", "")
-	}
-
-# Main function to evaluate a basic pokemon and return a score by calling criterion 1-5 and returns the total score with breakdown reasoning
-func evaluate_opponents_start_setup_pokemon_choices(basic_pokemon: card_object, hand: Array) -> Dictionary:
-	var total_score = 0.0
-	var score_breakdown = []
-	
-	# Apply all 5 criteria
-	var criterion_1 = criterion_1_single_energy_attack(basic_pokemon)
-	total_score += criterion_1.get("score_change", 0)
-	score_breakdown.append(criterion_1.get("reason", ""))
-	
-	var criterion_2 = criterion_2_evolution_available(basic_pokemon, hand)
-	total_score += criterion_2.get("score_change", 0)
-	score_breakdown.append(criterion_2.get("reason", ""))
-	
-	var criterion_3 = criterion_3_energy_type_match(basic_pokemon, hand)
-	total_score += criterion_3.get("score_change", 0)
-	score_breakdown.append(criterion_3.get("reason", ""))
-	
-	var criterion_4 = criterion_4_pokemon_hp(basic_pokemon)
-	total_score += criterion_4.get("score_change", 0)
-	score_breakdown.append(criterion_4.get("reason", ""))
-	
-	var criterion_5 = criterion_5_attack_damage(basic_pokemon)
-	total_score += criterion_5.get("score_change", 0)
-	score_breakdown.append(criterion_5.get("reason", ""))
-	
-	return {
-		"pokemon_name": basic_pokemon.metadata.get("name", "Unknown"),
-		"total_score": total_score,
-		"breakdown": score_breakdown
-	}
-
-# Evaluates all basic pokemon, returns highest scorer as active and next 3 as bench
-func select_opponent_pokemon_for_setup(hand: Array) -> Dictionary:
-	var all_basic_pokemon = get_all_basic_pokemon(hand)
-	
-	if all_basic_pokemon.size() == 0:
-		print("Error: No basic pokemon found in hand")
-		return {"active": null, "bench": []}
-	
-	# Score all basic pokemon
-	var scored_pokemon = []
-	for pokemon in all_basic_pokemon:
-		var evaluation = evaluate_opponents_start_setup_pokemon_choices(pokemon, hand)
-		scored_pokemon.append({
-			"pokemon": pokemon,
-			"score": evaluation.get("total_score", 0),
-			"breakdown": evaluation.get("breakdown", [])
-		})
-	
-	# Sort by score (highest first)
-	scored_pokemon.sort_custom(func(a, b): return a["score"] > b["score"])
-	
-	# First is active, next up to 3 are bench
-	var active_pokemon = scored_pokemon[0]["pokemon"]
-	var bench_pokemon = []
-	for i in range(1, min(4, scored_pokemon.size())):
-		bench_pokemon.append(scored_pokemon[i]["pokemon"])
-	
-	# Print results
-	print("Opponent AI selected active: " + active_pokemon.metadata.get("name", "Unknown") + " (Score: " + str(int(scored_pokemon[0]["score"])) + ")")
-	for reason in scored_pokemon[0]["breakdown"]:
-		print("  - " + reason)
-		
-	print("__________________________________________________________________")
-	
-	print("Opponent AI selected " + str(bench_pokemon.size()) + " bench pokemon")
-	for i in range(bench_pokemon.size()):
-		print("  " + str(i + 1) + ". " + bench_pokemon[i].metadata.get("name", "Unknown") + " (Score: " + str(int(scored_pokemon[i + 1]["score"])) + ")")
-		for reason in scored_pokemon[i+1]["breakdown"]:
-			print("  - " + reason)
-			
-		print("__________________________________________________________________")
-		
-	return {
-		"active": active_pokemon,
-		"bench": bench_pokemon
-	}
-
-# Function to set up opponent's active and bench pokemon using the priority condition criteria scoring selection
-func opponent_setup_pokemon_from_hand() -> void:
-	var selected_pokemon = select_opponent_pokemon_for_setup(opponent_hand)
-	var active_pokemon = selected_pokemon.get("active")
-	var bench_pokemon_list = selected_pokemon.get("bench", [])
-	
-	# Remove active pokemon from hand and set it as active
-	opponent_hand.erase(active_pokemon)
-	opponent_active_pokemon = active_pokemon
-	opponent_active_pokemon.current_location = "active"
-	opponent_active_pokemon.placed_on_field_this_turn = true
-	
-	# Remove bench pokemon from hand and add to bench
-	for bench_pokemon in bench_pokemon_list:
-		opponent_hand.erase(bench_pokemon)
-		bench_pokemon.current_location = "bench"
-		bench_pokemon.placed_on_field_this_turn = true
-		opponent_bench.append(bench_pokemon)
-	
-	# Update displays
-	display_pokemon(true)  # true = opponent
-	display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500,6)
-
-# Handles start-of-turn duties then hands off to the CPU decision orchestrator
-func opponent_start_turn_checks() -> void:
-	await get_tree().create_timer(0.5).timeout
-	opponents_turn_active = true
-	reset_field_pokemon_turn_flags(true)
-
-	await show_message("Your opponent draws a card")
-	var drawn_card = await draw_card_from_deck(true)
-
-	if drawn_card == null:
-		return
-
-	display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500, 6)
-	update_deck_icon(true)
-
-	# Future: resolve any start-of-turn triggered effects here
-
-	await cpu_turn_orchestrator()
-
-# Orchestrates all CPU decision phases in the correct order
-func cpu_turn_orchestrator() -> void:
-	# Phase 1: Trainer card plays (not yet implemented - reserve this slot)
-
-	# Phase 2: Evolution plays
-	await cpu_phase_evolution()
-
-	# Phase 3: Bench pokemon plays (uses existing priority scoring)
-	await cpu_phase_bench_play()
-
-	# Phase 4: Build evaluation AFTER all board-altering plays have resolved
-	var cpu_eval = build_cpu_evaluation()
-
-	# Phase 5: First retreat evaluation (before energy attachment)
-	var retreat_deferred = await cpu_phase_retreat_first_pass(cpu_eval)
-
-	# Phase 6: Energy attachment
-	await cpu_phase_energy_attachment(cpu_eval)
-
-	# Phase 7: Second retreat pass (only if Phase 5 deferred pending energy)
-	if retreat_deferred:
-		cpu_eval = build_cpu_evaluation()
-		await cpu_phase_retreat_second_pass(cpu_eval)
-
-	# Phase 8: Attack decision (must always be last)
-	await cpu_phase_attack(cpu_eval)
-
-	await get_tree().create_timer(0.5).timeout
-	await show_message("Your opponent ends their turn")
-	player_start_turn_checks()
-
-# CPU plays any valid evolutions from hand onto field pokemon using pair scoring
-func cpu_phase_evolution() -> void:
-	if turn_number <= 2:
-		return
-
-	while true:
-		# Build list of all valid (evo_card, target) pairs and score them
-		var scored_pairs = []
-		for card in opponent_hand:
-			var valid_targets = get_valid_evolution_targets(card, true)
-			for target in valid_targets:
-				var result = evaluate_evolution_pair(card, target)
-				scored_pairs.append(result)
-
-		if scored_pairs.is_empty():
-			break
-
-		# Sort by score descending and pick the best pair
-		scored_pairs.sort_custom(func(a, b): return a["score"] > b["score"])
-		var best = scored_pairs[0]
-
-		print("CPU evolving " + best["target"].metadata["name"] + " into " + best["evo_card"].metadata["name"] + " (Score: " + str(int(best["score"])) + ")")
-		for reason in best["reasons"]:
-			print("  - " + reason)
-
-		# Set the globals that perform_evolution reads from
-		evolution_card_awaiting_target = best["evo_card"]
-		selected_card_for_action = best["target"]
-		perform_evolution(true)
-
-		await show_message("Opponent evolved " + best["target"].metadata["name"].to_upper() + " into " + best["evo_card"].metadata["name"].to_upper() + "!")
-	
-		var evo_target_node = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container if best["evo_card"].current_location == "active" else $CARD_COLLECTIONS/OPPONENT/opponent_bench_container
-		var evo_scale = card_scales[8] if best["evo_card"].current_location == "active" else card_scales[11]
-		var evo_texture = get_card_texture(best["evo_card"])
-		await animate_card_a_to_b($CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, evo_target_node, 0.3, evo_texture, evo_scale)
-
-		display_pokemon(true)
-		display_active_pokemon_energies(true)
-		display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500, 6)
-
-		await get_tree().process_frame
-	
-		await play_evolution_effect(best["evo_card"])
-
-		# Clean up globals
-		evolution_card_awaiting_target = null
-		selected_card_for_action = null
-
-# Evaluates whether active should retreat before energy attachment (R.1-R.4)
-func cpu_phase_retreat_first_pass(cpu_eval: Dictionary) -> bool:
-	if opponent_active_pokemon == null or opponent_bench.size() == 0:
-		return false
-	if opponent_retreated_this_turn:
-		return false
-
-	# R.1: Should the active pokemon retreat?
-	var should_consider = evaluate_retreat_reasons(cpu_eval)
-	if not should_consider:
-		return false
-
-	var retreat_cost = get_retreat_cost(opponent_active_pokemon)
-	var current_energy = opponent_active_pokemon.attached_energies.size()
-
-	# R.3: Exactly 1 energy short — defer to after energy attachment
-	if current_energy == retreat_cost - 1 and not opponent_energy_played_this_turn:
-		print("CPU retreat deferred: 1 energy short, will re-evaluate after attachment")
-		return true
-
-	# R.2: Can the active actually pay retreat cost right now?
-	if current_energy < retreat_cost:
-		print("CPU cannot retreat: not enough energy (" + str(current_energy) + "/" + str(retreat_cost) + ")")
-		return false
-
-	# R.2 continued: Is paying the retreat cost worth the energy loss?
-	if not is_retreat_cost_worthwhile(cpu_eval):
-		print("CPU retreat not worthwhile: energy loss too high")
-		return false
-
-	# R.5: Pick the best replacement and execute
-	await execute_cpu_retreat(cpu_eval)
-	return false
-
-# R.1: Determines if there is a reason for the active to consider retreating
-func evaluate_retreat_reasons(cpu_eval: Dictionary) -> bool:
-	var active_key = opponent_active_pokemon.get_instance_id()
-	var active_data = cpu_eval["pokemon_data"].get(active_key, {})
-	var can_attack = active_data.get("can_attack", false)
-
-	# Reason 1: Mutual guaranteed KO situation
-	# Only ignore the guaranteed KO threat if WE can also guarantee a KO back
-	if cpu_eval.get("cpu_active_guaranteed_ko", false) and can_attack:
-		# Check if our attack is guaranteed to KO the player's active
-		var player_hp = player_active_pokemon.current_hp
-		var guaranteed_ko_player = false
-		
-		for attack in active_data.get("attack_data", []):
-			if attack["unmet"] == 0:  # Can use this attack
-				if attack["damage_min"] >= player_hp:  # Guaranteed to KO
-					guaranteed_ko_player = true
-					break
-					
-		if guaranteed_ko_player:
-			print("CPU NOT retreating: mutual KO - will attack and trade")
-			return false  # Don't retreat, attack instead
-		else:
-			print("CPU considering retreat: guaranteed KO threat and cannot KO back")
-			return true  # Do retreat, we'd lose the trade
-
-	# Reason 2: Active is at risk of KO (potential or bench threat)
-	if cpu_eval.get("cpu_active_potential_ko", false) or cpu_eval.get("player_bench_ko_threat", false):
-		print("CPU considering retreat: potential KO threat")
-		return true
-
-	# Reason 3: Active cannot attack and has no path to attacking within 1-2 turns
-	if not can_attack:
-		var nearest_attack = 999
-		for attack in active_data.get("attack_data", []):
-			if attack["unmet"] < nearest_attack:
-				nearest_attack = attack["unmet"]
-
-		# Count matching energy cards in hand
-		var matching_energy_in_hand = 0
-		for card in opponent_hand:
-			if card.metadata.get("supertype", "").to_lower() != "energy":
-				continue
-			var energy_types = get_energy_provided_by_card(card)
-			for attack in active_data.get("attack_data", []):
-				for req in attack.get("cost", []):
-					if req == "Colorless" or req in energy_types:
-						matching_energy_in_hand += 1
-						break
-
-		if nearest_attack > matching_energy_in_hand + 1:
-			print("CPU considering retreat: active has no viable attack path")
-			return true
-
-	return false
-
-# Scores all (pokemon, energy_card) pairs and attaches the best one (Phase 0, 2, 3)
-func cpu_phase_energy_attachment(cpu_eval: Dictionary) -> void:
-	# Phase 0.1: Skip if no energy cards in hand
-	var energy_cards_in_hand = []
-	for card in opponent_hand:
-		if card.metadata.get("supertype", "").to_lower() == "energy":
-			energy_cards_in_hand.append(card)
-
-	if energy_cards_in_hand.is_empty() or opponent_energy_played_this_turn:
-		return
-
-	# Phase 0.2: Build candidate targets (active + bench)
-	var candidates = get_all_cpu_field_pokemon()
-
-	# Phase 2: Score every (pokemon, energy_card) pair
-	var scored_pairs = []
-	for pokemon in candidates:
-		var key = pokemon.get_instance_id()
-		var pokemon_data = cpu_eval["pokemon_data"].get(key, {})
-		for energy_card in energy_cards_in_hand:
-			var score = score_energy_pair(pokemon, energy_card, cpu_eval, pokemon_data)
-			scored_pairs.append({
-				"pokemon": pokemon,
-				"energy_card": energy_card,
-				"score": score
-			})
-
-	if scored_pairs.is_empty():
-		return
-
-	# Phase 3.1: Sort by score descending
-	scored_pairs.sort_custom(func(a, b): return a["score"] > b["score"])
-	var best = scored_pairs[0]
-
-	# Phase 3.3: Tiebreaking
-	best = resolve_energy_tiebreak(scored_pairs, cpu_eval)
-
-	# Phase 3.4: Always attach even if score is negative
-	var target = best["pokemon"]
-	var energy = best["energy_card"]
-
-	print("CPU attaching " + energy.metadata["name"] + " to " + target.metadata["name"] + " (Score: " + str(int(best["score"])) + ")")
-
-	# Perform the attachment
-	opponent_hand.erase(energy)
-	target.attached_energies.append(energy)
-	opponent_energy_played_this_turn = true
-
-	await show_message("Opponent attached " + energy.metadata["name"].to_upper() + " to " + target.metadata["name"].to_upper() + "!")
-
-	var energy_target_node = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_energies if target == opponent_active_pokemon else $CARD_COLLECTIONS/OPPONENT/opponent_bench_container
-	var energy_set = energy.uid.split("-")[0]
-	var energy_texture = load("res://cardimages/" + energy_set + "/Small/" + energy.uid + ".png")
-	await animate_card_a_to_b($CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, energy_target_node, 0.2, energy_texture, card_scales[12])
-
-	display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500, 6)
-	display_pokemon(true)
-	display_active_pokemon_energies(true)
-	await get_tree().process_frame
-	await play_energy_attached_effect(target, energy)
-	
 # Scores a single (pokemon, energy_card) pair using all Phase 2 rules
 func score_energy_pair(pokemon: card_object, energy_card: card_object, cpu_eval: Dictionary, pokemon_data: Dictionary) -> float:
 	var score = 0.0
@@ -4064,11 +3814,268 @@ func resolve_energy_tiebreak(scored_pairs: Array, cpu_eval: Dictionary) -> Dicti
 
 	return tied[0]
 
+
+################################################### END OPPONENT PRIORITISE FUNCTIONALITY FUNCTIONS ##################################################
+######################################################################################################################################################
+ 
+# #######  ######   ##   ##        ######   #######    ####### #######
+# ##       ##   ##  ##   ##        ##      ##     ##  ##       ##
+# ##       ######   ##   ##  ##### ##      ##     ##  ##       #######
+# ##       ##       ##   ##        ##      ##     ##  ##       ##
+# #######  ##       #######        #######  #######   ##       #######
+
+######################################################################################################################################################
+###################################################### OPPONENT GENERAL FUNCTIONALITY FUNCTIONS ######################################################
+
+# Function to set up opponent's active and bench pokemon using the priority condition criteria scoring selection
+func opponent_setup_pokemon_from_hand() -> void:
+	var selected_pokemon = select_opponent_pokemon_for_setup(opponent_hand)
+	var active_pokemon = selected_pokemon.get("active")
+	var bench_pokemon_list = selected_pokemon.get("bench", [])
+	
+	# Remove active pokemon from hand and set it as active
+	opponent_hand.erase(active_pokemon)
+	opponent_active_pokemon = active_pokemon
+	opponent_active_pokemon.current_location = "active"
+	opponent_active_pokemon.placed_on_field_this_turn = true
+	
+	# Remove bench pokemon from hand and add to bench
+	for bench_pokemon in bench_pokemon_list:
+		opponent_hand.erase(bench_pokemon)
+		bench_pokemon.current_location = "bench"
+		bench_pokemon.placed_on_field_this_turn = true
+		opponent_bench.append(bench_pokemon)
+	
+	# Update displays
+	display_pokemon(true)  # true = opponent
+	display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500,6)
+
+# Handles start-of-turn duties then hands off to the CPU decision orchestrator
+func opponent_start_turn_checks() -> void:
+	turn_number += 1
+	print("OPPONENT'S TURN START. TURN NUMBER IS ", turn_number)
+	await get_tree().create_timer(0.5).timeout
+	opponents_turn_active = true
+	reset_field_pokemon_turn_flags(true)
+
+	await show_message("Your opponent draws a card")
+	var drawn_card = await draw_card_from_deck(true)
+
+	if drawn_card == null:
+		return
+
+	display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500, 6)
+	update_deck_icon(true)
+
+	# Future: resolve any start-of-turn triggered effects here
+
+	await cpu_turn_orchestrator()
+
+# Orchestrates all CPU decision phases in the correct order
+func cpu_turn_orchestrator() -> void:
+	# Phase 1: Trainer card plays (not yet implemented - reserve this slot)
+
+	# Phase 2: Evolution plays
+	await cpu_phase_evolution()
+
+	# Phase 3: Bench pokemon plays (uses existing priority scoring)
+	await cpu_phase_bench_play()
+
+	# Phase 4: Build evaluation AFTER all board-altering plays have resolved
+	var cpu_eval = build_cpu_evaluation()
+
+	# Phase 5: First retreat evaluation (before energy attachment)
+	var retreat_deferred = await cpu_phase_retreat_first_pass(cpu_eval)
+
+	# Phase 6: Energy attachment
+	await cpu_phase_energy_attachment(cpu_eval)
+
+	# Phase 7: Second retreat pass (only if Phase 5 deferred pending energy)
+	if retreat_deferred:
+		cpu_eval = build_cpu_evaluation()
+		await cpu_phase_retreat_second_pass(cpu_eval)
+
+	# Phase 8: Attack decision (must always be last)
+	await cpu_phase_attack(cpu_eval)
+
+	await get_tree().create_timer(0.5).timeout
+	await show_message("Your opponent ends their turn")
+	player_start_turn_checks()
+
+# CPU plays any valid evolutions from hand onto field pokemon using pair scoring
+func cpu_phase_evolution() -> void:
+	if turn_number <= 2:
+		return
+
+	while true:
+		# Build list of all valid (evo_card, target) pairs and score them
+		var scored_pairs = []
+		for card in opponent_hand:
+			var valid_targets = get_valid_evolution_targets(card, true)
+			for target in valid_targets:
+				var result = evaluate_evolution_pair(card, target)
+				scored_pairs.append(result)
+
+		if scored_pairs.is_empty():
+			break
+
+		# Sort by score descending and pick the best pair
+		scored_pairs.sort_custom(func(a, b): return a["score"] > b["score"])
+		var best = scored_pairs[0]
+
+		print("CPU evolving " + best["target"].metadata["name"] + " into " + best["evo_card"].metadata["name"] + " (Score: " + str(int(best["score"])) + ")")
+		for reason in best["reasons"]:
+			print("  - " + reason)
+
+		# Set the globals that perform_evolution reads from
+		evolution_card_awaiting_target = best["evo_card"]
+		selected_card_for_action = best["target"]
+		perform_evolution(true)
+
+		await show_message("Opponent evolved " + best["target"].metadata["name"].to_upper() + " into " + best["evo_card"].metadata["name"].to_upper() + "!")
+	
+		var evo_target_node = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container if best["evo_card"].current_location == "active" else $CARD_COLLECTIONS/OPPONENT/opponent_bench_container
+		var evo_scale = card_scales[8] if best["evo_card"].current_location == "active" else card_scales[11]
+		var evo_texture = get_card_texture(best["evo_card"])
+		await animate_card_a_to_b($CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, evo_target_node, 0.3, evo_texture, evo_scale)
+
+		display_pokemon(true)
+		display_active_pokemon_energies(true)
+		display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500, 6)
+
+		await get_tree().process_frame
+	
+		await play_evolution_effect(best["evo_card"])
+
+		# Clean up globals
+		evolution_card_awaiting_target = null
+		selected_card_for_action = null
+
+# R.1: Determines if there is a reason for the active to consider retreating
+func evaluate_retreat_reasons(cpu_eval: Dictionary) -> bool:
+	var active_key = opponent_active_pokemon.get_instance_id()
+	var active_data = cpu_eval["pokemon_data"].get(active_key, {})
+	var can_attack = active_data.get("can_attack", false)
+
+	# Reason 1: Mutual guaranteed KO situation
+	# Only ignore the guaranteed KO threat if WE can also guarantee a KO back
+	if cpu_eval.get("cpu_active_guaranteed_ko", false) and can_attack:
+		# Check if our attack is guaranteed to KO the player's active
+		var player_hp = player_active_pokemon.current_hp
+		var guaranteed_ko_player = false
+		
+		for attack in active_data.get("attack_data", []):
+			if attack["unmet"] == 0:  # Can use this attack
+				if attack["damage_min"] >= player_hp:  # Guaranteed to KO
+					guaranteed_ko_player = true
+					break
+					
+		if guaranteed_ko_player:
+			print("CPU NOT retreating: mutual KO - will attack and trade")
+			return false  # Don't retreat, attack instead
+		else:
+			print("CPU considering retreat: guaranteed KO threat and cannot KO back")
+			return true  # Do retreat, we'd lose the trade
+
+	# Reason 2: Active is at risk of KO (potential or bench threat)
+	if cpu_eval.get("cpu_active_potential_ko", false) or cpu_eval.get("player_bench_ko_threat", false):
+		print("CPU considering retreat: potential KO threat")
+		return true
+
+	# Reason 3: Active cannot attack and has no path to attacking within 1-2 turns
+	if not can_attack:
+		var nearest_attack = 999
+		for attack in active_data.get("attack_data", []):
+			if attack["unmet"] < nearest_attack:
+				nearest_attack = attack["unmet"]
+
+		# Count matching energy cards in hand
+		var matching_energy_in_hand = 0
+		for card in opponent_hand:
+			if card.metadata.get("supertype", "").to_lower() != "energy":
+				continue
+			var energy_types = get_energy_provided_by_card(card)
+			for attack in active_data.get("attack_data", []):
+				for req in attack.get("cost", []):
+					if req == "Colorless" or req in energy_types:
+						matching_energy_in_hand += 1
+						break
+
+		if nearest_attack > matching_energy_in_hand + 1:
+			print("CPU considering retreat: active has no viable attack path")
+			return true
+
+	return false
+
+# Scores all (pokemon, energy_card) pairs and attaches the best one (Phase 0, 2, 3)
+func cpu_phase_energy_attachment(cpu_eval: Dictionary) -> void:
+	# Phase 0.1: Skip if no energy cards in hand
+	var energy_cards_in_hand = []
+	for card in opponent_hand:
+		if card.metadata.get("supertype", "").to_lower() == "energy":
+			energy_cards_in_hand.append(card)
+
+	if energy_cards_in_hand.is_empty() or opponent_energy_played_this_turn:
+		return
+
+	# Phase 0.2: Build candidate targets (active + bench)
+	var candidates = get_all_cpu_field_pokemon()
+
+	# Phase 2: Score every (pokemon, energy_card) pair
+	var scored_pairs = []
+	for pokemon in candidates:
+		var key = pokemon.get_instance_id()
+		var pokemon_data = cpu_eval["pokemon_data"].get(key, {})
+		for energy_card in energy_cards_in_hand:
+			var score = score_energy_pair(pokemon, energy_card, cpu_eval, pokemon_data)
+			scored_pairs.append({
+				"pokemon": pokemon,
+				"energy_card": energy_card,
+				"score": score
+			})
+
+	if scored_pairs.is_empty():
+		return
+
+	# Phase 3.1: Sort by score descending
+	scored_pairs.sort_custom(func(a, b): return a["score"] > b["score"])
+	var best = scored_pairs[0]
+
+	# Phase 3.3: Tiebreaking
+	best = resolve_energy_tiebreak(scored_pairs, cpu_eval)
+
+	# Phase 3.4: Always attach even if score is negative
+	var target = best["pokemon"]
+	var energy = best["energy_card"]
+
+	print("CPU attaching " + energy.metadata["name"] + " to " + target.metadata["name"] + " (Score: " + str(int(best["score"])) + ")")
+
+	# Perform the attachment
+	opponent_hand.erase(energy)
+	target.attached_energies.append(energy)
+	opponent_energy_played_this_turn = true
+
+	await show_message("Opponent attached " + energy.metadata["name"].to_upper() + " to " + target.metadata["name"].to_upper() + "!")
+
+	var energy_target_node = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_energies if target == opponent_active_pokemon else $CARD_COLLECTIONS/OPPONENT/opponent_bench_container
+	var energy_set = energy.uid.split("-")[0]
+	var energy_texture = load("res://cardimages/" + energy_set + "/Small/" + energy.uid + ".png")
+	await animate_card_a_to_b($CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, energy_target_node, 0.2, energy_texture, card_scales[12])
+
+	display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500, 6)
+	display_pokemon(true)
+	display_active_pokemon_energies(true)
+	await get_tree().process_frame
+	await play_energy_attached_effect(target, energy)
+	
 # Chooses and executes an attack to end the CPU turn (Phase 8)
 func cpu_phase_attack(cpu_eval: Dictionary) -> void:
 	if opponent_active_pokemon == null or player_active_pokemon == null:
 		return
-
+	
+	if turn_number <= 1:
+		return
+	
 	# Check attack readiness from live board state, not stale cpu_eval
 	var has_usable_attack = false
 	for attack in opponent_active_pokemon.metadata.get("attacks", []):
@@ -4412,14 +4419,14 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 		hide_selection_mode_display_main()
 		return
 	
-	if evolution_mode_active:
+	elif evolution_mode_active:
 		print("Evolution cancelled")
 		evolution_card_awaiting_target = null
 		evolution_mode_active = false
 		hide_selection_mode_display_main()
 		return
 	
-	if retreat_mode_active:
+	elif retreat_mode_active:
 		print("Retreat energy selection cancelled")
 		retreat_mode_active = false
 		retreat_energies_selected.clear()
@@ -4427,7 +4434,7 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 		hide_selection_mode_display_main()
 		return
 	
-	if retreat_bench_selection_active:
+	elif retreat_bench_selection_active:
 		print("Retreat bench selection cancelled")
 		retreat_bench_selection_active = false
 		retreat_energies_selected.clear()
@@ -4436,13 +4443,25 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 		return
 	
 	# If we were in bench setup phase, end it and draw prize cards
-	if bench_setup_phase_active:
+	elif bench_setup_phase_active:
 		bench_setup_phase_active = false
 		$cancel_selection_mode_view_button.text = "Cancel"
 		$cancel_selection_mode_view_button.theme = load("res://uiresources/kenneyUI-red.tres")
 		draw_prize_cards(true)
+		hide_selection_mode_display_main()
 	
-	hide_selection_mode_display_main()
+		await show_message("FLIPPING COIN TO DECIDE WHICH PLAYER GOES FIRST")
+	
+		var who_starts = await flip_coin()
+	
+		if who_starts:
+			await show_message("You are going first!")
+			player_start_turn_checks()
+		else:
+			await show_message("Opponent is going first!")
+			opponent_start_turn_checks()
+	else:
+		hide_selection_mode_display_main()
 
 # Opens any card array in enlarged selection mode when its container is clicked
 func array_container_clicked(event: InputEvent, card_array: Array) -> void:
@@ -4682,6 +4701,7 @@ func _ready() -> void:
 	
 	show_enlarged_array_selection_mode(player_hand)
 	display_pokemon(false)
+	
 	
 ######################################################## END OF MAIN GAME RUNNING FUNCTIONS ##########################################################
 ######################################################################################################################################################
