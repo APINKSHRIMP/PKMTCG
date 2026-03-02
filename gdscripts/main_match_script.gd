@@ -12,6 +12,11 @@ var hide_hidden_cards = false      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET
 var opponent_deck_name = "GrassFire"
 var player_deck_name = "CurrentDeck1"
 
+# TESTING - There are different rulesets for burn and confusion depending on what generation/set is being played.
+# Additionally I personally felt base set confusion retreat rule is horrendous, so I have created a personal rule that doesn't give free retreat but doesn't force discard then coin flip
+var burn_rules: String = "base_set_burn_rules" # "base_set_burn_rules" or "modern_era_burn_rules"
+var confusion_rules: String = "base_set_confusion_rules" # "base_set_confusion_rules" or "fairer_confusion_rules" or "modern_era_confusion_rules"
+
 # Customisable in game textures
 # Load coin textures
 var tex_heads = load("res://gameimageassets/coins/coin_groudon_red.png")
@@ -455,6 +460,92 @@ func update_selection_mode_labels(array_displayed: Array, is_starting_game: bool
 		$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "Opponent's Discard Pile"
 		$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Viewing opponent's discard pile"
 
+# Function to change the text, enabled mode and function of the action button.
+func update_action_button() -> void:
+	
+	# We need to see what the button can do by running the function get_card_action
+	var action_info = get_card_action(selected_card_for_action)
+	var action_button = $BUTTONS/SELECTION_BUTTONS/card_action_button
+	var action_type = action_info["action"]
+	
+	if action_type == "SET_POKEMON" and not match_just_started_basic_pokemon_required:
+		if player_bench.size() >= 5:
+			action_button.disabled = true
+			action_button.text = "BENCH FULL"
+			# If no card is selected, disable the button and change the colour to show it can't be clicked	
+			action_button.theme = load("res://uiresources/kenneyUI.tres")
+			return
+	
+	# If no card is selected then we have no action to perform so disable the button and change text to select the card
+	if selected_card_for_action == null:
+		
+		# Specific requirement for the first turn, ONLY a basic pokemon can be set and nothing else so change text accordingly
+		if match_just_started_basic_pokemon_required:
+			action_button.text = "Select Basic Pokemon"
+		else:
+			action_button.text = "Select A Card"
+		
+		# If no card is selected, disable the button and change the colour to show it can't be clicked	
+		action_button.disabled = true
+		action_button.theme = load("res://uiresources/kenneyUI.tres")
+	
+	# If the match has just started, ONLY a basic pokemon can be played and SET AS ACTIVE POKEMON pokemon, not placed on bench	
+	elif match_just_started_basic_pokemon_required and is_basic_pokemon(selected_card_for_action):
+		
+		# Match just started AND a basic pokemon is selected so card is set to active
+		action_button.text = "SET AS ACTIVE POKEMON"
+		
+		# Enable the button and change the colour
+		action_button.disabled = false
+		action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+	
+	# If a basic pokemon is needed for turn 1 but any other card or no card is selected then change text to select basic pokemon	
+	elif match_just_started_basic_pokemon_required:
+		
+		# Match just started BUT wrong card or no card type selected
+		action_button.text = "Select Basic Pokemon"
+		
+		# Disable the button and change the colour
+		action_button.disabled = true
+		action_button.theme = load("res://uiresources/kenneyUI.tres")
+	
+	# If the card selected was an energy card
+	elif action_info["action"] == "ATTACH_ENERGY":
+		# Energy card is selected and we're ready to attach it
+		if player_energy_played_this_turn:
+			action_button.text = "ENERGY PLAYED"
+			action_button.disabled = true
+			action_button.theme = load("res://uiresources/kenneyUI.tres")
+		else:
+			action_button.text = "ATTACH ENERGY"
+			action_button.disabled = false
+			action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+	
+	elif action_info["action"] == "EVOLVE":
+		var valid_targets = get_valid_evolution_targets(selected_card_for_action, false)
+		if valid_targets.size() > 0:
+			action_button.text = "EVOLVE"
+			action_button.disabled = false
+			action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+		else:
+			action_button.text = "CANNOT EVOLVE"
+			action_button.disabled = true
+			action_button.theme = load("res://uiresources/kenneyUI.tres")
+	
+	# For 99% of other cases, if a card has been selected from the hand AND it isn't turn 1 requiring a basic, then display the action the card can take	
+	else:
+		# Normal match play - use action_info
+		action_button.text = action_info["button_text"]
+		
+		# Only disable the button if the action avaialable is none
+		action_button.disabled = (action_info["action"] == "NONE")
+		
+		# If the action button is disabled, change the colour. Change colour if it is enabled
+		if action_button.disabled:
+			action_button.theme = load("res://uiresources/kenneyUI.tres")
+		else:
+			action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+
 # Displays the prize cards for the specified player in their prize cards container
 func display_prize_cards(is_opponent: bool) -> void:
 	
@@ -605,6 +696,14 @@ func show_attack_buttons() -> void:
 		await show_message("You cannot attack on the first turn!")
 		hide_attack_buttons()
 		return
+	if player_active_pokemon.special_condition == "Paralyzed":
+		await show_message(player_active_pokemon.metadata.get("name", "").to_upper() + " IS PARALYZED AND CANNOT ATTACK!")
+		hide_attack_buttons()
+		return
+	if player_active_pokemon.special_condition == "Asleep":
+		await show_message(player_active_pokemon.metadata.get("name", "").to_upper() + " IS ASLEEP AND CANNOT ATTACK!")
+		hide_attack_buttons()
+		return
 	
 	$BUTTONS/main_screen_buttons_container.visible = false
 	$BUTTONS/main_screen_attack_buttons_container.visible = true
@@ -734,6 +833,43 @@ func update_discard_pile_display(is_opponent: bool) -> void:
 	icon.add_child(top_display)
 	top_display.load_card_image(top_card.uid, Vector2(110, 141), top_card)
 	icon.move_child(icon.get_node(label_name), -1)
+
+# Clears and rebuilds status condition icons for a pokemon's status container
+func update_status_icons(pokemon: card_object, is_opponent: bool) -> void:
+	var container = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_status_container if is_opponent else $ACTIVE_POKEMON/PLAYER/player_active_pokemon_status_container
+	for child in container.get_children():
+		child.queue_free()
+
+	var icons_to_show: Array = []
+
+	if pokemon.special_condition == "Paralyzed":
+		icons_to_show.append("status_paralyzed.png")
+	if pokemon.special_condition == "Asleep":
+		icons_to_show.append("status_asleep.png")
+	if pokemon.special_condition == "Confused":
+		icons_to_show.append("status_confused.png")
+	if pokemon.is_poisoned and pokemon.poison_damage == 10:
+		icons_to_show.append("status_poisoned.png")
+	if pokemon.is_poisoned and pokemon.poison_damage == 20:
+		icons_to_show.append("status_toxic.png")
+	if pokemon.is_burned:
+		icons_to_show.append("status_burned.png")
+	if pokemon.is_blind:
+		icons_to_show.append("status_blind.png")
+	if pokemon.has_no_damage:
+		icons_to_show.append("status_no_damage.png")
+	if pokemon.is_invincible:
+		icons_to_show.append("status_invincible.png")
+	if pokemon.has_destiny_bond:
+		icons_to_show.append("status_destiny_bond.png")
+
+	for icon_file in icons_to_show:
+		var icon = TextureRect.new()
+		icon.texture = load("res://gameimageassets/statusicons/" + icon_file)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.custom_minimum_size = Vector2(100, 30)
+		icon.size = Vector2(100, 30)
+		container.add_child(icon)
 
 ############################################################### END DISPLAY FUNCTIONS ################################################################
 ######################################################################################################################################################
@@ -1053,7 +1189,16 @@ func play_energy_attached_effect(pokemon: card_object, energy_card: card_object)
 	particles.emitting = true
 	await get_tree().create_timer(1).timeout
 	particles.queue_free()
+
+# Animate a quick attack effect for when an attack is used
+func play_attack_animation(pokemon: card_object, is_opponent: bool) -> void:
+
 	
+	if is_opponent: 
+		print("Opponent attacking")
+	else:
+		print("Player attacking")
+		
 ############################################################## END ANIMATION FUNCTIONS ###############################################################
 ######################################################################################################################################################
 
@@ -1248,7 +1393,6 @@ func start_bench_setup_phase() -> void:
 	# Show the hand again for bench pokemon selection
 	show_enlarged_array_selection_mode(player_hand)	
 
-
 ############################################################### END GAME LOAD FUNCTIONS ##############################################################
 ######################################################################################################################################################
 #
@@ -1409,92 +1553,6 @@ func get_card_action(card: card_object) -> Dictionary:
 	# Default fallback
 	return {"action": "NONE", "button_text": ""}
 
-# Function to change the text, enabled mode and function of the action button.
-func update_action_button() -> void:
-	
-	# We need to see what the button can do by running the function get_card_action
-	var action_info = get_card_action(selected_card_for_action)
-	var action_button = $BUTTONS/SELECTION_BUTTONS/card_action_button
-	var action_type = action_info["action"]
-	
-	if action_type == "SET_POKEMON" and not match_just_started_basic_pokemon_required:
-		if player_bench.size() >= 5:
-			action_button.disabled = true
-			action_button.text = "BENCH FULL"
-			# If no card is selected, disable the button and change the colour to show it can't be clicked	
-			action_button.theme = load("res://uiresources/kenneyUI.tres")
-			return
-	
-	# If no card is selected then we have no action to perform so disable the button and change text to select the card
-	if selected_card_for_action == null:
-		
-		# Specific requirement for the first turn, ONLY a basic pokemon can be set and nothing else so change text accordingly
-		if match_just_started_basic_pokemon_required:
-			action_button.text = "Select Basic Pokemon"
-		else:
-			action_button.text = "Select A Card"
-		
-		# If no card is selected, disable the button and change the colour to show it can't be clicked	
-		action_button.disabled = true
-		action_button.theme = load("res://uiresources/kenneyUI.tres")
-	
-	# If the match has just started, ONLY a basic pokemon can be played and SET AS ACTIVE POKEMON pokemon, not placed on bench	
-	elif match_just_started_basic_pokemon_required and is_basic_pokemon(selected_card_for_action):
-		
-		# Match just started AND a basic pokemon is selected so card is set to active
-		action_button.text = "SET AS ACTIVE POKEMON"
-		
-		# Enable the button and change the colour
-		action_button.disabled = false
-		action_button.theme = load("res://uiresources/kenneyUI-green.tres")
-	
-	# If a basic pokemon is needed for turn 1 but any other card or no card is selected then change text to select basic pokemon	
-	elif match_just_started_basic_pokemon_required:
-		
-		# Match just started BUT wrong card or no card type selected
-		action_button.text = "Select Basic Pokemon"
-		
-		# Disable the button and change the colour
-		action_button.disabled = true
-		action_button.theme = load("res://uiresources/kenneyUI.tres")
-	
-	# If the card selected was an energy card
-	elif action_info["action"] == "ATTACH_ENERGY":
-		# Energy card is selected and we're ready to attach it
-		if player_energy_played_this_turn:
-			action_button.text = "ENERGY PLAYED"
-			action_button.disabled = true
-			action_button.theme = load("res://uiresources/kenneyUI.tres")
-		else:
-			action_button.text = "ATTACH ENERGY"
-			action_button.disabled = false
-			action_button.theme = load("res://uiresources/kenneyUI-green.tres")
-	
-	elif action_info["action"] == "EVOLVE":
-		var valid_targets = get_valid_evolution_targets(selected_card_for_action, false)
-		if valid_targets.size() > 0:
-			action_button.text = "EVOLVE"
-			action_button.disabled = false
-			action_button.theme = load("res://uiresources/kenneyUI-green.tres")
-		else:
-			action_button.text = "CANNOT EVOLVE"
-			action_button.disabled = true
-			action_button.theme = load("res://uiresources/kenneyUI.tres")
-	
-	# For 99% of other cases, if a card has been selected from the hand AND it isn't turn 1 requiring a basic, then display the action the card can take	
-	else:
-		# Normal match play - use action_info
-		action_button.text = action_info["button_text"]
-		
-		# Only disable the button if the action avaialable is none
-		action_button.disabled = (action_info["action"] == "NONE")
-		
-		# If the action button is disabled, change the colour. Change colour if it is enabled
-		if action_button.disabled:
-			action_button.theme = load("res://uiresources/kenneyUI.tres")
-		else:
-			action_button.theme = load("res://uiresources/kenneyUI-green.tres")
-
 # Function for setting the active pokemon from hand of bench
 func set_player_active_pokemon() -> void:
 	# First, check if a card was actually selected
@@ -1597,14 +1655,6 @@ func find_card_ui_for_object(card_obj: card_object) -> TextureRect:
 					return card_ui
 	
 	return null
-
-# Function to get all basic pokemon from a given array of cards
-func get_all_basic_pokemon(card_array: Array) -> Array:
-	var basic_pokemon = []
-	for card in card_array:
-		if card.metadata.get("supertype") == "Pokémon" and card.metadata.has("subtypes") and card.metadata["subtypes"].has("Basic"):
-			basic_pokemon.append(card)
-	return basic_pokemon
 
 # Function called when selecting an energy card to attach to a pokemon. Calls show enlarged array as a subfunction	
 func start_energy_attachment() -> void:
@@ -1761,17 +1811,82 @@ func player_end_turn_checks() -> void:
 	await check_all_knockouts()
 	
 	reset_field_pokemon_turn_flags(false)
-	inbetween_turn_checks()
+	await inbetween_turn_checks(true)
 
-# Resets shared state between turns before the next player begins
-func inbetween_turn_checks() -> void:
-	player_energy_played_this_turn = false
-	player_retreated_this_turn = false
-	opponent_energy_played_this_turn = false
-	opponent_retreated_this_turn = false
-	reset_field_pokemon_turn_flags(false)
-	reset_field_pokemon_turn_flags(true)
-	opponent_start_turn_checks()
+# Resets shared state between turns, processes status effects, and starts the next turn
+func inbetween_turn_checks(player_turn_just_ended: bool = true) -> void:
+	
+	# Remove end-of-turn flags and status from the pokemon whose owner's turn just ended
+	if player_turn_just_ended:
+		clear_end_of_turn_statuses(player_active_pokemon, false)
+		player_energy_played_this_turn = false
+		player_retreated_this_turn = false
+		reset_field_pokemon_turn_flags(false)
+	else:
+		clear_end_of_turn_statuses(opponent_active_pokemon, true)
+		opponent_energy_played_this_turn = false
+		opponent_retreated_this_turn = false
+		reset_field_pokemon_turn_flags(true)
+
+	# Process between-turn effects (poison, burn, sleep) for both active pokemon
+	if player_active_pokemon != null:
+		await process_status_between_turns(player_active_pokemon, false)
+	if opponent_active_pokemon != null:
+		await process_status_between_turns(opponent_active_pokemon, true)
+
+	await check_all_knockouts()
+
+	if player_turn_just_ended:
+		opponent_start_turn_checks()
+	else:
+		player_start_turn_checks()
+
+# Removes statuses that expire at the end of the affected player's own turn
+func clear_end_of_turn_statuses(pokemon: card_object, is_opponent: bool) -> void:
+	if pokemon == null:
+		return
+
+	var pokemon_name = pokemon.metadata.get("name", "Unknown")
+	var changed = false
+
+	if pokemon.special_condition == "Paralyzed":
+		pokemon.special_condition = ""
+		print("END OF TURN: ", pokemon_name, " is no longer Paralyzed")
+		changed = true
+
+	if pokemon.is_blind:
+		pokemon.is_blind = false
+		print("END OF TURN: ", pokemon_name, " is no longer Blind")
+		changed = true
+
+	if changed:
+		update_status_icons(pokemon, is_opponent)
+
+# Removes all status conditions from a pokemon (used when retreating or evolving)
+func clear_all_statuses(pokemon: card_object, is_opponent: bool) -> void:
+	if pokemon == null:
+		return
+
+	var had_status = false
+	if pokemon.special_condition != "":
+		had_status = true
+	if pokemon.is_poisoned or pokemon.is_burned or pokemon.is_blind:
+		had_status = true
+	if pokemon.has_no_damage or pokemon.is_invincible or pokemon.has_destiny_bond:
+		had_status = true
+
+	pokemon.special_condition = ""
+	pokemon.is_poisoned = false
+	pokemon.poison_damage = 10
+	pokemon.is_burned = false
+	pokemon.is_blind = false
+	pokemon.has_no_damage = false
+	pokemon.is_invincible = false
+	pokemon.has_destiny_bond = false
+
+	if had_status:
+		print("STATUSES CLEARED: ", pokemon.metadata.get("name", "Unknown"))
+		update_status_icons(pokemon, is_opponent)
 
 # Scans active and bench for Pokemon that the given evolution card can legally evolve from
 func get_valid_evolution_targets(evolution_card: card_object, is_opponent: bool) -> Array:
@@ -1868,7 +1983,8 @@ func perform_evolution(is_opponent: bool) -> void:
 			bench[bench_index] = evo_card
 	
 	print(target_card.metadata["name"], " evolved into ", evo_card.metadata["name"], "! (Damage carried: ", damage_taken, ")")
-	
+	clear_all_statuses(evo_card, is_opponent)
+	 
 # Sends a card and all its attachments (energies, pre-evolutions, attached cards) to the discard pile
 func send_card_to_discard(card: card_object, is_opponent: bool) -> void:
 	var discard = opponent_discard_pile if is_opponent else player_discard_pile
@@ -1941,6 +2057,10 @@ func can_retreat(is_opponent: bool) -> Dictionary:
 		return {"can_retreat": false, "reason": "Cannot retreat with no Pokemon on your bench!"}
 	if is_disabled:
 		return {"can_retreat": false, "reason": "You have been prevented from retreating!"}
+	if active.special_condition == "Paralyzed":
+		return {"can_retreat": false, "reason": active.metadata.get("name", "") + " is Paralyzed and cannot retreat!"}
+	if active.special_condition == "Asleep":
+		return {"can_retreat": false, "reason": active.metadata.get("name", "") + " is Asleep and cannot retreat!"}
 	if active.attached_energies.size() < get_retreat_cost(active):
 		return {"can_retreat": false, "reason": "Not enough energy to retreat!"}
 	
@@ -2057,7 +2177,7 @@ func flip_coin() -> bool:
 #          ##      ##   ##       ##    ##      ## ######  ##    ##
 
 ######################################################################################################################################################
-############################################################# ATTACK AND DAMAGE FUNCTIONS ############################################################
+############################################################ ATTACK AND DAMAGE FUNCTIONS #############################################################
 
 # Returns the attacks array for any given card object.
 func get_attacks_for_card(card: card_object) -> Array:
@@ -2158,6 +2278,28 @@ func perform_attack(attack_index: int) -> void:
 
 	await show_message((player_active_pokemon.metadata["name"] + " USED " + attack.get("name", "")).to_upper())
 	
+	if player_active_pokemon.special_condition == "Confused":
+		await show_message(player_active_pokemon.metadata["name"].to_upper() + " IS CONFUSED! FLIPPING COIN...")
+		var coin = await flip_coin()
+		if not coin:
+			var self_damage = 20
+			if confusion_rules == "modern_era_confusion_rules":
+				self_damage = 30
+			if confusion_rules == "base_set_confusion_rules":
+				var self_types = player_active_pokemon.metadata.get("types", ["Colorless"])
+				var result = calculate_final_damage(self_damage, self_types, player_active_pokemon)
+				self_damage = result["damage"]
+			player_active_pokemon.current_hp = max(0, player_active_pokemon.current_hp - self_damage)
+			await show_message("THE ATTACK FAILED! " + player_active_pokemon.metadata["name"].to_upper() + " HURT ITSELF FOR " + str(self_damage) + " DAMAGE!")
+			show_floating_label("-" + str(self_damage) + "HP", Vector2(530, 300))
+			display_hp_circles_above_align(player_active_pokemon, false)
+			print("CONFUSED: ", player_active_pokemon.metadata["name"], " hurt itself for ", self_damage)
+			hide_attack_buttons()
+			await check_all_knockouts()
+			await get_tree().create_timer(0.5).timeout
+			player_end_turn_checks()
+			return
+	
 	var attacking_types = player_active_pokemon.metadata.get("types", ["Colorless"])
 	var result = calculate_final_damage(base_damage, attacking_types, opponent_active_pokemon)
 	var final_damage = result["damage"]
@@ -2175,6 +2317,11 @@ func perform_attack(attack_index: int) -> void:
 	
 	display_hp_circles_above_align(opponent_active_pokemon, true)
 	hide_attack_buttons()
+	
+	var attack_text = attack.get("text", "")
+	var effects = parse_card_text_effects(attack_text, player_active_pokemon.metadata.get("name", ""))
+	if effects.size() > 0:
+		await apply_card_text_effects(effects, player_active_pokemon, opponent_active_pokemon, false)
 	
 	await check_all_knockouts()
 	
@@ -2330,6 +2477,222 @@ func handle_post_knockout(is_opponent: bool) -> void:
 	
 ########################################################## END ATTACK AND DAMAGE FUNCTIONS ###########################################################
 ######################################################################################################################################################
+#
+#         ########  ########  #######  ########  #######  ########
+#         ##        ##        ##       ##        ##          ##
+#         ########  ########  #######  ########  ##          ##
+#         ##        ##        ##       ##        ##          ##
+#         ########  ##        ##       ########  #######     ##
+#
+
+######################################################################################################################################################
+############################################################# EFFECT PARSING FUNCTIONS ###############################################################
+
+# Looks backwards from an effect's position to find the nearest coin flip condition
+func get_flip_context(text: String, effect_pos: int) -> String:
+	var before = text.substr(0, effect_pos)
+	var heads_pos = before.rfind("if heads")
+	var tails_pos = before.rfind("if tails")
+	if heads_pos == -1 and tails_pos == -1:
+		return "none"
+	if heads_pos > tails_pos:
+		return "heads"
+	return "tails"
+		
+# Searches for a defender status across three text patterns, returns position or -1
+func find_defender_status_pos(text: String, status: String, has_defender_prefix: bool) -> int:
+	var direct_pos = text.find("the defending pokémon is now " + status)
+	if direct_pos != -1:
+		return direct_pos
+	if has_defender_prefix:
+		var and_pos = text.find("and " + status)
+		if and_pos != -1:
+			return and_pos
+		var it_pos = text.find("it is now " + status)
+		if it_pos != -1:
+			return it_pos
+	return -1
+	
+# Parses attack effect text and returns an array of effect dictionaries for evaluation or application
+func parse_card_text_effects(attack_text: String, attacker_name: String) -> Array:
+	if attack_text == "":
+		return []
+	
+	var effects: Array = []
+	var text = attack_text.to_lower()
+	var lower_name = attacker_name.to_lower()
+	var has_defender_prefix = "the defending pokémon is now" in text
+	
+	# --- STATUS: Defender status conditions ---
+	var defender_statuses = ["paralyzed", "asleep", "poisoned", "confused", "burned"]
+	for status in defender_statuses:
+		var pos = find_defender_status_pos(text, status, has_defender_prefix)
+		if pos != -1:
+			var flip = get_flip_context(text, pos)
+			effects.append({"type": "status", "target": "defender", "status": status.capitalize(), "flip": flip})
+			print("EFFECT PARSED: Status -> Defender ", status.capitalize(), " | Flip: ", flip)
+	
+	# --- STATUS: Self-inflicted status (attacker name used instead of "defending") ---
+	var self_statuses = ["confused", "asleep", "poisoned", "paralyzed", "burned"]
+	for status in self_statuses:
+		if lower_name + " is now " + status in text:
+			var pos = text.find(lower_name + " is now " + status)
+			var flip = get_flip_context(text, pos)
+			effects.append({"type": "status", "target": "self", "status": status.capitalize(), "flip": flip})
+			print("EFFECT PARSED: Status -> Self ", status.capitalize(), " | Flip: ", flip)
+	
+	if effects.size() == 0:
+		print("EFFECT PARSED: No recognised effects in: ", text.left(80))
+	
+	return effects
+
+# Applies parsed effect dictionaries to the game state with coin flip gating
+func apply_card_text_effects(effects: Array, attacker: card_object, defender: card_object, is_opponent_attacking: bool) -> void:
+	var flip_result: String = ""
+	var needs_flip: bool = false
+	for effect in effects:
+		if effect.get("flip", "none") != "none":
+			needs_flip = true
+			break
+
+	if needs_flip:
+		var coin = await flip_coin()
+		flip_result = "heads" if coin else "tails"
+
+	for effect in effects:
+		var required_flip = effect.get("flip", "none")
+		if required_flip != "none" and flip_result != required_flip:
+			print("EFFECT SKIPPED: Needed ", required_flip, " but got ", flip_result)
+			continue
+
+		if effect["type"] == "status":
+			await apply_status_effect(effect, attacker, defender, is_opponent_attacking)
+
+# Applies a single parsed status effect to the correct pokemon and updates the UI
+func apply_status_effect(effect: Dictionary, attacker: card_object, defender: card_object, is_opponent_attacking: bool) -> void:
+	var target_pokemon: card_object
+	var is_target_opponent: bool
+	if effect["target"] == "defender":
+		target_pokemon = defender
+		is_target_opponent = !is_opponent_attacking
+	else:
+		target_pokemon = attacker
+		is_target_opponent = is_opponent_attacking
+
+	var status = effect["status"]
+	var mutually_exclusive = ["Paralyzed", "Asleep", "Confused"]
+
+	if status in mutually_exclusive:
+		target_pokemon.special_condition = status
+	if status == "Poisoned":
+		target_pokemon.is_poisoned = true
+		target_pokemon.poison_damage = 10
+	if status == "Burned":
+		target_pokemon.is_burned = true
+
+	await show_message(target_pokemon.metadata["name"].to_upper() + " IS NOW " + status.to_upper() + "!")
+	print("STATUS APPLIED: ", target_pokemon.metadata["name"], " is now ", status)
+	update_status_icons(target_pokemon, is_target_opponent)
+
+# Processes poison damage, burn damage/flip, and sleep wake-up between turns for one pokemon
+func process_status_between_turns(pokemon: card_object, is_opponent: bool) -> void:
+	if pokemon == null:
+		return
+
+	var pokemon_name = pokemon.metadata.get("name", "Unknown")
+
+	if pokemon.is_poisoned:
+		pokemon.current_hp = max(0, pokemon.current_hp - pokemon.poison_damage)
+		var label = "TOXIC" if pokemon.poison_damage == 20 else "POISON"
+		await show_message(pokemon_name.to_upper() + " TAKES " + str(pokemon.poison_damage) + " " + label + " DAMAGE!")
+		show_floating_label("-" + str(pokemon.poison_damage) + "HP", Vector2(530 if !is_opponent else 1030, 300), is_opponent)
+		display_hp_circles_above_align(pokemon, is_opponent)
+		print("BETWEEN TURNS: ", pokemon_name, " took ", pokemon.poison_damage, " poison damage. HP: ", pokemon.current_hp)
+
+	if pokemon.is_burned:
+		if burn_rules == "base_set_burn_rules":
+			await show_message(pokemon_name.to_upper() + " IS BURNED! FLIPPING COIN...")
+			var coin = await flip_coin()
+			if not coin:
+				pokemon.current_hp = max(0, pokemon.current_hp - 20)
+				await show_message(pokemon_name.to_upper() + " TAKES 20 BURN DAMAGE!")
+				show_floating_label("-20HP", Vector2(530 if !is_opponent else 1030, 300), is_opponent)
+				display_hp_circles_above_align(pokemon, is_opponent)
+				print("BETWEEN TURNS: ", pokemon_name, " took 20 burn damage. HP: ", pokemon.current_hp)
+			else:
+				await show_message(pokemon_name.to_upper() + " AVOIDED BURN DAMAGE!")
+				print("BETWEEN TURNS: ", pokemon_name, " avoided burn damage (heads)")
+		elif burn_rules == "modern_era_burn_rules":
+			pokemon.current_hp = max(0, pokemon.current_hp - 20)
+			await show_message(pokemon_name.to_upper() + " TAKES 20 BURN DAMAGE!")
+			show_floating_label("-20HP", Vector2(530 if !is_opponent else 1030, 300), is_opponent)
+			display_hp_circles_above_align(pokemon, is_opponent)
+			print("BETWEEN TURNS: ", pokemon_name, " took 20 burn damage. HP: ", pokemon.current_hp)
+			await show_message("FLIPPING COIN TO CURE BURN...")
+			var coin = await flip_coin()
+			if coin:
+				pokemon.is_burned = false
+				await show_message(pokemon_name.to_upper() + " IS NO LONGER BURNED!")
+				update_status_icons(pokemon, is_opponent)
+				print("BETWEEN TURNS: ", pokemon_name, " cured of burn (heads)")
+
+	if pokemon.special_condition == "Asleep":
+		await show_message(pokemon_name.to_upper() + " IS ASLEEP! FLIPPING COIN...")
+		var coin = await flip_coin()
+		if coin:
+			pokemon.special_condition = ""
+			await show_message(pokemon_name.to_upper() + " WOKE UP!")
+			update_status_icons(pokemon, is_opponent)
+			print("BETWEEN TURNS: ", pokemon_name, " woke up (heads)")
+		else:
+			await show_message(pokemon_name.to_upper() + " IS STILL ASLEEP!")
+			print("BETWEEN TURNS: ", pokemon_name, " still asleep (tails)")
+
+# Checks confusion retreat rules at the given phase, returns true if retreat should proceed
+func check_confused_retreat(pokemon: card_object, is_opponent: bool, phase: String) -> bool:
+	if pokemon.special_condition != "Confused":
+		return true
+	if confusion_rules == "modern_era_confusion_rules":
+		return true
+
+	var pokemon_name = pokemon.metadata.get("name", "Unknown")
+
+	if confusion_rules == "fairer_confusion_rules" and phase == "pre_energy":
+		await show_message(pokemon_name.to_upper() + " IS CONFUSED! FLIPPING COIN TO RETREAT...")
+		var coin = await flip_coin()
+		if not coin:
+			pokemon.current_hp = max(0, pokemon.current_hp - 20)
+			await show_message("RETREAT FAILED! " + pokemon_name.to_upper() + " HURT ITSELF FOR 20 DAMAGE!")
+			var label_x = 1030 if is_opponent else 530
+			show_floating_label("-20HP", Vector2(label_x, 300), is_opponent)
+			display_hp_circles_above_align(pokemon, is_opponent)
+			if is_opponent:
+				opponent_retreated_this_turn = true
+			else:
+				player_retreated_this_turn = true
+			print("CONFUSED RETREAT FAILED: ", pokemon_name, " took 20 damage (fairer rules)")
+			return false
+		print("CONFUSED RETREAT PASSED: ", pokemon_name, " can retreat (fairer rules)")
+		return true
+
+	if confusion_rules == "base_set_confusion_rules" and phase == "post_energy":
+		await show_message(pokemon_name.to_upper() + " IS CONFUSED! FLIPPING COIN TO RETREAT...")
+		var coin = await flip_coin()
+		if not coin:
+			await show_message("RETREAT FAILED! ENERGY WAS STILL DISCARDED!")
+			if is_opponent:
+				opponent_retreated_this_turn = true
+			else:
+				player_retreated_this_turn = true
+			print("CONFUSED RETREAT FAILED: ", pokemon_name, " lost energy but stayed (base set rules)")
+			return false
+		print("CONFUSED RETREAT PASSED: ", pokemon_name, " can retreat (base set rules)")
+		return true
+
+	return true
+
+########################################################### END EFFECT PARSING FUNCTIONS #############################################################
+######################################################################################################################################################
 
 #                ##      ##      ########  ####    ##  ########
 #               ####    ####        ##     ## ##   ##     ##
@@ -2339,6 +2702,14 @@ func handle_post_knockout(is_opponent: bool) -> void:
 
 ######################################################################################################################################################
 ################################################### SMALL FUNCTIONS TO HELP WITH CODE READABILITY ####################################################
+
+# Function to get all basic pokemon from a given array of cards
+func get_all_basic_pokemon(card_array: Array) -> Array:
+	var basic_pokemon = []
+	for card in card_array:
+		if card.metadata.get("supertype") == "Pokémon" and card.metadata.has("subtypes") and card.metadata["subtypes"].has("Basic"):
+			basic_pokemon.append(card)
+	return basic_pokemon
 
 # Function mainly just for readability in the code to check if a pokemon can evolve from another pokemon by checking the evolving pokemon's "evolvesFrom" metadata
 func can_evolve_from(evolving_pokemon: card_object, base_pokemon: card_object) -> bool:
@@ -3233,6 +3604,9 @@ func cpu_phase_retreat_first_pass(cpu_eval: Dictionary) -> bool:
 		return false
 	if opponent_retreated_this_turn:
 		return false
+	if opponent_active_pokemon.special_condition in ["Paralyzed", "Asleep"]:
+		print("CPU cannot retreat: active is ", opponent_active_pokemon.special_condition)
+		return false
 
 	# R.1: Should the active pokemon retreat?
 	var should_consider = evaluate_retreat_reasons(cpu_eval)
@@ -3266,6 +3640,9 @@ func cpu_phase_retreat_second_pass(cpu_eval: Dictionary) -> void:
 	if opponent_active_pokemon == null or opponent_bench.size() == 0:
 		return
 	if opponent_retreated_this_turn:
+		return
+	if opponent_active_pokemon.special_condition in ["Paralyzed", "Asleep"]:
+		print("CPU retreat second pass: active is ", opponent_active_pokemon.special_condition)
 		return
 
 	var retreat_cost = get_retreat_cost(opponent_active_pokemon)
@@ -3905,7 +4282,7 @@ func cpu_turn_orchestrator() -> void:
 
 	await get_tree().create_timer(0.5).timeout
 	await show_message("Your opponent ends their turn")
-	player_start_turn_checks()
+	await inbetween_turn_checks(false)
 
 # CPU plays any valid evolutions from hand onto field pokemon using pair scoring
 func cpu_phase_evolution() -> void:
@@ -4081,6 +4458,13 @@ func cpu_phase_attack(cpu_eval: Dictionary) -> void:
 	if turn_number <= 1:
 		return
 	
+	if opponent_active_pokemon.special_condition == "Paralyzed":
+		print("CPU cannot attack: active is Paralyzed")
+		return
+	if opponent_active_pokemon.special_condition == "Asleep":
+		print("CPU cannot attack: active is Asleep")
+		return
+	
 	# Check attack readiness from live board state, not stale cpu_eval
 	var has_usable_attack = false
 	for attack in opponent_active_pokemon.metadata.get("attacks", []):
@@ -4144,6 +4528,26 @@ func cpu_phase_attack(cpu_eval: Dictionary) -> void:
 
 	await show_message("Opponent's " + opponent_active_pokemon.metadata["name"].to_upper() + " used " + chosen_attack["name"].to_upper() + "!")
 
+	if opponent_active_pokemon.special_condition == "Confused":
+		await show_message(opponent_active_pokemon.metadata["name"].to_upper() + " IS CONFUSED! FLIPPING COIN...")
+		var coin = await flip_coin()
+		if not coin:
+			var self_damage = 20
+			if confusion_rules == "modern_era_confusion_rules":
+				self_damage = 30
+			if confusion_rules == "base_set_confusion_rules":
+				var self_types = opponent_active_pokemon.metadata.get("types", ["Colorless"])
+				var confusion_result = calculate_final_damage(self_damage, self_types, opponent_active_pokemon)
+				self_damage = confusion_result["damage"]
+			opponent_active_pokemon.current_hp = max(0, opponent_active_pokemon.current_hp - self_damage)
+			await show_message("THE ATTACK FAILED! " + opponent_active_pokemon.metadata["name"].to_upper() + " HURT ITSELF FOR " + str(self_damage) + " DAMAGE!")
+			show_floating_label("-" + str(self_damage) + "HP", Vector2(1030, 300), true)
+			display_hp_circles_above_align(opponent_active_pokemon, true)
+			print("CONFUSED: CPU ", opponent_active_pokemon.metadata["name"], " hurt itself for ", self_damage)
+			await check_all_knockouts()
+			display_active_pokemon_energies(true)
+			return
+
 	for modifier in result["modifiers"]:
 		show_floating_label(modifier, Vector2(530, 300), true)
 		await get_tree().create_timer(0.5).timeout
@@ -4155,6 +4559,11 @@ func cpu_phase_attack(cpu_eval: Dictionary) -> void:
 	print("CPU used " + chosen_attack["name"] + " for " + str(final_damage) + " damage! Player HP: " + str(player_active_pokemon.current_hp))
 
 	display_hp_circles_above_align(player_active_pokemon, false)
+	
+	var attack_text = chosen_attack.get("text", "")
+	var effects = parse_card_text_effects(attack_text, opponent_active_pokemon.metadata.get("name", ""))
+	if effects.size() > 0:
+		await apply_card_text_effects(effects, opponent_active_pokemon, player_active_pokemon, true)
 
 	await check_all_knockouts()
 	display_active_pokemon_energies(true)
@@ -4204,7 +4613,14 @@ func execute_cpu_retreat(cpu_eval: Dictionary) -> void:
 	if best_replacement == null:
 		print("CPU retreat failed: no valid bench replacement")
 		return
-
+		
+	var pre_check = await check_confused_retreat(opponent_active_pokemon, true, "pre_energy")
+	if not pre_check:
+		display_hp_circles_above_align(opponent_active_pokemon, true)
+		await check_all_knockouts()
+		display_pokemon(true)
+		return
+		
 	# Discard energy for retreat cost
 	var retreat_cost = get_retreat_cost(opponent_active_pokemon)
 	var discarded_energies = []
@@ -4213,6 +4629,12 @@ func execute_cpu_retreat(cpu_eval: Dictionary) -> void:
 			var energy = opponent_active_pokemon.attached_energies.pop_back()
 			send_card_to_discard(energy, true)
 			discarded_energies.append(energy)
+
+	var post_check = await check_confused_retreat(opponent_active_pokemon, true, "post_energy")
+	if not post_check:
+		display_pokemon(true)
+		display_active_pokemon_energies(true)
+		return
 
 	# Swap positions
 	var old_active = opponent_active_pokemon
@@ -4224,8 +4646,8 @@ func execute_cpu_retreat(cpu_eval: Dictionary) -> void:
 	opponent_retreated_this_turn = true
 
 	print("CPU retreated " + old_active.metadata["name"] + " for " + best_replacement.metadata["name"])
-
 	await animate_retreat(old_active, best_replacement, discarded_energies, true)
+	clear_all_statuses(old_active, true)
 	display_pokemon(true)
 	display_active_pokemon_energies(true)
 
@@ -4254,27 +4676,43 @@ func action_button_pressed_perform_action() -> void:
 	
 	if retreat_bench_selection_active:
 		var new_active = selected_card_for_action
-		
-		#for energy in retreat_energies_selected:
-	#		player_active_pokemon.attached_energies.erase(energy)
-#			send_card_to_discard(energy, false)
-		
+
+		var pre_check = await check_confused_retreat(player_active_pokemon, false, "pre_energy")
+		if not pre_check:
+			retreat_bench_selection_active = false
+			selected_card_for_action = null
+			hide_selection_mode_display_main()
+			display_hp_circles_above_align(player_active_pokemon, false)
+			await check_all_knockouts()
+			display_pokemon(false)
+			return
+
+		var post_check = await check_confused_retreat(player_active_pokemon, false, "post_energy")
+		if not post_check:
+			retreat_bench_selection_active = false
+			selected_card_for_action = null
+			hide_selection_mode_display_main()
+			display_pokemon(false)
+			display_active_pokemon_energies()
+			return
+
 		player_bench.erase(new_active)
 		player_bench.append(player_active_pokemon)
-		
+
 		player_active_pokemon.current_location = "bench"
 		new_active.current_location = "active"
-		
+
 		player_retreated_this_turn = true
 		retreat_bench_selection_active = false
 		selected_card_for_action = null
-		
+
 		hide_selection_mode_display_main()
 		await animate_retreat(player_active_pokemon, new_active, retreat_energies_selected, false)
-		
+
+		clear_all_statuses(player_active_pokemon, false)
 		player_active_pokemon = new_active
 		retreat_energies_selected.clear()
-		
+
 		display_pokemon(false)
 		display_active_pokemon_energies()
 		return

@@ -20,6 +20,16 @@ var placed_on_field_this_turn: bool = false
 # self metadata addition to track hp damage
 var current_hp: int = 0
 
+# Status condition tracking
+var special_condition: String = ""
+var is_poisoned: bool = false
+var poison_damage: int = 10
+var is_burned: bool = false
+var is_blind: bool = false
+var has_no_damage: bool = false
+var is_invincible: bool = false
+var has_destiny_bond: bool = false
+
 # Constructor - initialize the card with a UID and load its metadata
 func _init(card_uid: String, card_metadata: Dictionary) -> void:
 	uid = card_uid

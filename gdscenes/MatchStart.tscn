@@ -463,6 +463,13 @@ offset_right = 971.0
 offset_bottom = 369.0
 columns = 12
 
+[node name="player_active_pokemon_status_container" type="VBoxContainer" parent="ACTIVE_POKEMON/PLAYER"]
+layout_mode = 0
+offset_left = 17.0
+offset_top = 212.0
+offset_right = 57.0
+offset_bottom = 252.0
+
 [node name="OPPONENT" type="Control" parent="ACTIVE_POKEMON"]
 anchors_preset = 0
 offset_right = 40.0
@@ -489,6 +496,13 @@ offset_top = 183.0
 offset_right = 1433.0
 offset_bottom = 369.0
 columns = 12
+
+[node name="opponent_active_pokemon_status_container" type="VBoxContainer" parent="ACTIVE_POKEMON/OPPONENT"]
+layout_mode = 0
+offset_left = 17.0
+offset_top = 212.0
+offset_right = 57.0
+offset_bottom = 252.0
 
 [node name="SELECTION_MODE" type="Control" parent="."]
 anchors_preset = 0

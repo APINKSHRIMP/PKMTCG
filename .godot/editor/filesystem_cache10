@@ -1,9 +1,9 @@
 63f7b34db8d8cdea90c76aacccf841ec
-::res://::1772378389
+::res://::1772469098
 ::res://backgrounds/::1771447576
 background1.png::CompressedTexture2D::4319622225189491881::1770149641::1770149643::1::::<><><>0<>0<>f44210daa537a7438e038270b4163f34<>res://.godot/imported/background1.png-d54be7a97eb8f16b3a047d474f654630.ctex::
 background2.png::CompressedTexture2D::5827825881536004575::1771447575::1771447576::1::::<><><>0<>0<>e1d8de21c9d5d35781c76d2a8e72907c<>res://.godot/imported/background2.png-3a3822be768a8747a8aeb9c8209ec85c.ctex::
-::res://cardimages/::1771594453
+::res://cardimages/::1772394815
 null.png::CompressedTexture2D::6506685634918848426::1769543111::1769543294::1::::<><><>0<>0<>efd2e85444203467aa84d55996988d35<>res://.godot/imported/null.png-d31ca93f13d4e180965b35103b41fa18.ctex::
 nullsmall.png::CompressedTexture2D::7431203761745795489::1771594451::1771594453::1::::<><><>0<>0<>c6ad1d102e6b270ee9a560d8e4b1a9fb<>res://.godot/imported/nullsmall.png-a36b05fcae4f3365a028c4a94fad7cfe.ctex::
 ::res://cardimages/base1/::1769533190
@@ -1163,7 +1163,7 @@ neo2-72.png::CompressedTexture2D::5864530804789613532::1707069078::1769533284::1
 neo2-73.png::CompressedTexture2D::7740070692480644705::1707069080::1769533284::1::::<><><>0<>0<>1d7a2890b81b82f3e4d485db013e2609<>res://.godot/imported/neo2-73.png-6c8b0c94335637dcf15f639857a8a727.ctex::
 neo2-74.png::CompressedTexture2D::7241655625032921221::1707069082::1769533284::1::::<><><>0<>0<>57d44ae32d6a134a7e9b8ddd44af497e<>res://.godot/imported/neo2-74.png-f8cfcca803ee6eae7aa5c777541cff40.ctex::
 neo2-75.png::CompressedTexture2D::3548911584058716384::1707069083::1769533284::1::::<><><>0<>0<>fc6cb7f1813efd86d3fdb86f03fdcf9d<>res://.godot/imported/neo2-75.png-e904784912c6a40e7c203d629fc0d353.ctex::
-::res://gameimageassets/::1771863841
+::res://gameimageassets/::1772461034
 ::res://gameimageassets/coins/::1772301253
 coin_alakazam_purple.png::CompressedTexture2D::3995485036133240823::1772301253::1771864207::1::::<><><>0<>0<>26e517b717549def0cad37d204f218fb<>res://.godot/imported/coin_alakazam_purple.png-23ca53d241858a8d2abc292eaa29f0a5.ctex::
 coin_arcanine_red.png::CompressedTexture2D::3159638001484219328::1772301253::1771864207::1::::<><><>0<>0<>e255c1341fd74d1d1d7282c779e4a70d<>res://.godot/imported/coin_arcanine_red.png-06a4af0539392566a86e0e70c28bb591.ctex::
@@ -1668,10 +1668,18 @@ Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Pokemon (3rd Gener
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Pokemon (3rd Generation) - Latias.png::CompressedTexture2D::6448570081641959380::1770808232::1771183064::1::::<><><>0<>0<>1497d4344617bc860c2df0bca31186c7<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Pokemon (3rd Generation) - Latias.png-6a8cc851449522313952555177fdb943.ctex::
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Pokemon (3rd Generation) - Latios.png::CompressedTexture2D::1398495587958258712::1770808235::1771183064::1::::<><><>0<>0<>f0891fbb7aefa79eb69d2d4f62d97417<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Pokemon (3rd Generation) - Latios.png-7ae2b388e5ac1f5208cf660925bfb072.ctex::
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Pokemon (3rd Generation) - Regirock, Regice & Registeel.png::CompressedTexture2D::2565267144953625481::1770808264::1771183064::1::::<><><>0<>0<>9bc1b665f94d57cb5afaa66a46c9c411<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Pokemon (3rd Generation) - Regirock, Regice & Registeel.png-9ebb8cb1b41e78ea4c66d054616c87d5.ctex::
-::res://gameimageassets/statuseffects/::1771183064
-DS _ DSi - Pokemon Diamond _ Pearl - Miscellaneous - Symbols.png::CompressedTexture2D::8073736598211452644::1770809947::1771183064::1::::<><><>0<>0<>a618f6aa49559fb5b74f13baca1e155f<>res://.godot/imported/DS _ DSi - Pokemon Diamond _ Pearl - Miscellaneous - Symbols.png-17332bb2faa90f522942d492fd6aca93.ctex::
-Game Boy Advance - Pokemon Emerald - Miscellaneous - Type _ Condition Icons.png::CompressedTexture2D::161979844202514419::1770809710::1771183064::1::::<><><>0<>0<>56b3dd656839157f304382ab708bd32d<>res://.godot/imported/Game Boy Advance - Pokemon Emerald - Miscellaneous - Type _ Condition Icons.png-b1deb424c42ac0c41c4c158b3100abc9.ctex::
-Game Boy Advance - Pokemon FireRed _ LeafGreen - Menu Elements - Type _ Status Icons.png::CompressedTexture2D::2967492902203304909::1770809602::1771183064::1::::<><><>0<>0<>d08d3bf466193c8e4466312b6a22f7e3<>res://.godot/imported/Game Boy Advance - Pokemon FireRed _ LeafGreen - Menu Elements - Type _ Status Icons.png-e7c8e8aea09367f1f45e3df7c06b2066.ctex::
+::res://gameimageassets/statusicons/::1772465008
+status_asleep.png::CompressedTexture2D::7921783418174917575::1706888629::1772461034::1::::<><><>0<>0<>a9e0a9b04c7973245d6d31aa8d7d93bb<>res://.godot/imported/status_asleep.png-4cf6db3d5aab9865fd517b19b10f6081.ctex::
+status_blind.png::CompressedTexture2D::5776247336343275949::1772395069::1772461034::1::::<><><>0<>0<>2e1ec3a922a83face1bfcc0c16e92541<>res://.godot/imported/status_blind.png-072762bb4c0b00940b0d3a01165d0f10.ctex::
+status_burned.png::CompressedTexture2D::546251536129646915::1772450391::1772461034::1::::<><><>0<>0<>eb2f134d39d4d14f6f4690f034fee0c6<>res://.godot/imported/status_burned.png-07e700bff690186b0900140d0f6e4e7d.ctex::
+status_confused.png::CompressedTexture2D::387326236587367279::1772450350::1772461034::1::::<><><>0<>0<>b36ff0b204f10709c20e959a401850f7<>res://.godot/imported/status_confused.png-a05eb50f90ea32d18f2023fa05dfe769.ctex::
+status_destiny_bond.png::CompressedTexture2D::5014356566686703035::1772461591::1772465008::1::::<><><>0<>0<>f6159b189b8ca150cbc76940f137551d<>res://.godot/imported/status_destiny_bond.png-5878435149dbadbbf99e51ebb4688ded.ctex::
+status_freeze.png::CompressedTexture2D::504266711917283642::1772450464::1772461034::1::::<><><>0<>0<>581cbe78f9c456ed6a549eea69525486<>res://.godot/imported/status_freeze.png-403c3a2f2f056bf69589bdfa4d1edb4f.ctex::
+status_invincible.png::CompressedTexture2D::7007640906085780650::1772394794::1772461034::1::::<><><>0<>0<>98aec4296ce171c2e5ffada48fe2b842<>res://.godot/imported/status_invincible.png-0002d06729216c967dcff3f39b9a80e8.ctex::
+status_no_damage.png::CompressedTexture2D::1948529805157179145::1772394619::1772461034::1::::<><><>0<>0<>533c67cdc774d38d7040ec35272b89c0<>res://.godot/imported/status_no_damage.png-b2fb8a7006edb0605c029dcd3103f3ef.ctex::
+status_paralyzed.png::CompressedTexture2D::5592242438447362108::1772450415::1772461034::1::::<><><>0<>0<>1306bcd0f323a14391716f7cdd333991<>res://.godot/imported/status_paralyzed.png-cfb51cb01c06bfc718c312b53dad721c.ctex::
+status_poisoned.png::CompressedTexture2D::10847244861596095::1772461625::1772465008::1::::<><><>0<>0<>9442492a0bb32bde0f826d32a9219a9f<>res://.godot/imported/status_poisoned.png-442eedfe97baf03f4d70d1f1dc8ae297.ctex::
+status_toxic.png::CompressedTexture2D::5406599926744454270::1772461670::1772465008::1::::<><><>0<>0<>47565d938a431fe847be36c716406a68<>res://.godot/imported/status_toxic.png-9dde4bd6412e50603e195906f1d3c1c6.ctex::
 ::res://gameimageassets/town/::1771183064
 DS _ DSi - Pokemon Mystery Dungeon_ Explorers of Sky - Maps - Igglybuff's House.png::CompressedTexture2D::8089850792766027676::1770810944::1771183064::1::::<><><>0<>0<>13c010173bd2776a4fa487586bfc9e51<>res://.godot/imported/DS _ DSi - Pokemon Mystery Dungeon_ Explorers of Sky - Maps - Igglybuff's House.png-57917195180071997f0f57fbeb2eea8e.ctex::
 DS _ DSi - Pokemon Mystery Dungeon_ Explorers of Sky - Maps - Spinda Cafe.png::CompressedTexture2D::5328417342746078050::1770810975::1771183064::1::::<><><>0<>0<>bc5c166a090d36bfd9f20b29691ad7cc<>res://.godot/imported/DS _ DSi - Pokemon Mystery Dungeon_ Explorers of Sky - Maps - Spinda Cafe.png-1ffae13c7618e991b1e02270569bd159.ctex::
@@ -1686,13 +1694,13 @@ Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Peli
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Pokemon Square.png::CompressedTexture2D::7975275552531345460::1770808341::1771183064::1::::<><><>0<>0<>ee287859ff216f171adf577dae60c58a<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Pokemon Square.png-f5412f9af4fcfce81f675190407edccd.ctex::
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Wake Up Forest.png::CompressedTexture2D::9016169070841043957::1770808384::1771183064::1::::<><><>0<>0<>47055b80a4ee4919c2d6e4ae2f977f83<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Wake Up Forest.png-d83d0c9873d41b1328175f397b82083a.ctex::
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Whiscash Pond.png::CompressedTexture2D::564202538199469867::1770808387::1771183064::1::::<><><>0<>0<>49c17e0e692eab42328086fad63f0563<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Whiscash Pond.png-dd496132545824659bc15464d84a1900.ctex::
-::res://gdscenes/::1772314804
-backgroundscroll.gdshader::Shader::4939812685521450649::1772313887::0::1::::<><><>0<>0<><>::
-MatchStart.tscn::PackedScene::8327961863846055698::1772314804::0::1::::<><><>0<>0<><>::uid://p2djeecymjo7::::res://gdscripts/main_match_script.gd<>uid://ccm481fk14lc8::::res://gdscenes/backgroundscroll.gdshader<>uid://cpbbo8tyee1n4::::res://backgrounds/background2.png<>uid://mbsg4xqnedxi::::res://uiresources/kenneyUI-red.tres<>uid://bnhngmri4tfgr::::res://uiresources/kenneyUI-green.tres<>uid://bb6vwl0h1flws::::res://uiresources/kenneyUI-blue.tres<>uid://41l5prxtsvdk::::res://gameimageassets/menutiles/bluesquaremessagebox.png<>uid://dmay144mc3hmo::::res://cardimages/cardbacksanddecks/1deckfulltrans_clean.png<>uid://6shp5ck1tnja::::res://uiresources/kenneyUI.tres
-::res://gdscripts/::1772314794
+::res://gdscenes/::1772469082
+backgroundscroll.gdshader::Shader::4939812685521450649::1772459755::0::1::::<><><>0<>0<><>::
+MatchStart.tscn::PackedScene::8327961863846055698::1772469082::0::1::::<><><>0<>0<><>::uid://p2djeecymjo7::::res://gdscripts/main_match_script.gd<>uid://ccm481fk14lc8::::res://gdscenes/backgroundscroll.gdshader<>uid://cpbbo8tyee1n4::::res://backgrounds/background2.png<>uid://mbsg4xqnedxi::::res://uiresources/kenneyUI-red.tres<>uid://bnhngmri4tfgr::::res://uiresources/kenneyUI-green.tres<>uid://bb6vwl0h1flws::::res://uiresources/kenneyUI-blue.tres<>uid://41l5prxtsvdk::::res://gameimageassets/menutiles/bluesquaremessagebox.png<>uid://dmay144mc3hmo::::res://cardimages/cardbacksanddecks/1deckfulltrans_clean.png<>uid://6shp5ck1tnja::::res://uiresources/kenneyUI.tres
+::res://gdscripts/::1772469082
 cardimage.gd::GDScript::8839746712978955150::1772301164::0::1::::<>TextureRect<><>0<>0<><>::
-card_class_object.gd::GDScript::7050753202451257024::1771594818::0::1::::card_object<>RefCounted<><>0<>0<><>::
-main_match_script.gd::GDScript::1108769293449586880::1772314794::0::1::::<>Control<><>0<>0<><>::
+card_class_object.gd::GDScript::7050753202451257024::1772460377::0::1::::card_object<>RefCounted<><>0<>0<><>::
+main_match_script.gd::GDScript::1108769293449586880::1772469082::0::1::::<>Control<><>0<>0<><>::
 ::res://icon/::1770067344
 RayquazaSprite.png::CompressedTexture2D::1656207969913314715::1770062602::1770067344::1::::<><><>0<>0<>5c1b9796eaa598df7e62bda5eabd4b61<>res://.godot/imported/RayquazaSprite.png-e2b18131d0ebafe8706566d3d48f1901.ctex::
 ::res://opponentdeckdata/::1772301254
@@ -1710,11 +1718,11 @@ Evolutions.json::JSON::-1::1772301254::0::1::::<><><>0<>0<><>::
 GrassFire.json::JSON::-1::1772301254::0::1::::<><><>0<>0<><>::
 Magikarp.json::JSON::-1::1772301254::0::1::::<><><>0<>0<><>::
 testingchanseyonly.json::JSON::-1::1772301254::0::1::::<><><>0<>0<><>::
-::res://uiresources/::1772313887
-kenneyUI-blue.tres::Theme::2521920198750954642::1772313887::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
-kenneyUI-green.tres::Theme::3314126987880200601::1772313887::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
-kenneyUI-red.tres::Theme::845435681495830482::1772313887::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+::res://uiresources/::1772459755
+kenneyUI-blue.tres::Theme::2521920198750954642::1772459755::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+kenneyUI-green.tres::Theme::3314126987880200601::1772459755::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+kenneyUI-red.tres::Theme::845435681495830482::1772459755::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
 kenneyUI-yellow.tres::Theme::545356902672929525::1770817546::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
-kenneyUI.tres::Theme::2213466337489992798::1772313887::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+kenneyUI.tres::Theme::2213466337489992798::1772459755::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
 kenvector_future.ttf::FontFile::4191331151886121916::1769790644::1769790650::1::::<><><>0<>0<>b5f2fbf7341fa91df600bf6a2cd79529<>res://.godot/imported/kenvector_future.ttf-0df52ea86bc6bd37fdc474d8a1e4c7a4.fontdata::
 UIpack_vector.svg::CompressedTexture2D::8966962219257996827::1769790644::1769790651::1::::<><><>0<>0<>85e2938788acfa1d2a1358e64153b160<>res://.godot/imported/UIpack_vector.svg-de0b2e46bae3527b25cbbf9a474f3ed7.ctex::
