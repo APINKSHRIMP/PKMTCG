@@ -8,9 +8,9 @@ extends Control
 
 # TESTING VARIABLES
 var amount_of_cards_to_draw = 7	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
-var hide_hidden_cards = false      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
-var opponent_deck_name = "GrassFire"
-var player_deck_name = "CurrentDeck1"
+var hide_hidden_cards = true      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
+var opponent_deck_name = "StatusChecks"
+var player_deck_name = "StatusChecks"
 
 # TESTING - There are different rulesets for burn and confusion depending on what generation/set is being played.
 # Additionally I personally felt base set confusion retreat rule is horrendous, so I have created a personal rule that doesn't give free retreat but doesn't force discard then coin flip
@@ -105,7 +105,8 @@ var card_scales: Dictionary = {
 	11: Vector2(100, 138),
 	11.55: Vector2(83, 113),
 	11.5: Vector2(75, 103),
-	12: Vector2(50, 69)
+	12: Vector2(50, 69),
+	13: Vector2(25, 35)
 }
 ######################################################################################################################################################
 ################################################################# END OF VARIABLES ###################################################################
@@ -938,21 +939,29 @@ func animate_card_a_to_b(from_node: Control, to_node: Control, animation_speed: 
 # Animate discarding for reatreat and knockout
 func animate_energies_to_discard(energy_cards: Array, pokemon: card_object, is_opponent: bool) -> void:
 	var discard_node = $CARD_COLLECTIONS/OPPONENT/opponent_discard_pile_icon if is_opponent else $CARD_COLLECTIONS/PLAYER/player_discard_pile_icon
+	var discard_pile = opponent_discard_pile if is_opponent else player_discard_pile
 	var from_node = find_card_ui_for_object(pokemon)
-	
+
 	if from_node == null:
 		return
-	
+
 	for energy in energy_cards:
 		var energy_texture = get_card_texture(energy)
 		animate_card_a_to_b(from_node, discard_node, 0.2, energy_texture, card_scales[10])
-		
+
 		# Remove this energy from the pokemon's attached list NOW,
 		# so the redraw reflects one fewer energy each frame
 		pokemon.attached_energies.erase(energy)
-		
+
+		# Actually add the energy to the discard pile array
+		energy.current_location = "discard"
+		discard_pile.append(energy)
+
 		display_active_pokemon_energies(is_opponent)
 		await get_tree().create_timer(0.2).timeout
+
+	# Update the discard pile visual to show the new top card
+	update_discard_pile_display(is_opponent)
 				
 # Animates the retreat sequence: energies to discard, message, then swap pokemon positions
 func animate_retreat(old_active: card_object, new_active: card_object, discarded_energies: Array, is_opponent: bool) -> void:
@@ -1297,7 +1306,7 @@ func setup_opponent(opponent_id: String):
 	opponent_hand = draw_opening_hand(opponent_deck, "Opponent")
 	
 	# Display the cards in the top right in tiny size just for visual cue
-	display_hand_cards_array(opponent_hand, opponent_hand_container, card_scales[12], hide_hidden_cards)
+	display_hand_cards_array(opponent_hand, opponent_hand_container, card_scales[11.55], hide_hidden_cards)
 
 # Function to draw opening hand with mulligan logic for both player and opponent
 func draw_opening_hand(deck: Array, player_name: String = "") -> Array:
@@ -2027,7 +2036,7 @@ func take_prize_card(card: card_object, is_opponent: bool) -> void:
 	
 	await animate_card_a_to_b(prize_container, hand_container, 0.3, card_texture, card_scales[11])
 	
-	var hand_scale = card_scales[12] if is_opponent else card_scales[11]
+	var hand_scale = card_scales[11.55] if is_opponent else card_scales[11]
 	display_hand_cards_array(hand, hand_container, hand_scale)
 
 # Opens selection mode to choose a prize card and return that as the object to put into hand
@@ -2418,11 +2427,18 @@ func check_all_knockouts() -> Dictionary:
 	for pokemon in player_to_check:
 		if await check_and_handle_knockout(pokemon, false):
 			results["player_kos"] += 1
-	
+			
 	for i in range(results["opponent_kos"]):
 		if player_prize_cards.size() > 0:
+			$opponent_turn_input_blocker.visible = false
 			await player_pick_prize_card()
 			await prize_card_taken
+			$opponent_turn_input_blocker.visible = true
+	
+	# Opponent takes prizes for player KOs
+	for i in range(results["player_kos"]):
+		if opponent_prize_cards.size() > 0:
+			await opponent_take_prize_card()
 	
 	if results["opponent_kos"] > 0:
 		await handle_post_knockout(true)
@@ -2430,6 +2446,14 @@ func check_all_knockouts() -> Dictionary:
 	if results["player_kos"] > 0:
 		await handle_post_knockout(false)
 	
+	# Check win condition: all prize cards taken
+	if player_prize_cards.size() == 0 and results["opponent_kos"] > 0:
+		await show_message("YOU TOOK YOUR LAST PRIZE CARD!")
+		game_end_logic(false)  # false = opponent loses
+	if opponent_prize_cards.size() == 0 and results["player_kos"] > 0:
+		await show_message("OPPONENT TOOK THEIR LAST PRIZE CARD!")
+		game_end_logic(true)  # true = player loses
+
 	return results
 
 # After KOs are processed, animates a bench Pokemon moving to the active spot or ends the game
@@ -4650,6 +4674,17 @@ func execute_cpu_retreat(cpu_eval: Dictionary) -> void:
 	clear_all_statuses(old_active, true)
 	display_pokemon(true)
 	display_active_pokemon_energies(true)
+
+# CPU automatically picks a random prize card and moves it to hand
+func opponent_take_prize_card() -> void:
+	if opponent_prize_cards.size() == 0:
+		return
+	
+	var random_index = randi() % opponent_prize_cards.size()
+	var chosen_card = opponent_prize_cards[random_index]
+	
+	await show_message("OPPONENT TAKES A PRIZE CARD!")
+	await take_prize_card(chosen_card, true)
 
 ################################################## END OPPONENT PRIORITISE FUNCTIONALITY FUNCTIONS ###################################################
 ######################################################################################################################################################

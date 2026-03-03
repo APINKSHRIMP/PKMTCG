@@ -5,5 +5,3 @@ res://uiresources/kenneyUI-green.tres
 res://uiresources/kenneyUI-blue.tres
 res://uiresources/kenneyUI.tres
 res://gdscripts/main_match_script.gd
-res://playerdata/GrassFire.json
-res://playerdata/StatusChecks.json
