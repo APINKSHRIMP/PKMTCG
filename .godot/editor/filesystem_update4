@@ -4,4 +4,6 @@ res://uiresources/kenneyUI-red.tres
 res://uiresources/kenneyUI-green.tres
 res://uiresources/kenneyUI-blue.tres
 res://uiresources/kenneyUI.tres
+res://opponentdeckdata/GrassFire.json
+res://playerdata/GrassFire.json
 res://gdscripts/main_match_script.gd

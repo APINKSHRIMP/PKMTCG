@@ -9,8 +9,8 @@ extends Control
 # TESTING VARIABLES
 var amount_of_cards_to_draw = 7	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
 var hide_hidden_cards = true      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
-var opponent_deck_name = "StatusChecks"
-var player_deck_name = "StatusChecks"
+var opponent_deck_name = "GrassFire"
+var player_deck_name = "GrassFire"
 
 # TESTING - There are different rulesets for burn and confusion depending on what generation/set is being played.
 # Additionally I personally felt base set confusion retreat rule is horrendous, so I have created a personal rule that doesn't give free retreat but doesn't force discard then coin flip
@@ -163,6 +163,9 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 	$ACTIVE_POKEMON/PLAYER/player_active_pokemon_hp_container.visible = false
 	$ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_hp_container.visible = false
 	
+	$ACTIVE_POKEMON/PLAYER/player_active_pokemon_status_container.visible = false
+	$ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_status_container.visible = false
+	
 	$CARD_COLLECTIONS/PLAYER/player_bench_container.visible = false
 	$CARD_COLLECTIONS/OPPONENT/opponent_bench_container.visible = false
 	
@@ -279,6 +282,9 @@ func hide_selection_mode_display_main() -> void:
 	
 	$ACTIVE_POKEMON/PLAYER/player_active_pokemon_hp_container.visible = true
 	$ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_hp_container.visible = true
+	
+	$ACTIVE_POKEMON/PLAYER/player_active_pokemon_status_container.visible = true
+	$ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_status_container.visible = true
 	
 	$BUTTONS/main_screen_buttons_container.visible = true
 	
@@ -1871,32 +1877,6 @@ func clear_end_of_turn_statuses(pokemon: card_object, is_opponent: bool) -> void
 	if changed:
 		update_status_icons(pokemon, is_opponent)
 
-# Removes all status conditions from a pokemon (used when retreating or evolving)
-func clear_all_statuses(pokemon: card_object, is_opponent: bool) -> void:
-	if pokemon == null:
-		return
-
-	var had_status = false
-	if pokemon.special_condition != "":
-		had_status = true
-	if pokemon.is_poisoned or pokemon.is_burned or pokemon.is_blind:
-		had_status = true
-	if pokemon.has_no_damage or pokemon.is_invincible or pokemon.has_destiny_bond:
-		had_status = true
-
-	pokemon.special_condition = ""
-	pokemon.is_poisoned = false
-	pokemon.poison_damage = 10
-	pokemon.is_burned = false
-	pokemon.is_blind = false
-	pokemon.has_no_damage = false
-	pokemon.is_invincible = false
-	pokemon.has_destiny_bond = false
-
-	if had_status:
-		print("STATUSES CLEARED: ", pokemon.metadata.get("name", "Unknown"))
-		update_status_icons(pokemon, is_opponent)
-
 # Scans active and bench for Pokemon that the given evolution card can legally evolve from
 func get_valid_evolution_targets(evolution_card: card_object, is_opponent: bool) -> Array:
 	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
@@ -1992,7 +1972,7 @@ func perform_evolution(is_opponent: bool) -> void:
 			bench[bench_index] = evo_card
 	
 	print(target_card.metadata["name"], " evolved into ", evo_card.metadata["name"], "! (Damage carried: ", damage_taken, ")")
-	clear_all_statuses(evo_card, is_opponent)
+	clear_all_statuses(target_card, is_opponent)
 	 
 # Sends a card and all its attachments (energies, pre-evolutions, attached cards) to the discard pile
 func send_card_to_discard(card: card_object, is_opponent: bool) -> void:
@@ -2341,6 +2321,9 @@ func perform_attack(attack_index: int) -> void:
 func calculate_final_damage(base_damage: int, attacking_types: Array, defending_pokemon: card_object) -> Dictionary:
 	var damage = base_damage
 	var modifiers_applied = []
+	
+	if defending_pokemon == null:
+		return {"damage": damage, "modifiers": modifiers_applied}
 	
 	for weakness in defending_pokemon.metadata.get("weaknesses", []):
 		if weakness["type"] in attacking_types:
@@ -2714,6 +2697,33 @@ func check_confused_retreat(pokemon: card_object, is_opponent: bool, phase: Stri
 		return true
 
 	return true
+
+# Removes all status conditions from a pokemon (used when retreating or evolving)
+func clear_all_statuses(pokemon: card_object, is_opponent: bool) -> void:
+	if pokemon == null:
+		return
+
+	var had_status = false
+	if pokemon.special_condition != "":
+		had_status = true
+	if pokemon.is_poisoned or pokemon.is_burned or pokemon.is_blind:
+		had_status = true
+	if pokemon.has_no_damage or pokemon.is_invincible or pokemon.has_destiny_bond:
+		had_status = true
+
+	pokemon.special_condition = ""
+	pokemon.is_poisoned = false
+	pokemon.poison_damage = 10
+	pokemon.is_burned = false
+	pokemon.is_blind = false
+	pokemon.has_no_damage = false
+	pokemon.is_invincible = false
+	pokemon.has_destiny_bond = false
+
+	if had_status:
+		print("STATUSES CLEARED: ", pokemon.metadata.get("name", "Unknown"))
+		update_status_icons(pokemon, is_opponent)
+
 
 ########################################################### END EFFECT PARSING FUNCTIONS #############################################################
 ######################################################################################################################################################
@@ -3518,7 +3528,7 @@ func can_cpu_ko_player_active() -> bool:
 
 # Checks if any bench pokemon is ready or near-ready to attack and can survive a hit (1.13)
 func check_viable_bench_attacker() -> bool:
-	if player_active_pokemon == null:
+	if player_active_pokemon == null or opponent_active_pokemon == null:
 		return false
 
 	var player_types = player_active_pokemon.metadata.get("types", ["Colorless"])
