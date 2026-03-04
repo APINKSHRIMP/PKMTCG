@@ -1788,6 +1788,124 @@ func draw_card_from_deck(is_opponent: bool) -> card_object:
 
 	return drawn_card
 
+# Flips a coin with animation, blocks input, shows result message, returns true for heads
+func flip_coin() -> bool:
+	var result: bool = (randi() % 2 == 0)
+
+	# Show the input-blocking overlay and set initial coin image to heads
+	$coin_flip_container.visible = true
+	var coin = $coin_flip_container/coin_flip_texture
+	coin.texture = tex_heads
+	coin.visible = true
+	
+	# Force coin to a fixed display size regardless of source image dimensions
+	coin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	coin.custom_minimum_size = Vector2(129, 129)
+	coin.size = Vector2(129, 129)
+	
+	# Set pivot to center so the squish effect scales from the middle, not the top edge
+	coin.pivot_offset = coin.size / 2
+	var start_y = coin.position.y
+	var flip_count = 12
+	var half_flip_time = 0.04
+	var total_time = flip_count * half_flip_time * 1.5
+	
+	# Position tween: arc up then back down
+	var pos_tween = create_tween()
+	pos_tween.tween_property(coin, "position:y", start_y - 400, total_time / 1.5).set_ease(Tween.EASE_OUT)
+	pos_tween.tween_property(coin, "position:y", start_y, total_time / 1.5).set_ease(Tween.EASE_IN)
+	
+	# Flip tween: squish scale.y to 0, swap texture, unsquish back to 1
+	var flip_tween = create_tween()
+	var textures = [tex_tails, tex_heads]
+	for i in flip_count:
+		flip_tween.tween_property(coin, "scale:y", 0.0, half_flip_time)
+		flip_tween.tween_callback(coin.set.bind("texture", textures[i % 2]))
+		flip_tween.tween_property(coin, "scale:y", 1.0, half_flip_time)
+	
+	await flip_tween.finished
+	
+	# Set the final coin face to match the actual result
+	coin.texture = tex_heads if result else tex_tails
+	var sparkles = null
+	if result:
+		sparkles = start_sparkle_effect(coin)
+	coin.scale.y = 1.0
+	
+	# Show result message using existing message system
+	var result_text = "HEADS" if result else "TAILS"
+	await show_message("Coin landed on " + result_text + "!")
+	
+	# Clean up sparkles before hiding coin
+	if sparkles:
+		sparkles.queue_free()
+	
+	# Clean up: hide the coin overlay
+	$coin_flip_container.visible = false
+	coin.visible = false
+	
+	return result
+	
+# Sends a card and all its attachments (energies, pre-evolutions, attached cards) to the discard pile
+func send_card_to_discard(card: card_object, is_opponent: bool) -> void:
+	var discard = opponent_discard_pile if is_opponent else player_discard_pile
+	
+	for energy in card.attached_energies:
+		energy.current_location = "discard"
+		discard.append(energy)
+	card.attached_energies.clear()
+	
+	for pre_evo in card.attached_pre_evolutions:
+		pre_evo.current_location = "discard"
+		discard.append(pre_evo)
+	card.attached_pre_evolutions.clear()
+	
+	for attached in card.attached_cards:
+		attached.current_location = "discard"
+		discard.append(attached)
+	card.attached_cards.clear()
+	
+	card.current_location = "discard"
+	discard.append(card)
+	
+	update_discard_pile_display(is_opponent)
+
+# Removes a prize card from the specified player's prizes and adds it to their hand with animation
+func take_prize_card(card: card_object, is_opponent: bool) -> void:
+	var prizes = opponent_prize_cards if is_opponent else player_prize_cards
+	var hand = opponent_hand if is_opponent else player_hand
+	var prize_container = $CARD_COLLECTIONS/OPPONENT/opponent_prize_cards_container if is_opponent else $CARD_COLLECTIONS/PLAYER/player_prize_cards_container
+	var hand_container = $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container if is_opponent else $CARD_COLLECTIONS/PLAYER/player_hand_hbox_container
+	
+	var card_ui = find_card_ui_for_object(card)
+	var card_texture = get_card_texture(card)
+	
+	prizes.erase(card)
+	card.current_location = "hand"
+	hand.append(card)
+	
+	display_prize_cards(is_opponent)
+	
+	await animate_card_a_to_b(prize_container, hand_container, 0.3, card_texture, card_scales[11])
+	
+	var hand_scale = card_scales[11.55] if is_opponent else card_scales[11]
+	display_hand_cards_array(hand, hand_container, hand_scale)
+
+# Opens selection mode to choose a prize card and return that as the object to put into hand
+func player_pick_prize_card() -> void:
+	prize_card_selection_active = true
+	$BUTTONS/SELECTION_BUTTONS/card_action_button.position.x += 210
+	show_enlarged_array_selection_mode(player_prize_cards)
+	$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "TAKE A PRIZE CARD"
+	$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Select a prize card to add to your hand"
+	$cancel_selection_mode_view_button.visible = false
+	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "TAKE PRIZE"
+	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
+	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+
+
+############################################### Start and end of turn checks and sets ################################################
+
 # Resets placed_on_field_this_turn to false for all pokemon on the specified player's field
 func reset_field_pokemon_turn_flags(is_opponent: bool) -> void:
 	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
@@ -1830,18 +1948,22 @@ func player_end_turn_checks() -> void:
 
 # Resets shared state between turns, processes status effects, and starts the next turn
 func inbetween_turn_checks(player_turn_just_ended: bool = true) -> void:
-	
-	# Remove end-of-turn flags and status from the pokemon whose owner's turn just ended
+	player_energy_played_this_turn = false
+	player_retreated_this_turn = false
+	opponent_energy_played_this_turn = false
+	opponent_retreated_this_turn = false
+	reset_field_pokemon_turn_flags(false)
+	reset_field_pokemon_turn_flags(true)
+
+	# Remove end-of-turn statuses from the pokemon whose owner's turn just ended
 	if player_turn_just_ended:
 		clear_end_of_turn_statuses(player_active_pokemon, false)
-		player_energy_played_this_turn = false
-		player_retreated_this_turn = false
-		reset_field_pokemon_turn_flags(false)
+		clear_defensive_statuses(opponent_active_pokemon, true)
+		player_retreat_disabled = false
 	else:
 		clear_end_of_turn_statuses(opponent_active_pokemon, true)
-		opponent_energy_played_this_turn = false
-		opponent_retreated_this_turn = false
-		reset_field_pokemon_turn_flags(true)
+		clear_defensive_statuses(player_active_pokemon, false)
+		opponent_retreat_disabled = false
 
 	# Process between-turn effects (poison, burn, sleep) for both active pokemon
 	if player_active_pokemon != null:
@@ -1855,7 +1977,7 @@ func inbetween_turn_checks(player_turn_just_ended: bool = true) -> void:
 		opponent_start_turn_checks()
 	else:
 		player_start_turn_checks()
-
+		
 # Removes statuses that expire at the end of the affected player's own turn
 func clear_end_of_turn_statuses(pokemon: card_object, is_opponent: bool) -> void:
 	if pokemon == null:
@@ -1876,6 +1998,29 @@ func clear_end_of_turn_statuses(pokemon: card_object, is_opponent: bool) -> void
 
 	if changed:
 		update_status_icons(pokemon, is_opponent)
+
+# Removes no_damage and invincible shields that expire after the opposing player's turn
+func clear_defensive_statuses(pokemon: card_object, is_opponent: bool) -> void:
+	if pokemon == null:
+		return
+
+	var changed = false
+	var pokemon_name = pokemon.metadata.get("name", "Unknown")
+
+	if pokemon.has_no_damage:
+		pokemon.has_no_damage = false
+		print("EXPIRED: ", pokemon_name, " no_damage shield wore off")
+		changed = true
+
+	if pokemon.is_invincible:
+		pokemon.is_invincible = false
+		print("EXPIRED: ", pokemon_name, " invincible shield wore off")
+		changed = true
+
+	if changed:
+		update_status_icons(pokemon, is_opponent)
+
+########################################################### Evolution functions ##############################################################
 
 # Scans active and bench for Pokemon that the given evolution card can legally evolve from
 func get_valid_evolution_targets(evolution_card: card_object, is_opponent: bool) -> Array:
@@ -1974,62 +2119,7 @@ func perform_evolution(is_opponent: bool) -> void:
 	print(target_card.metadata["name"], " evolved into ", evo_card.metadata["name"], "! (Damage carried: ", damage_taken, ")")
 	clear_all_statuses(target_card, is_opponent)
 	 
-# Sends a card and all its attachments (energies, pre-evolutions, attached cards) to the discard pile
-func send_card_to_discard(card: card_object, is_opponent: bool) -> void:
-	var discard = opponent_discard_pile if is_opponent else player_discard_pile
-	
-	for energy in card.attached_energies:
-		energy.current_location = "discard"
-		discard.append(energy)
-	card.attached_energies.clear()
-	
-	for pre_evo in card.attached_pre_evolutions:
-		pre_evo.current_location = "discard"
-		discard.append(pre_evo)
-	card.attached_pre_evolutions.clear()
-	
-	for attached in card.attached_cards:
-		attached.current_location = "discard"
-		discard.append(attached)
-	card.attached_cards.clear()
-	
-	card.current_location = "discard"
-	discard.append(card)
-	
-	update_discard_pile_display(is_opponent)
-
-# Removes a prize card from the specified player's prizes and adds it to their hand with animation
-func take_prize_card(card: card_object, is_opponent: bool) -> void:
-	var prizes = opponent_prize_cards if is_opponent else player_prize_cards
-	var hand = opponent_hand if is_opponent else player_hand
-	var prize_container = $CARD_COLLECTIONS/OPPONENT/opponent_prize_cards_container if is_opponent else $CARD_COLLECTIONS/PLAYER/player_prize_cards_container
-	var hand_container = $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container if is_opponent else $CARD_COLLECTIONS/PLAYER/player_hand_hbox_container
-	
-	var card_ui = find_card_ui_for_object(card)
-	var card_texture = get_card_texture(card)
-	
-	prizes.erase(card)
-	card.current_location = "hand"
-	hand.append(card)
-	
-	display_prize_cards(is_opponent)
-	
-	await animate_card_a_to_b(prize_container, hand_container, 0.3, card_texture, card_scales[11])
-	
-	var hand_scale = card_scales[11.55] if is_opponent else card_scales[11]
-	display_hand_cards_array(hand, hand_container, hand_scale)
-
-# Opens selection mode to choose a prize card and return that as the object to put into hand
-func player_pick_prize_card() -> void:
-	prize_card_selection_active = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.position.x += 210
-	show_enlarged_array_selection_mode(player_prize_cards)
-	$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "TAKE A PRIZE CARD"
-	$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Select a prize card to add to your hand"
-	$cancel_selection_mode_view_button.visible = false
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "TAKE PRIZE"
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+########################################################### Retreat functions ##############################################################
 
 # Checks if a Pokemon can retreat, returning a dictionary with "can_retreat" and "reason" if blocked
 func can_retreat(is_opponent: bool) -> Dictionary:
@@ -2098,64 +2188,6 @@ func start_retreat_bench_selection() -> void:
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")
 
-# Flips a coin with animation, blocks input, shows result message, returns true for heads
-func flip_coin() -> bool:
-	var result: bool = (randi() % 2 == 0)
-
-	# Show the input-blocking overlay and set initial coin image to heads
-	$coin_flip_container.visible = true
-	var coin = $coin_flip_container/coin_flip_texture
-	coin.texture = tex_heads
-	coin.visible = true
-	
-	# Force coin to a fixed display size regardless of source image dimensions
-	coin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	coin.custom_minimum_size = Vector2(129, 129)
-	coin.size = Vector2(129, 129)
-	
-	# Set pivot to center so the squish effect scales from the middle, not the top edge
-	coin.pivot_offset = coin.size / 2
-	var start_y = coin.position.y
-	var flip_count = 12
-	var half_flip_time = 0.04
-	var total_time = flip_count * half_flip_time * 1.5
-	
-	# Position tween: arc up then back down
-	var pos_tween = create_tween()
-	pos_tween.tween_property(coin, "position:y", start_y - 400, total_time / 1.5).set_ease(Tween.EASE_OUT)
-	pos_tween.tween_property(coin, "position:y", start_y, total_time / 1.5).set_ease(Tween.EASE_IN)
-	
-	# Flip tween: squish scale.y to 0, swap texture, unsquish back to 1
-	var flip_tween = create_tween()
-	var textures = [tex_tails, tex_heads]
-	for i in flip_count:
-		flip_tween.tween_property(coin, "scale:y", 0.0, half_flip_time)
-		flip_tween.tween_callback(coin.set.bind("texture", textures[i % 2]))
-		flip_tween.tween_property(coin, "scale:y", 1.0, half_flip_time)
-	
-	await flip_tween.finished
-	
-	# Set the final coin face to match the actual result
-	coin.texture = tex_heads if result else tex_tails
-	var sparkles = null
-	if result:
-		sparkles = start_sparkle_effect(coin)
-	coin.scale.y = 1.0
-	
-	# Show result message using existing message system
-	var result_text = "HEADS" if result else "TAILS"
-	await show_message("Coin landed on " + result_text + "!")
-	
-	# Clean up sparkles before hiding coin
-	if sparkles:
-		sparkles.queue_free()
-	
-	# Clean up: hide the coin overlay
-	$coin_flip_container.visible = false
-	coin.visible = false
-	
-	return result
-	
 ########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
 ######################################################################################################################################################
 
@@ -2168,6 +2200,8 @@ func flip_coin() -> bool:
 ######################################################################################################################################################
 ############################################################ ATTACK AND DAMAGE FUNCTIONS #############################################################
 
+													####### Attacking helper functions #########
+													
 # Returns the attacks array for any given card object.
 func get_attacks_for_card(card: card_object) -> Array:
 	
@@ -2249,6 +2283,8 @@ func check_attack_requirements(attack_dict: Dictionary, pokemon_card: card_objec
 	
 	return true
 
+													######## Actual attacking functions ##########
+													
 # Applies damage from the chosen attack to the opponent's active pokemon and refreshes the HP display
 func perform_attack(attack_index: int) -> void:
 	if opponent_active_pokemon == null:
@@ -2289,9 +2325,36 @@ func perform_attack(attack_index: int) -> void:
 			player_end_turn_checks()
 			return
 	
+	if player_active_pokemon.is_blind:
+		await show_message(player_active_pokemon.metadata["name"].to_upper() + " CAN'T SEE! FLIPPING COIN...")
+		var blind_coin = await flip_coin()
+		if not blind_coin:
+			await show_message("THE ATTACK FAILED!")
+			player_active_pokemon.is_blind = false
+			update_status_icons(player_active_pokemon, false)
+			hide_attack_buttons()
+			await get_tree().create_timer(0.5).timeout
+			player_end_turn_checks()
+			return
+		player_active_pokemon.is_blind = false
+		update_status_icons(player_active_pokemon, false)
+	
 	var attacking_types = player_active_pokemon.metadata.get("types", ["Colorless"])
 	var result = calculate_final_damage(base_damage, attacking_types, opponent_active_pokemon)
 	var final_damage = result["damage"]
+	
+	if opponent_active_pokemon.is_invincible:
+		final_damage = 0
+		await show_message(opponent_active_pokemon.metadata["name"].to_upper() + " IS FULLY PROTECTED! ATTACK BLOCKED!")
+		hide_attack_buttons()
+		await get_tree().create_timer(0.5).timeout
+		player_end_turn_checks()
+		return
+
+	if opponent_active_pokemon.has_no_damage:
+		final_damage = 0
+		await show_message(opponent_active_pokemon.metadata["name"].to_upper() + " IS SHIELDED! DAMAGE PREVENTED!")
+		print("NO DAMAGE: Defender shield active, damage set to 0")
 
 	for modifier in result["modifiers"]:
 		show_floating_label(modifier, Vector2(1030, 300))
@@ -2344,6 +2407,8 @@ func calculate_final_damage(base_damage: int, attacking_types: Array, defending_
 	
 	return {"damage": damage, "modifiers": modifiers_applied}
 
+############################################################# Knockout functions ##################################################################
+													
 # Checks a single Pokemon's HP and if zero or below, animates KO and discards it
 func check_and_handle_knockout(pokemon: card_object, is_opponent: bool) -> bool:
 	if pokemon == null or pokemon.current_hp > 0:
@@ -2495,6 +2560,8 @@ func handle_post_knockout(is_opponent: bool) -> void:
 ######################################################################################################################################################
 ############################################################# EFFECT PARSING FUNCTIONS ###############################################################
 
+															######### Effect helpers ##########
+															
 # Looks backwards from an effect's position to find the nearest coin flip condition
 func get_flip_context(text: String, effect_pos: int) -> String:
 	var before = text.substr(0, effect_pos)
@@ -2520,61 +2587,6 @@ func find_defender_status_pos(text: String, status: String, has_defender_prefix:
 			return it_pos
 	return -1
 	
-# Parses attack effect text and returns an array of effect dictionaries for evaluation or application
-func parse_card_text_effects(attack_text: String, attacker_name: String) -> Array:
-	if attack_text == "":
-		return []
-	
-	var effects: Array = []
-	var text = attack_text.to_lower()
-	var lower_name = attacker_name.to_lower()
-	var has_defender_prefix = "the defending pokémon is now" in text
-	
-	# --- STATUS: Defender status conditions ---
-	var defender_statuses = ["paralyzed", "asleep", "poisoned", "confused", "burned"]
-	for status in defender_statuses:
-		var pos = find_defender_status_pos(text, status, has_defender_prefix)
-		if pos != -1:
-			var flip = get_flip_context(text, pos)
-			effects.append({"type": "status", "target": "defender", "status": status.capitalize(), "flip": flip})
-			print("EFFECT PARSED: Status -> Defender ", status.capitalize(), " | Flip: ", flip)
-	
-	# --- STATUS: Self-inflicted status (attacker name used instead of "defending") ---
-	var self_statuses = ["confused", "asleep", "poisoned", "paralyzed", "burned"]
-	for status in self_statuses:
-		if lower_name + " is now " + status in text:
-			var pos = text.find(lower_name + " is now " + status)
-			var flip = get_flip_context(text, pos)
-			effects.append({"type": "status", "target": "self", "status": status.capitalize(), "flip": flip})
-			print("EFFECT PARSED: Status -> Self ", status.capitalize(), " | Flip: ", flip)
-	
-	if effects.size() == 0:
-		print("EFFECT PARSED: No recognised effects in: ", text.left(80))
-	
-	return effects
-
-# Applies parsed effect dictionaries to the game state with coin flip gating
-func apply_card_text_effects(effects: Array, attacker: card_object, defender: card_object, is_opponent_attacking: bool) -> void:
-	var flip_result: String = ""
-	var needs_flip: bool = false
-	for effect in effects:
-		if effect.get("flip", "none") != "none":
-			needs_flip = true
-			break
-
-	if needs_flip:
-		var coin = await flip_coin()
-		flip_result = "heads" if coin else "tails"
-
-	for effect in effects:
-		var required_flip = effect.get("flip", "none")
-		if required_flip != "none" and flip_result != required_flip:
-			print("EFFECT SKIPPED: Needed ", required_flip, " but got ", flip_result)
-			continue
-
-		if effect["type"] == "status":
-			await apply_status_effect(effect, attacker, defender, is_opponent_attacking)
-
 # Applies a single parsed status effect to the correct pokemon and updates the UI
 func apply_status_effect(effect: Dictionary, attacker: card_object, defender: card_object, is_opponent_attacking: bool) -> void:
 	var target_pokemon: card_object
@@ -2724,7 +2736,407 @@ func clear_all_statuses(pokemon: card_object, is_opponent: bool) -> void:
 		print("STATUSES CLEARED: ", pokemon.metadata.get("name", "Unknown"))
 		update_status_icons(pokemon, is_opponent)
 
+# Walks backwards from a keyword position in text to extract the preceding number
+func extract_number_before(text: String, keyword: String) -> int:
+	var pos = text.find(keyword)
+	if pos == -1:
+		return -1
+	var i = pos - 1
+	while i >= 0 and text[i] == " ":
+		i -= 1
+	var num_str = ""
+	while i >= 0 and text[i].is_valid_int():
+		num_str = text[i] + num_str
+		i -= 1
+	if num_str != "":
+		return int(num_str)
+	return -1
 
+														######### Effects from text ##########
+																
+# Applies self-damage from an attack effect to the attacker
+func apply_self_damage(effect: Dictionary, attacker: card_object, is_opponent_attacking: bool) -> void:
+	var damage = effect.get("damage", 0)
+	attacker.current_hp = max(0, attacker.current_hp - damage)
+	var name = attacker.metadata.get("name", "Unknown")
+	var label_x = 1030 if is_opponent_attacking else 530
+	await show_message(name.to_upper() + " DEALT " + str(damage) + " DAMAGE TO ITSELF!")
+	show_floating_label("-" + str(damage) + "HP", Vector2(label_x, 300), is_opponent_attacking)
+	display_hp_circles_above_align(attacker, is_opponent_attacking)
+	print("EFFECT APPLIED: ", name, " took ", damage, " self-damage. HP: ", attacker.current_hp)
+
+# Discards energy from the attacker as an attack cost
+func apply_energy_discard_self(effect: Dictionary, attacker: card_object, is_opponent_attacking: bool) -> void:
+	var count = effect.get("count", 1)
+	var energy_type = effect.get("energy_type", "any")
+	var name = attacker.metadata.get("name", "Unknown")
+	var to_discard: Array = []
+
+	if count == -1:
+		to_discard = attacker.attached_energies.duplicate()
+	else:
+		for i in range(count):
+			var found = false
+			for j in range(attacker.attached_energies.size() - 1, -1, -1):
+				var energy = attacker.attached_energies[j]
+				if energy in to_discard:
+					continue
+				if energy_type == "any":
+					to_discard.append(energy)
+					found = true
+					break
+				else:
+					var provided = get_energy_provided_by_card(energy)
+					if energy_type in provided:
+						to_discard.append(energy)
+						found = true
+						break
+			if not found and energy_type != "any":
+				for j in range(attacker.attached_energies.size() - 1, -1, -1):
+					var energy = attacker.attached_energies[j]
+					if energy not in to_discard:
+						to_discard.append(energy)
+						break
+
+	for energy in to_discard:
+		attacker.attached_energies.erase(energy)
+		send_card_to_discard(energy, is_opponent_attacking)
+
+	var count_text = "ALL" if count == -1 else str(to_discard.size())
+	await show_message(name.to_upper() + " DISCARDED " + count_text + " ENERGY!")
+	display_active_pokemon_energies(is_opponent_attacking)
+	print("EFFECT APPLIED: ", name, " discarded ", to_discard.size(), " energy cards")
+
+# Discards energy from the defending pokemon
+func apply_energy_discard_defender(effect: Dictionary, defender: card_object, is_opponent_attacking: bool) -> void:
+	if defender.attached_energies.size() == 0:
+		print("EFFECT SKIPPED: Defender has no energy to discard")
+		return
+	var name = defender.metadata.get("name", "Unknown")
+	var energy = defender.attached_energies.pop_back()
+	send_card_to_discard(energy, !is_opponent_attacking)
+	await show_message("AN ENERGY WAS DISCARDED FROM " + name.to_upper() + "!")
+	display_active_pokemon_energies(!is_opponent_attacking)
+	print("EFFECT APPLIED: Discarded energy from ", name)
+
+# Applies damage to benched pokemon based on target scope
+func apply_bench_damage(effect: Dictionary, is_opponent_attacking: bool) -> void:
+	var bench_target = effect.get("target", "opponent_bench")
+	var damage = effect.get("damage", 10)
+	var benches_to_hit: Array = []
+
+	if bench_target == "opponent_bench":
+		if is_opponent_attacking:
+			benches_to_hit.append({"bench": player_bench, "is_opponent": false})
+		else:
+			benches_to_hit.append({"bench": opponent_bench, "is_opponent": true})
+	elif bench_target == "own_bench":
+		if is_opponent_attacking:
+			benches_to_hit.append({"bench": opponent_bench, "is_opponent": true})
+		else:
+			benches_to_hit.append({"bench": player_bench, "is_opponent": false})
+	elif bench_target == "all_benches":
+		benches_to_hit.append({"bench": player_bench, "is_opponent": false})
+		benches_to_hit.append({"bench": opponent_bench, "is_opponent": true})
+
+	var total_hit = 0
+	for bench_info in benches_to_hit:
+		for pokemon in bench_info["bench"]:
+			pokemon.current_hp = max(0, pokemon.current_hp - damage)
+			total_hit += 1
+			print("BENCH DAMAGE: ", pokemon.metadata.get("name", ""), " took ", damage, " damage. HP: ", pokemon.current_hp)
+
+	if total_hit > 0:
+		var side_label = bench_target.replace("_", " ").to_upper()
+		await show_message(str(damage) + " DAMAGE TO EACH BENCHED POKEMON! (" + side_label + ")")
+
+# Sets the blind flag on the defending pokemon and updates icons
+func apply_blind_effect(defender: card_object, is_opponent_attacking: bool) -> void:
+	defender.is_blind = true
+	var is_def_opponent = !is_opponent_attacking
+	update_status_icons(defender, is_def_opponent)
+	await show_message(defender.metadata.get("name", "").to_upper() + " CAN'T SEE! MUST FLIP TO ATTACK!")
+	print("EFFECT APPLIED: ", defender.metadata.get("name", ""), " is now Blind")
+
+# Sets the no_damage flag on the attacker and updates icons
+func apply_no_damage_effect(attacker: card_object, is_opponent_attacking: bool) -> void:
+	attacker.has_no_damage = true
+	update_status_icons(attacker, is_opponent_attacking)
+	await show_message(attacker.metadata.get("name", "").to_upper() + " IS PROTECTED FROM DAMAGE!")
+	print("EFFECT APPLIED: ", attacker.metadata.get("name", ""), " has no_damage shield")
+
+# Sets the invincible flag on the attacker and updates icons
+func apply_invincible_effect(attacker: card_object, is_opponent_attacking: bool) -> void:
+	attacker.is_invincible = true
+	update_status_icons(attacker, is_opponent_attacking)
+	await show_message(attacker.metadata.get("name", "").to_upper() + " IS FULLY PROTECTED!")
+	print("EFFECT APPLIED: ", attacker.metadata.get("name", ""), " is invincible")
+
+# Sets the retreat lock on the defending pokemon
+func apply_retreat_lock(defender: card_object, is_opponent_attacking: bool) -> void:
+	if is_opponent_attacking:
+		player_retreat_disabled = true
+	else:
+		opponent_retreat_disabled = true
+	await show_message(defender.metadata.get("name", "").to_upper() + " CAN'T RETREAT!")
+	print("EFFECT APPLIED: Retreat locked for ", defender.metadata.get("name", ""))
+
+# Draws cards for the attacker
+func apply_draw_effect(effect: Dictionary, is_opponent_attacking: bool) -> void:
+	var count = effect.get("count", 1)
+	for i in range(count):
+		await draw_card_from_deck(is_opponent_attacking)
+	var who = "CPU" if is_opponent_attacking else "Player"
+	await show_message(who.to_upper() + " DREW " + str(count) + " CARD(S)!")
+	if is_opponent_attacking:
+		display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500, 6)
+	else:
+		display_hand_cards_array(player_hand, $CARD_COLLECTIONS/PLAYER/player_hand_hbox_container, card_scales[11])
+	print("EFFECT APPLIED: ", who, " drew ", count, " card(s)")
+
+# Heals damage from the attacker
+func apply_self_heal(effect: Dictionary, attacker: card_object, is_opponent_attacking: bool) -> void:
+	var name = attacker.metadata.get("name", "Unknown")
+	var max_hp = int(attacker.metadata.get("hp", "0"))
+	var amount = effect.get("amount", -1)
+	var healed = 0
+
+	if amount == -1:
+		healed = max_hp - attacker.current_hp
+		attacker.current_hp = max_hp
+	else:
+		var heal_hp = amount * 10
+		healed = min(heal_hp, max_hp - attacker.current_hp)
+		attacker.current_hp = min(max_hp, attacker.current_hp + heal_hp)
+
+	if healed > 0:
+		await show_message(name.to_upper() + " HEALED " + str(healed) + " HP!")
+		display_hp_circles_above_align(attacker, is_opponent_attacking)
+		print("EFFECT APPLIED: ", name, " healed ", healed, " HP. Now at: ", attacker.current_hp)
+	else:
+		print("EFFECT SKIPPED: ", name, " already at full HP")
+
+# Applies the toxic upgrade setting poison damage to 20
+func apply_toxic(defender: card_object, is_opponent_attacking: bool) -> void:
+	defender.is_poisoned = true
+	defender.poison_damage = 20
+	var is_def_opponent = !is_opponent_attacking
+	update_status_icons(defender, is_def_opponent)
+	print("EFFECT APPLIED: ", defender.metadata.get("name", ""), " poison upgraded to Toxic (20 damage)")
+
+# Sets destiny bond flag on the attacker
+func apply_destiny_bond(attacker: card_object, is_opponent_attacking: bool) -> void:
+	attacker.has_destiny_bond = true
+	update_status_icons(attacker, is_opponent_attacking)
+	await show_message(attacker.metadata.get("name", "").to_upper() + " IS BOUND BY DESTINY!")
+	print("EFFECT APPLIED: ", attacker.metadata.get("name", ""), " has Destiny Bond")
+
+												######### Main effect parsers helpers ##########
+
+# Parses attack effect text and returns an array of effect dictionaries for evaluation or application
+func parse_card_text_effects(attack_text: String, attacker_name: String) -> Array:
+	if attack_text == "":
+		return []
+
+	var effects: Array = []
+	var text = attack_text.to_lower()
+	var lower_name = attacker_name.to_lower()
+	var has_defender_prefix = "the defending pokémon is now" in text
+
+	# --- STATUS: Defender status conditions ---
+	var defender_statuses = ["paralyzed", "asleep", "poisoned", "confused", "burned"]
+	for status in defender_statuses:
+		var pos = find_defender_status_pos(text, status, has_defender_prefix)
+		if pos != -1:
+			var flip = get_flip_context(text, pos)
+			effects.append({"type": "status", "target": "defender", "status": status.capitalize(), "flip": flip})
+			print("EFFECT PARSED: Status -> Defender ", status.capitalize(), " | Flip: ", flip)
+
+	# --- STATUS: Self-inflicted status ---
+	var self_statuses = ["confused", "asleep", "poisoned", "paralyzed", "burned"]
+	for status in self_statuses:
+		if lower_name + " is now " + status in text:
+			var pos = text.find(lower_name + " is now " + status)
+			var flip = get_flip_context(text, pos)
+			effects.append({"type": "status", "target": "self", "status": status.capitalize(), "flip": flip})
+			print("EFFECT PARSED: Status -> Self ", status.capitalize(), " | Flip: ", flip)
+
+	# --- TOXIC: Enhanced poison (20 instead of 10) ---
+	if "20 poison damage instead of 10" in text or "put 2 damage counters instead of 1" in text:
+		var flip = get_flip_context(text, text.find("instead"))
+		effects.append({"type": "toxic", "target": "defender", "flip": flip})
+		print("EFFECT PARSED: Toxic upgrade | Flip: ", flip)
+
+	# --- SELF DAMAGE: Attacker damages itself ---
+	if lower_name in text and "damage to itself" in text:
+		var damage = extract_number_before(text, "damage to itself")
+		if damage > 0:
+			var flip = get_flip_context(text, text.find("damage to itself"))
+			effects.append({"type": "self_damage", "target": "self", "damage": damage, "flip": flip})
+			print("EFFECT PARSED: Self Damage -> ", damage, " | Flip: ", flip)
+
+	# --- ENERGY DISCARD SELF: Attacker discards own energy ---
+	if "discard" in text and "energy" in text and ("attached to " + lower_name) in text:
+		var discard_pos = text.find("discard")
+		var flip = get_flip_context(text, discard_pos)
+		var count = 0
+		var energy_type = "any"
+		if "discard all" in text and ("energy cards attached to " + lower_name) in text:
+			count = -1
+		elif "discard a " in text or "discard 1 " in text:
+			count = 1
+		elif "discard 2" in text:
+			count = 2
+		elif "discard 3" in text:
+			count = 3
+		else:
+			count = 1
+		var type_keywords = ["fire", "water", "grass", "lightning", "psychic", "fighting", "darkness", "metal"]
+		for type_name in type_keywords:
+			if "discard" in text and type_name + " energy" in text and ("attached to " + lower_name) in text:
+				energy_type = type_name.capitalize()
+				break
+		effects.append({"type": "energy_discard_self", "target": "self", "count": count, "energy_type": energy_type, "flip": flip})
+		print("EFFECT PARSED: Energy Discard Self -> Count: ", count, " Type: ", energy_type, " | Flip: ", flip)
+
+	# --- ENERGY DISCARD DEFENDER: Remove energy from defending pokemon ---
+	if "discard" in text and "energy" in text and "attached to" in text:
+		var is_defender_energy = false
+		if "attached to the defending" in text:
+			is_defender_energy = true
+		if "attached to it" in text and "defending" in text:
+			is_defender_energy = true
+		if "choose 1 of them and discard it" in text and "energy cards attached to it" in text:
+			is_defender_energy = true
+		if is_defender_energy:
+			var discard_pos = text.find("discard")
+			var flip = get_flip_context(text, discard_pos)
+			effects.append({"type": "energy_discard_defender", "target": "defender", "count": 1, "flip": flip})
+			print("EFFECT PARSED: Energy Discard Defender | Flip: ", flip)
+
+	# --- BENCH DAMAGE: Damage to benched pokemon ---
+	if "damage to each" in text and "bench" in text:
+		var bench_target = "all_benches"
+		if "your opponent's benched" in text or "opponent's benched" in text:
+			bench_target = "opponent_bench"
+		elif "your own benched" in text:
+			bench_target = "own_bench"
+		elif "each player's bench" in text:
+			bench_target = "all_benches"
+		var damage = extract_number_before(text, "damage to each")
+		if damage <= 0:
+			damage = 10
+		var flip = get_flip_context(text, text.find("damage to each"))
+		effects.append({"type": "bench_damage", "target": bench_target, "damage": damage, "flip": flip})
+		print("EFFECT PARSED: Bench Damage -> ", bench_target, " for ", damage, " | Flip: ", flip)
+
+	# --- BLIND / SMOKESCREEN: Defender must flip to attack next turn ---
+	if "tries to attack" in text and "if tails" in text and "does nothing" in text:
+		effects.append({"type": "blind", "target": "defender", "flip": "none"})
+		print("EFFECT PARSED: Blind / Smokescreen -> Defender")
+
+	# --- INVINCIBLE: Prevent all effects including damage next turn ---
+	if "prevent all effects of attacks, including damage" in text:
+		var flip = get_flip_context(text, text.find("prevent all effects"))
+		effects.append({"type": "invincible", "target": "self", "flip": flip})
+		print("EFFECT PARSED: Invincible -> Self | Flip: ", flip)
+
+	# --- NO DAMAGE: Prevent damage only next turn (other effects still happen) ---
+	if "prevent all damage done to" in text and "prevent all effects of attacks" not in text:
+		var flip = get_flip_context(text, text.find("prevent all damage"))
+		effects.append({"type": "no_damage", "target": "self", "flip": flip})
+		print("EFFECT PARSED: No Damage -> Self | Flip: ", flip)
+
+	# --- RETREAT LOCK: Defender can't retreat ---
+	if "can't retreat" in text and "defending" in text:
+		var flip = get_flip_context(text, text.find("can't retreat"))
+		effects.append({"type": "retreat_lock", "target": "defender", "flip": flip})
+		print("EFFECT PARSED: Retreat Lock -> Defender | Flip: ", flip)
+
+	# --- DRAW CARDS ---
+	if "draw a card" in text and "your opponent" not in text:
+		effects.append({"type": "draw", "target": "self", "count": 1, "flip": "none"})
+		print("EFFECT PARSED: Draw 1 card")
+	elif "draw " in text and "cards" in text and "your opponent" not in text:
+		var count = extract_number_before(text, "cards")
+		if count > 0:
+			effects.append({"type": "draw", "target": "self", "count": count, "flip": "none"})
+			print("EFFECT PARSED: Draw ", count, " cards")
+
+	# --- SELF HEAL ALL: Remove all damage from attacker ---
+	if "remove all damage counters from " + lower_name in text:
+		var flip = get_flip_context(text, text.find("remove all damage"))
+		effects.append({"type": "self_heal", "target": "self", "amount": -1, "flip": flip})
+		print("EFFECT PARSED: Self Heal All | Flip: ", flip)
+
+	# --- SELF HEAL PARTIAL: Remove X damage counters from attacker ---
+	if "remove" in text and "damage counter" in text and lower_name in text and "remove all" not in text:
+		var amount = extract_number_before(text, "damage counter")
+		if amount > 0:
+			var flip = get_flip_context(text, text.find("remove"))
+			effects.append({"type": "self_heal", "target": "self", "amount": amount, "flip": flip})
+			print("EFFECT PARSED: Self Heal ", amount, " counters | Flip: ", flip)
+
+	# --- DESTINY BOND ---
+	if "knocks out " + lower_name in text and "knock out that" in text:
+		effects.append({"type": "destiny_bond", "target": "self", "flip": "none"})
+		print("EFFECT PARSED: Destiny Bond -> Self")
+
+	if effects.size() == 0:
+		print("EFFECT PARSED: No recognised effects in: ", text.left(80))
+
+	return effects
+	
+# Applies parsed effect dictionaries to the game state with coin flip gating
+func apply_card_text_effects(effects: Array, attacker: card_object, defender: card_object, is_opponent_attacking: bool) -> void:
+	var flip_result: String = ""
+	var needs_flip: bool = false
+	for effect in effects:
+		if effect.get("flip", "none") != "none":
+			needs_flip = true
+			break
+
+	if needs_flip:
+		var coin = await flip_coin()
+		flip_result = "heads" if coin else "tails"
+
+	for effect in effects:
+		var required_flip = effect.get("flip", "none")
+		if required_flip != "none" and flip_result != required_flip:
+			print("EFFECT SKIPPED: Needed ", required_flip, " but got ", flip_result)
+			continue
+
+		if effect.get("target") == "defender" and defender.is_invincible:
+			print("EFFECT BLOCKED: Defender is invincible - skipping ", effect["type"])
+			continue
+
+		if effect["type"] == "status":
+			await apply_status_effect(effect, attacker, defender, is_opponent_attacking)
+		if effect["type"] == "toxic":
+			await apply_toxic(defender, is_opponent_attacking)
+		if effect["type"] == "self_damage":
+			await apply_self_damage(effect, attacker, is_opponent_attacking)
+		if effect["type"] == "energy_discard_self":
+			await apply_energy_discard_self(effect, attacker, is_opponent_attacking)
+		if effect["type"] == "energy_discard_defender":
+			await apply_energy_discard_defender(effect, defender, is_opponent_attacking)
+		if effect["type"] == "bench_damage":
+			await apply_bench_damage(effect, is_opponent_attacking)
+		if effect["type"] == "blind":
+			await apply_blind_effect(defender, is_opponent_attacking)
+		if effect["type"] == "no_damage":
+			await apply_no_damage_effect(attacker, is_opponent_attacking)
+		if effect["type"] == "invincible":
+			await apply_invincible_effect(attacker, is_opponent_attacking)
+		if effect["type"] == "retreat_lock":
+			await apply_retreat_lock(defender, is_opponent_attacking)
+		if effect["type"] == "draw":
+			await apply_draw_effect(effect, is_opponent_attacking)
+		if effect["type"] == "self_heal":
+			await apply_self_heal(effect, attacker, is_opponent_attacking)
+		if effect["type"] == "destiny_bond":
+			await apply_destiny_bond(attacker, is_opponent_attacking)
+			
 ########################################################### END EFFECT PARSING FUNCTIONS #############################################################
 ######################################################################################################################################################
 
@@ -4230,7 +4642,119 @@ func resolve_energy_tiebreak(scored_pairs: Array, cpu_eval: Dictionary) -> Dicti
 
 	return tied[0]
 
+# Scores the value of parsed attack effects for CPU attack selection
+func score_parsed_effects(effects: Array, defender: card_object) -> float:
+	var score = 0.0
 
+	for effect in effects:
+		var flip_mult = 1.0
+		if effect.get("flip", "none") != "none":
+			flip_mult = 0.5
+
+		if effect["type"] == "status" and effect["target"] == "defender":
+			if defender.special_condition == effect["status"]:
+				continue
+			match effect["status"]:
+				"Paralyzed":
+					score += 80.0 * flip_mult
+				"Asleep":
+					score += 50.0 * flip_mult
+				"Confused":
+					score += 40.0 * flip_mult
+				"Poisoned":
+					if not defender.is_poisoned:
+						score += 30.0 * flip_mult
+				"Burned":
+					if not defender.is_burned:
+						score += 25.0 * flip_mult
+
+		if effect["type"] == "status" and effect["target"] == "self":
+			match effect["status"]:
+				"Confused":
+					score -= 30.0 * flip_mult
+				"Asleep":
+					score -= 40.0 * flip_mult
+				"Poisoned":
+					score -= 30.0 * flip_mult
+				"Burned":
+					score -= 25.0 * flip_mult
+
+		if effect["type"] == "toxic":
+			if not defender.is_poisoned or defender.poison_damage < 20:
+				score += 50.0 * flip_mult
+
+		if effect["type"] == "self_damage":
+			score -= effect.get("damage", 0) * 0.5
+
+		if effect["type"] == "energy_discard_self":
+			var count = effect.get("count", 1)
+			if count == -1:
+				score -= 70.0
+			else:
+				score -= count * 10.0
+
+		if effect["type"] == "energy_discard_defender":
+			if defender.attached_energies.size() > 0:
+				score += 25.0 * flip_mult
+
+		if effect["type"] == "bench_damage":
+			var target_bench_size = 0
+			if effect["target"] == "opponent_bench":
+				target_bench_size = player_bench.size()
+			elif effect["target"] == "own_bench":
+				target_bench_size = opponent_bench.size()
+				score -= effect.get("damage", 0) * target_bench_size * 0.3
+				continue
+			elif effect["target"] == "all_benches":
+				target_bench_size = player_bench.size()
+				var own_penalty = effect.get("damage", 0) * opponent_bench.size() * 0.3
+				score -= own_penalty
+			score += effect.get("damage", 0) * target_bench_size * 0.3
+
+		if effect["type"] == "blind":
+			score += 30.0 * flip_mult
+
+		if effect["type"] == "retreat_lock":
+			score += 20.0 * flip_mult
+
+		if effect["type"] == "draw":
+			score += 15.0 * effect.get("count", 1)
+
+		if effect["type"] == "self_heal":
+			var max_hp = int(effects[0].get("damage", 0)) if false else 0
+			var damage_on_attacker = 0
+			if opponent_active_pokemon != null:
+				var max_hp_real = int(opponent_active_pokemon.metadata.get("hp", "0"))
+				damage_on_attacker = max_hp_real - opponent_active_pokemon.current_hp
+			if damage_on_attacker > 0:
+				score += 20.0 * flip_mult
+
+		if effect["type"] == "invincible":
+			score += 60.0 * flip_mult
+
+		if effect["type"] == "no_damage":
+			score += 40.0 * flip_mult
+
+		if effect["type"] == "destiny_bond":
+			var attacker_hp_pct = 0.0
+			if opponent_active_pokemon != null:
+				var max_hp = int(opponent_active_pokemon.metadata.get("hp", "0"))
+				attacker_hp_pct = float(opponent_active_pokemon.current_hp) / max(max_hp, 1)
+			if attacker_hp_pct <= 0.3:
+				score += 50.0
+			else:
+				score += 10.0
+
+	if defender.is_invincible:
+		var defender_bonus = 0.0
+		for effect in effects:
+			if effect.get("target") == "defender":
+				defender_bonus = 0.0
+				break
+		score = min(score, score - defender_bonus)
+
+	return score
+	
 ################################################### END OPPONENT PRIORITISE FUNCTIONALITY FUNCTIONS ##################################################
 ######################################################################################################################################################
  
@@ -4543,8 +5067,9 @@ func cpu_phase_attack(cpu_eval: Dictionary) -> void:
 
 		# Penalise attacks with self-discard costs
 		var pokemon_name = opponent_active_pokemon.metadata.get("name", "")
-		var discard_penalty = get_attack_text_penalty(attack.get("text", ""), pokemon_name)
-		score += discard_penalty
+		var parsed_effects = parse_card_text_effects(attack.get("text", ""), pokemon_name)
+		var effect_score = score_parsed_effects(parsed_effects, player_active_pokemon)
+		score += effect_score
 
 		if score > best_attack_score:
 			best_attack_score = score
@@ -4561,7 +5086,30 @@ func cpu_phase_attack(cpu_eval: Dictionary) -> void:
 	var final_damage = result["damage"]
 
 	await show_message("Opponent's " + opponent_active_pokemon.metadata["name"].to_upper() + " used " + chosen_attack["name"].to_upper() + "!")
+	
+	if player_active_pokemon.is_invincible:
+		await show_message(player_active_pokemon.metadata["name"].to_upper() + " IS FULLY PROTECTED! ATTACK BLOCKED!")
+		display_active_pokemon_energies(true)
+		return
 
+	if player_active_pokemon.has_no_damage:
+		final_damage = 0
+		await show_message(player_active_pokemon.metadata["name"].to_upper() + " IS SHIELDED! DAMAGE PREVENTED!")
+		print("NO DAMAGE: Player shield active, damage set to 0")
+	
+	if opponent_active_pokemon.is_blind:
+		await show_message(opponent_active_pokemon.metadata["name"].to_upper() + " CAN'T SEE! FLIPPING COIN...")
+		var blind_coin = await flip_coin()
+		if not blind_coin:
+			await show_message("THE ATTACK FAILED!")
+			opponent_active_pokemon.is_blind = false
+			update_status_icons(opponent_active_pokemon, true)
+			display_active_pokemon_energies(true)
+			return
+		opponent_active_pokemon.is_blind = false
+		update_status_icons(opponent_active_pokemon, true)
+	
+		
 	if opponent_active_pokemon.special_condition == "Confused":
 		await show_message(opponent_active_pokemon.metadata["name"].to_upper() + " IS CONFUSED! FLIPPING COIN...")
 		var coin = await flip_coin()
