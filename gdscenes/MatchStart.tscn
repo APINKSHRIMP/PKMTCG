@@ -1,6 +1,6 @@
 [gd_scene load_steps=12 format=3 uid="uid://dqwekyllekveg"]
 
-[ext_resource type="Script" uid="uid://p2djeecymjo7" path="res://gdscripts/main_match_script.gd" id="1_c6k6o"]
+[ext_resource type="Script" uid="uid://b53ijkeqaoe1p" path="res://gdscripts/main_match_script.gd" id="1_c6k6o"]
 [ext_resource type="Shader" uid="uid://ccm481fk14lc8" path="res://gdscenes/backgroundscroll.gdshader" id="2_0kjtx"]
 [ext_resource type="Texture2D" uid="uid://cpbbo8tyee1n4" path="res://backgrounds/background2.png" id="2_1cpm0"]
 [ext_resource type="Theme" uid="uid://mbsg4xqnedxi" path="res://uiresources/kenneyUI-red.tres" id="2_6pfim"]
@@ -233,12 +233,12 @@ layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = 1378.0
-offset_top = 173.0
-offset_right = 1791.0
-offset_bottom = 274.0
+offset_left = 1471.0
+offset_top = 143.0
+offset_right = 1884.0
+offset_bottom = 244.0
 grow_horizontal = 0
-theme_override_constants/separation = -20
+theme_override_constants/separation = 50
 
 [node name="opponent_bench_container" type="HBoxContainer" parent="CARD_COLLECTIONS/OPPONENT"]
 layout_mode = 0

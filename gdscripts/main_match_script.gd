@@ -7,10 +7,10 @@ extends Control
 # GLOBAL VARIABLES FOR FULL MATCH VARIABLES AND CHANGABLES. MOST ARE SELF EXPLANATORY BY NAME
 
 # TESTING VARIABLES
-var amount_of_cards_to_draw = 7	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
+var amount_of_cards_to_draw = 15	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
 var hide_hidden_cards = true      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
-var opponent_deck_name = "GrassFire"
-var player_deck_name = "GrassFire"
+var opponent_deck_name = "NewEffectsWG"
+var player_deck_name = "NewEffectsWG"
 
 # TESTING - There are different rulesets for burn and confusion depending on what generation/set is being played.
 # Additionally I personally felt base set confusion retreat rule is horrendous, so I have created a personal rule that doesn't give free retreat but doesn't force discard then coin flip
@@ -103,7 +103,7 @@ var card_scales: Dictionary = {
 	10: Vector2(150, 206),
 	10.5: Vector2(125, 172),
 	11: Vector2(100, 138),
-	11.55: Vector2(83, 113),
+	11.55: Vector2(50, 69),
 	11.5: Vector2(75, 103),
 	12: Vector2(50, 69),
 	13: Vector2(25, 35)
@@ -2186,11 +2186,11 @@ func start_retreat_bench_selection() -> void:
 	$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Choose a bench Pokemon to switch into the active spot"
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "MAKE ACTIVE"
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")#
 
 ########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
 ######################################################################################################################################################
-
+#
 #	           ##    ########  #######     ##     ######  ##   ##
 #             ####      ##       ##       ####    ##      ##  ##
 #            ##  ##     ##       ##      ##  ##   ##      ####
@@ -2200,7 +2200,7 @@ func start_retreat_bench_selection() -> void:
 ######################################################################################################################################################
 ############################################################ ATTACK AND DAMAGE FUNCTIONS #############################################################
 
-													####### Attacking helper functions #########
+############################################################## Attacking helper functions ###########################################################
 													
 # Returns the attacks array for any given card object.
 func get_attacks_for_card(card: card_object) -> Array:
@@ -2283,8 +2283,95 @@ func check_attack_requirements(attack_dict: Dictionary, pokemon_card: card_objec
 	
 	return true
 
-													######## Actual attacking functions ##########
+############################################################## Actual attacking functions #####################################################
 													
+# Parses the numeric base damage value from an attack's "damage" field string
+# Strips non-numeric characters (e.g. "30+" becomes 30, "×2" etc.)
+func parse_attack_base_damage(attack: Dictionary) -> int:
+	var raw_damage = attack.get("damage", "0")
+	var numeric_damage = ""
+	for character in raw_damage:
+		if character.is_valid_int():
+			numeric_damage += character
+	return int(numeric_damage) if numeric_damage != "" else 0
+
+# Handles the confusion coin flip when an attacker is confused
+# Returns true if the attack FAILS (attacker hurt itself), false if the attack can proceed
+func handle_attack_confusion(attacker: card_object, is_opponent: bool) -> bool:
+	if attacker.special_condition != "Confused":
+		return false
+	await show_message(attacker.metadata["name"].to_upper() + " IS CONFUSED! FLIPPING COIN...")
+	var coin = await flip_coin()
+	if coin:
+		return false
+	var self_damage = 20
+	if confusion_rules == "modern_era_confusion_rules":
+		self_damage = 30
+	if confusion_rules == "base_set_confusion_rules":
+		var self_types = attacker.metadata.get("types", ["Colorless"])
+		var result = calculate_final_damage(self_damage, self_types, attacker)
+		self_damage = result["damage"]
+	attacker.current_hp = max(0, attacker.current_hp - self_damage)
+	await show_message("THE ATTACK FAILED! " + attacker.metadata["name"].to_upper() + " HURT ITSELF FOR " + str(self_damage) + " DAMAGE!")
+	var attacker_label_pos = Vector2(1030, 300) if is_opponent else Vector2(530, 300)
+	show_floating_label("-" + str(self_damage) + "HP", attacker_label_pos, is_opponent)
+	display_hp_circles_above_align(attacker, is_opponent)
+	print("CONFUSED: ", attacker.metadata["name"], " hurt itself for ", self_damage)
+	await check_all_knockouts()
+	return true
+
+# Handles the blind coin flip when an attacker cannot see
+# Returns true if the attack FAILS (missed), false if the attack can proceed
+func handle_attack_blind(attacker: card_object, is_opponent: bool) -> bool:
+	if not attacker.is_blind:
+		return false
+	await show_message(attacker.metadata["name"].to_upper() + " CAN'T SEE! FLIPPING COIN...")
+	var blind_coin = await flip_coin()
+	if not blind_coin:
+		await show_message("THE ATTACK FAILED!")
+		attacker.is_blind = false
+		update_status_icons(attacker, is_opponent)
+		return true
+	attacker.is_blind = false
+	update_status_icons(attacker, is_opponent)
+	return false
+
+# Checks if the defender is fully invincible and blocks the attack entirely
+# Returns true if the attack is blocked
+func check_defender_invincible(defender: card_object) -> bool:
+	if not defender.is_invincible:
+		return false
+	await show_message(defender.metadata["name"].to_upper() + " IS FULLY PROTECTED! ATTACK BLOCKED!")
+	return true
+
+# Checks if the defender has a no-damage shield active
+# Returns the adjusted damage (0 if shielded, otherwise the original value)
+func apply_defender_no_damage_shield(defender: card_object, damage: int) -> int:
+	if not defender.has_no_damage:
+		return damage
+	await show_message(defender.metadata["name"].to_upper() + " IS SHIELDED! DAMAGE PREVENTED!")
+	print("NO DAMAGE: Defender shield active, damage set to 0")
+	return 0
+
+# Displays modifier floating labels, the damage floating label, applies HP reduction,
+# and updates the HP circles for the defender
+func display_and_apply_attack_damage(attacker: card_object, defender: card_object, final_damage: int, modifiers: Array, is_opponent: bool) -> void:
+	var defender_label_pos = Vector2(530, 300) if is_opponent else Vector2(1030, 300)
+	for modifier in modifiers:
+		show_floating_label(modifier, defender_label_pos, is_opponent)
+		await get_tree().create_timer(0.5).timeout
+	show_floating_label("-" + str(final_damage) + "HP", defender_label_pos, is_opponent)
+	defender.current_hp = max(0, defender.current_hp - final_damage)
+	print(attacker.metadata["name"] + " dealt " + str(final_damage) + " damage to " + defender.metadata["name"] + "! HP remaining: " + str(defender.current_hp))
+	display_hp_circles_above_align(defender, !is_opponent)
+
+# Parses the attack text for card effects and applies them
+func process_attack_effects(attack: Dictionary, attacker: card_object, defender: card_object, is_opponent: bool) -> void:
+	var attack_text = attack.get("text", "")
+	var effects = parse_card_text_effects(attack_text, attacker.metadata.get("name", ""))
+	if effects.size() > 0:
+		await apply_card_text_effects(effects, attacker, defender, is_opponent)
+
 # Applies damage from the chosen attack to the opponent's active pokemon and refreshes the HP display
 func perform_attack(attack_index: int) -> void:
 	if opponent_active_pokemon == null:
@@ -2293,87 +2380,38 @@ func perform_attack(attack_index: int) -> void:
 	
 	var attacks = get_attacks_for_card(player_active_pokemon)
 	var attack = attacks[attack_index]
-	
-	var raw_damage = attack.get("damage", "0")
-	var numeric_damage = ""
-	for character in raw_damage:
-		if character.is_valid_int():
-			numeric_damage += character
-	var base_damage = int(numeric_damage) if numeric_damage != "" else 0
+	var base_damage = parse_attack_base_damage(attack)
 
 	await show_message((player_active_pokemon.metadata["name"] + " USED " + attack.get("name", "")).to_upper())
 	
-	if player_active_pokemon.special_condition == "Confused":
-		await show_message(player_active_pokemon.metadata["name"].to_upper() + " IS CONFUSED! FLIPPING COIN...")
-		var coin = await flip_coin()
-		if not coin:
-			var self_damage = 20
-			if confusion_rules == "modern_era_confusion_rules":
-				self_damage = 30
-			if confusion_rules == "base_set_confusion_rules":
-				var self_types = player_active_pokemon.metadata.get("types", ["Colorless"])
-				var result = calculate_final_damage(self_damage, self_types, player_active_pokemon)
-				self_damage = result["damage"]
-			player_active_pokemon.current_hp = max(0, player_active_pokemon.current_hp - self_damage)
-			await show_message("THE ATTACK FAILED! " + player_active_pokemon.metadata["name"].to_upper() + " HURT ITSELF FOR " + str(self_damage) + " DAMAGE!")
-			show_floating_label("-" + str(self_damage) + "HP", Vector2(530, 300))
-			display_hp_circles_above_align(player_active_pokemon, false)
-			print("CONFUSED: ", player_active_pokemon.metadata["name"], " hurt itself for ", self_damage)
-			hide_attack_buttons()
-			await check_all_knockouts()
-			await get_tree().create_timer(0.5).timeout
-			player_end_turn_checks()
-			return
+	if await handle_attack_confusion(player_active_pokemon, false):
+		hide_attack_buttons()
+		await get_tree().create_timer(0.5).timeout
+		player_end_turn_checks()
+		return
 	
-	if player_active_pokemon.is_blind:
-		await show_message(player_active_pokemon.metadata["name"].to_upper() + " CAN'T SEE! FLIPPING COIN...")
-		var blind_coin = await flip_coin()
-		if not blind_coin:
-			await show_message("THE ATTACK FAILED!")
-			player_active_pokemon.is_blind = false
-			update_status_icons(player_active_pokemon, false)
-			hide_attack_buttons()
-			await get_tree().create_timer(0.5).timeout
-			player_end_turn_checks()
-			return
-		player_active_pokemon.is_blind = false
-		update_status_icons(player_active_pokemon, false)
+	if await handle_attack_blind(player_active_pokemon, false):
+		hide_attack_buttons()
+		await get_tree().create_timer(0.5).timeout
+		player_end_turn_checks()
+		return
 	
 	var attacking_types = player_active_pokemon.metadata.get("types", ["Colorless"])
 	var result = calculate_final_damage(base_damage, attacking_types, opponent_active_pokemon)
 	var final_damage = result["damage"]
 	
-	if opponent_active_pokemon.is_invincible:
-		final_damage = 0
-		await show_message(opponent_active_pokemon.metadata["name"].to_upper() + " IS FULLY PROTECTED! ATTACK BLOCKED!")
+	if await check_defender_invincible(opponent_active_pokemon):
 		hide_attack_buttons()
 		await get_tree().create_timer(0.5).timeout
 		player_end_turn_checks()
 		return
 
-	if opponent_active_pokemon.has_no_damage:
-		final_damage = 0
-		await show_message(opponent_active_pokemon.metadata["name"].to_upper() + " IS SHIELDED! DAMAGE PREVENTED!")
-		print("NO DAMAGE: Defender shield active, damage set to 0")
+	final_damage = await apply_defender_no_damage_shield(opponent_active_pokemon, final_damage)
 
-	for modifier in result["modifiers"]:
-		show_floating_label(modifier, Vector2(1030, 300))
-		await get_tree().create_timer(0.5).timeout
-
-	show_floating_label("-"+str(final_damage) + "HP", Vector2(1030, 300))
-	
-	opponent_active_pokemon.current_hp = max(0, opponent_active_pokemon.current_hp - final_damage)
-	
-	print(player_active_pokemon.metadata["name"] + " used " + attack.get("name", "") + " for " + str(final_damage) + " damage!")
-	print(opponent_active_pokemon.metadata["name"] + " HP remaining: " + str(opponent_active_pokemon.current_hp))
-	
-	display_hp_circles_above_align(opponent_active_pokemon, true)
+	await display_and_apply_attack_damage(player_active_pokemon, opponent_active_pokemon, final_damage, result["modifiers"], false)
 	hide_attack_buttons()
 	
-	var attack_text = attack.get("text", "")
-	var effects = parse_card_text_effects(attack_text, player_active_pokemon.metadata.get("name", ""))
-	if effects.size() > 0:
-		await apply_card_text_effects(effects, player_active_pokemon, opponent_active_pokemon, false)
+	await process_attack_effects(attack, player_active_pokemon, opponent_active_pokemon, false)
 	
 	await check_all_knockouts()
 	
@@ -2560,7 +2598,7 @@ func handle_post_knockout(is_opponent: bool) -> void:
 ######################################################################################################################################################
 ############################################################# EFFECT PARSING FUNCTIONS ###############################################################
 
-															######### Effect helpers ##########
+################################################################## Effect helpers ####################################################################
 															
 # Looks backwards from an effect's position to find the nearest coin flip condition
 func get_flip_context(text: String, effect_pos: int) -> String:
@@ -2889,7 +2927,7 @@ func apply_draw_effect(effect: Dictionary, is_opponent_attacking: bool) -> void:
 	var who = "CPU" if is_opponent_attacking else "Player"
 	await show_message(who.to_upper() + " DREW " + str(count) + " CARD(S)!")
 	if is_opponent_attacking:
-		display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500, 6)
+		display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 400, 7)
 	else:
 		display_hand_cards_array(player_hand, $CARD_COLLECTIONS/PLAYER/player_hand_hbox_container, card_scales[11])
 	print("EFFECT APPLIED: ", who, " drew ", count, " card(s)")
@@ -4804,7 +4842,7 @@ func opponent_start_turn_checks() -> void:
 	if drawn_card == null:
 		return
 
-	display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500, 6)
+	display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 400, 7)
 	update_deck_icon(true)
 
 	# Future: resolve any start-of-turn triggered effects here
@@ -4881,7 +4919,7 @@ func cpu_phase_evolution() -> void:
 
 		display_pokemon(true)
 		display_active_pokemon_energies(true)
-		display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500, 6)
+		display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 400, 7)
 
 		await get_tree().process_frame
 	
@@ -5002,7 +5040,7 @@ func cpu_phase_energy_attachment(cpu_eval: Dictionary) -> void:
 	var energy_texture = load("res://cardimages/" + energy_set + "/Small/" + energy.uid + ".png")
 	await animate_card_a_to_b($CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, energy_target_node, 0.2, energy_texture, card_scales[12])
 
-	display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500, 6)
+	display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 400, 7)
 	display_pokemon(true)
 	display_active_pokemon_energies(true)
 	await get_tree().process_frame
@@ -5087,65 +5125,23 @@ func cpu_phase_attack(cpu_eval: Dictionary) -> void:
 
 	await show_message("Opponent's " + opponent_active_pokemon.metadata["name"].to_upper() + " used " + chosen_attack["name"].to_upper() + "!")
 	
-	if player_active_pokemon.is_invincible:
-		await show_message(player_active_pokemon.metadata["name"].to_upper() + " IS FULLY PROTECTED! ATTACK BLOCKED!")
+	if await handle_attack_confusion(opponent_active_pokemon, true):
+		display_active_pokemon_energies(true)
+		return
+	
+	if await check_defender_invincible(player_active_pokemon):
 		display_active_pokemon_energies(true)
 		return
 
-	if player_active_pokemon.has_no_damage:
-		final_damage = 0
-		await show_message(player_active_pokemon.metadata["name"].to_upper() + " IS SHIELDED! DAMAGE PREVENTED!")
-		print("NO DAMAGE: Player shield active, damage set to 0")
+	if await handle_attack_blind(opponent_active_pokemon, true):
+		display_active_pokemon_energies(true)
+		return
 	
-	if opponent_active_pokemon.is_blind:
-		await show_message(opponent_active_pokemon.metadata["name"].to_upper() + " CAN'T SEE! FLIPPING COIN...")
-		var blind_coin = await flip_coin()
-		if not blind_coin:
-			await show_message("THE ATTACK FAILED!")
-			opponent_active_pokemon.is_blind = false
-			update_status_icons(opponent_active_pokemon, true)
-			display_active_pokemon_energies(true)
-			return
-		opponent_active_pokemon.is_blind = false
-		update_status_icons(opponent_active_pokemon, true)
+	final_damage = await apply_defender_no_damage_shield(player_active_pokemon, final_damage)
 	
-		
-	if opponent_active_pokemon.special_condition == "Confused":
-		await show_message(opponent_active_pokemon.metadata["name"].to_upper() + " IS CONFUSED! FLIPPING COIN...")
-		var coin = await flip_coin()
-		if not coin:
-			var self_damage = 20
-			if confusion_rules == "modern_era_confusion_rules":
-				self_damage = 30
-			if confusion_rules == "base_set_confusion_rules":
-				var self_types = opponent_active_pokemon.metadata.get("types", ["Colorless"])
-				var confusion_result = calculate_final_damage(self_damage, self_types, opponent_active_pokemon)
-				self_damage = confusion_result["damage"]
-			opponent_active_pokemon.current_hp = max(0, opponent_active_pokemon.current_hp - self_damage)
-			await show_message("THE ATTACK FAILED! " + opponent_active_pokemon.metadata["name"].to_upper() + " HURT ITSELF FOR " + str(self_damage) + " DAMAGE!")
-			show_floating_label("-" + str(self_damage) + "HP", Vector2(1030, 300), true)
-			display_hp_circles_above_align(opponent_active_pokemon, true)
-			print("CONFUSED: CPU ", opponent_active_pokemon.metadata["name"], " hurt itself for ", self_damage)
-			await check_all_knockouts()
-			display_active_pokemon_energies(true)
-			return
-
-	for modifier in result["modifiers"]:
-		show_floating_label(modifier, Vector2(530, 300), true)
-		await get_tree().create_timer(0.5).timeout
-
-	show_floating_label("-" + str(final_damage) + "HP", Vector2(530, 300), true)
-
-	player_active_pokemon.current_hp = max(0, player_active_pokemon.current_hp - final_damage)
-
-	print("CPU used " + chosen_attack["name"] + " for " + str(final_damage) + " damage! Player HP: " + str(player_active_pokemon.current_hp))
-
-	display_hp_circles_above_align(player_active_pokemon, false)
+	await display_and_apply_attack_damage(opponent_active_pokemon, player_active_pokemon, final_damage, result["modifiers"], true)
 	
-	var attack_text = chosen_attack.get("text", "")
-	var effects = parse_card_text_effects(attack_text, opponent_active_pokemon.metadata.get("name", ""))
-	if effects.size() > 0:
-		await apply_card_text_effects(effects, opponent_active_pokemon, player_active_pokemon, true)
+	await process_attack_effects(chosen_attack, opponent_active_pokemon, player_active_pokemon, true)
 
 	await check_all_knockouts()
 	display_active_pokemon_energies(true)
@@ -5186,7 +5182,7 @@ func cpu_phase_bench_play() -> void:
 		var card_texture = get_card_texture(best_card)
 		await animate_card_a_to_b($CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, $CARD_COLLECTIONS/OPPONENT/opponent_bench_container, 0.3, card_texture, card_scales[11])
 		display_pokemon(true)
-		display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500, 6)
+		display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 400, 7)
 
 # R.5: Selects the best bench replacement and performs the retreat
 func execute_cpu_retreat(cpu_eval: Dictionary) -> void:
