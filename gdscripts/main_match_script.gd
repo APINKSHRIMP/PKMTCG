@@ -7,7 +7,7 @@ extends Control
 # GLOBAL VARIABLES FOR FULL MATCH VARIABLES AND CHANGABLES. MOST ARE SELF EXPLANATORY BY NAME
 
 # TESTING VARIABLES
-var amount_of_cards_to_draw = 15	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
+var amount_of_cards_to_draw = 7	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
 var hide_hidden_cards = true      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
 var opponent_deck_name = "NewEffectsWG"
 var player_deck_name = "NewEffectsWG"
@@ -44,7 +44,6 @@ var opponent_discard_pile: Array = []
 # FUNCTIONAL REQUIREMENT VARIABLES
 var card_selection_mode_enabled = false
 var selected_card_for_action = null
-var card_was_clicked_this_frame: bool = false
 var prize_card_selection_active: bool = false
 var knockout_bench_selection_active: bool = false
 
@@ -71,9 +70,13 @@ var opponent_retreat_disabled: bool = false
 var player_retreated_this_turn: bool = false
 var opponent_retreated_this_turn: bool = false
 
-# UI VARIABLES
-var large_header_text_label: Label
-var small_hint_info_text_label: Label
+# PRELOADED RESOURCES
+var theme_disabled = preload("res://uiresources/kenneyUI.tres")
+var theme_green = preload("res://uiresources/kenneyUI-green.tres")
+var theme_blue = preload("res://uiresources/kenneyUI-blue.tres")
+var theme_red = preload("res://uiresources/kenneyUI-red.tres")
+var card_display_script = preload("res://gdscripts/cardimage.gd")
+var card_back_texture = preload("res://cardimages/cardbacksanddecks/cardbacksmall.png")
 
 #signals
 signal message_acknowledged
@@ -316,7 +319,7 @@ func hide_selection_mode_display_main() -> void:
 	
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "Select a Card"
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled
 	
 	# Re-enable mouse input on previously hidden containers
 	$ACTIVE_POKEMON/PLAYER/player_active_pokemon_container.mouse_filter = MOUSE_FILTER_PASS
@@ -331,9 +334,6 @@ func hide_selection_mode_display_main() -> void:
 	
 # Displays both the player and opponents hand cards. Shows players at the top of screen and opponents in top right smaller.
 func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2, face_down: bool = false, max_hand_width: float = 1300.0, max_before_overlap: int = 12):
-	
-	# Load the script that displays card images
-	var card_display_script = load("res://gdscripts/cardimage.gd")
 	
 	# Clear existing cards from container to prevent stale entries when cards leave or enter the hand
 	for child in hand_container.get_children():
@@ -381,9 +381,14 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2, f
 			
 			# Align to bottom
 			hand_card_to_display.size_flags_vertical = Control.SIZE_SHRINK_END
-		else:
-			hand_card_to_display.size_flags_vertical = Control.SIZE_SHRINK_END
 						
+# Refreshes the hand display for either player or opponent using standard sizes and containers
+func refresh_hand_display(is_opponent: bool) -> void:
+	if is_opponent:
+		display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 400, 7)
+	else:
+		display_hand_cards_array(player_hand, $CARD_COLLECTIONS/PLAYER/player_hand_hbox_container, card_scales[11])
+
 # Display active and bench pokemon for either player or opponent. is_opponent: true for opponent, false for player
 func display_pokemon(is_opponent: bool) -> void:
 	var active_pokemon = opponent_active_pokemon if is_opponent else player_active_pokemon
@@ -397,7 +402,7 @@ func display_pokemon(is_opponent: bool) -> void:
 	
 	# Display active pokemon if exists
 	if active_pokemon != null:
-		var card_display_script = load("res://gdscripts/cardimage.gd")
+		
 		var active_card_display = TextureRect.new()
 		active_card_display.set_script(card_display_script)
 		active_container.add_child(active_card_display)
@@ -410,7 +415,7 @@ func display_pokemon(is_opponent: bool) -> void:
 	
 	# Display bench pokemon
 	if bench_pokemon_array.size() > 0:
-		var card_display_script = load("res://gdscripts/cardimage.gd")
+		
 		for bench_pokemon in bench_pokemon_array:
 			var bench_card_display = TextureRect.new()
 			bench_card_display.set_script(card_display_script)
@@ -480,7 +485,7 @@ func update_action_button() -> void:
 			action_button.disabled = true
 			action_button.text = "BENCH FULL"
 			# If no card is selected, disable the button and change the colour to show it can't be clicked	
-			action_button.theme = load("res://uiresources/kenneyUI.tres")
+			action_button.theme = theme_disabled
 			return
 	
 	# If no card is selected then we have no action to perform so disable the button and change text to select the card
@@ -494,7 +499,7 @@ func update_action_button() -> void:
 		
 		# If no card is selected, disable the button and change the colour to show it can't be clicked	
 		action_button.disabled = true
-		action_button.theme = load("res://uiresources/kenneyUI.tres")
+		action_button.theme = theme_disabled
 	
 	# If the match has just started, ONLY a basic pokemon can be played and SET AS ACTIVE POKEMON pokemon, not placed on bench	
 	elif match_just_started_basic_pokemon_required and is_basic_pokemon(selected_card_for_action):
@@ -504,7 +509,7 @@ func update_action_button() -> void:
 		
 		# Enable the button and change the colour
 		action_button.disabled = false
-		action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+		action_button.theme = theme_green
 	
 	# If a basic pokemon is needed for turn 1 but any other card or no card is selected then change text to select basic pokemon	
 	elif match_just_started_basic_pokemon_required:
@@ -514,7 +519,7 @@ func update_action_button() -> void:
 		
 		# Disable the button and change the colour
 		action_button.disabled = true
-		action_button.theme = load("res://uiresources/kenneyUI.tres")
+		action_button.theme = theme_disabled
 	
 	# If the card selected was an energy card
 	elif action_info["action"] == "ATTACH_ENERGY":
@@ -522,22 +527,22 @@ func update_action_button() -> void:
 		if player_energy_played_this_turn:
 			action_button.text = "ENERGY PLAYED"
 			action_button.disabled = true
-			action_button.theme = load("res://uiresources/kenneyUI.tres")
+			action_button.theme = theme_disabled
 		else:
 			action_button.text = "ATTACH ENERGY"
 			action_button.disabled = false
-			action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+			action_button.theme = theme_green
 	
 	elif action_info["action"] == "EVOLVE":
 		var valid_targets = get_valid_evolution_targets(selected_card_for_action, false)
 		if valid_targets.size() > 0:
 			action_button.text = "EVOLVE"
 			action_button.disabled = false
-			action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+			action_button.theme = theme_green
 		else:
 			action_button.text = "CANNOT EVOLVE"
 			action_button.disabled = true
-			action_button.theme = load("res://uiresources/kenneyUI.tres")
+			action_button.theme = theme_disabled
 	
 	# For 99% of other cases, if a card has been selected from the hand AND it isn't turn 1 requiring a basic, then display the action the card can take	
 	else:
@@ -549,9 +554,9 @@ func update_action_button() -> void:
 		
 		# If the action button is disabled, change the colour. Change colour if it is enabled
 		if action_button.disabled:
-			action_button.theme = load("res://uiresources/kenneyUI.tres")
+			action_button.theme = theme_disabled
 		else:
-			action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+			action_button.theme = theme_green
 
 # Displays the prize cards for the specified player in their prize cards container
 func display_prize_cards(is_opponent: bool) -> void:
@@ -574,9 +579,6 @@ func display_prize_cards(is_opponent: bool) -> void:
 	# If prize cards array is empty, nothing to display
 	if prize_cards.size() == 0:
 		return
-	
-	# Load the card display script
-	var card_display_script = load("res://gdscripts/cardimage.gd")
 	
 	# Display each prize card
 	for prize_card in prize_cards:
@@ -608,7 +610,7 @@ func display_active_pokemon_energies(is_opponent: bool = false) -> void:
 	if active_pokemon.attached_energies.size() == 0:
 		return
 
-	var card_display_script = load("res://gdscripts/cardimage.gd")
+	
 	var energy_card_size = card_scales[11]
 	var card_width = energy_card_size.x
 	var overlap_offset = 80
@@ -732,10 +734,10 @@ func show_attack_buttons() -> void:
 		# Enable and colour green if requirements met, disable and grey out if not
 		if check_attack_requirements(attack, player_active_pokemon):
 			btn.disabled = false
-			btn.theme = load("res://uiresources/kenneyUI-green.tres")
+			btn.theme = theme_green
 		else:
 			btn.disabled = true
-			btn.theme = load("res://uiresources/kenneyUI.tres")
+			btn.theme = theme_disabled
 		
 		# bind(i) locks the current index into the callable so each button calls with its own attack index
 		btn.pressed.connect(perform_attack.bind(i))
@@ -802,15 +804,15 @@ func update_main_screen_buttons() -> void:
 	)
 
 	if should_disable:
-		$BUTTONS/main_screen_buttons_container/button_main_attack.theme = load("res://uiresources/kenneyUI.tres")
-		$BUTTONS/main_screen_buttons_container/button_main_power.theme = load("res://uiresources/kenneyUI.tres")
-		$BUTTONS/main_screen_buttons_container/button_main_retreat.theme = load("res://uiresources/kenneyUI.tres")
-		$BUTTONS/main_screen_buttons_container/button_main_endturn.theme = load("res://uiresources/kenneyUI.tres")
+		$BUTTONS/main_screen_buttons_container/button_main_attack.theme = theme_disabled
+		$BUTTONS/main_screen_buttons_container/button_main_power.theme = theme_disabled
+		$BUTTONS/main_screen_buttons_container/button_main_retreat.theme = theme_disabled
+		$BUTTONS/main_screen_buttons_container/button_main_endturn.theme = theme_disabled
 	else:
-		$BUTTONS/main_screen_buttons_container/button_main_attack.theme = load("res://uiresources/kenneyUI-blue.tres")
-		$BUTTONS/main_screen_buttons_container/button_main_power.theme = load("res://uiresources/kenneyUI-blue.tres")
-		$BUTTONS/main_screen_buttons_container/button_main_retreat.theme = load("res://uiresources/kenneyUI-blue.tres")
-		$BUTTONS/main_screen_buttons_container/button_main_endturn.theme = load("res://uiresources/kenneyUI-blue.tres")	
+		$BUTTONS/main_screen_buttons_container/button_main_attack.theme = theme_blue
+		$BUTTONS/main_screen_buttons_container/button_main_power.theme = theme_blue
+		$BUTTONS/main_screen_buttons_container/button_main_retreat.theme = theme_blue
+		$BUTTONS/main_screen_buttons_container/button_main_endturn.theme = theme_blue	
 				
 	$BUTTONS/main_screen_buttons_container/button_main_attack.disabled = should_disable
 	$BUTTONS/main_screen_buttons_container/button_main_power.disabled = should_disable
@@ -832,7 +834,7 @@ func update_discard_pile_display(is_opponent: bool) -> void:
 	if discard.size() == 0:
 		return
 	
-	var card_display_script = load("res://gdscripts/cardimage.gd")
+	
 	var top_card = discard.back()
 	var top_display = TextureRect.new()
 	top_display.set_script(card_display_script)
@@ -903,7 +905,7 @@ func show_floating_label(message: String, spawn_position: Vector2, upwards: bool
 	label.modulate = Color(1, 1, 1, 1)
 	
 	# Apply kenney theme for the pixel font, then override colour and size
-	label.theme = load("res://uiresources/kenneyUI.tres")
+	label.theme = theme_disabled
 	label.add_theme_color_override("font_color", Color.WHITE)
 	label.add_theme_color_override("font_outline_color", Color.BLACK)
 	label.add_theme_constant_override("outline_size", 10)
@@ -926,7 +928,7 @@ func show_floating_label(message: String, spawn_position: Vector2, upwards: bool
 func animate_card_a_to_b(from_node: Control, to_node: Control, animation_speed: float = 0.8, custom_texture: Texture2D = null, custom_size: Vector2 = Vector2(83, 113)) -> void:
 	$animation_input_blocker.visible = true
 	var card_image = TextureRect.new()
-	card_image.texture = custom_texture if custom_texture else load("res://cardimages/cardbacksanddecks/cardbacksmall.png")
+	card_image.texture = custom_texture if custom_texture else card_back_texture
 	card_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	card_image.custom_minimum_size = custom_size
 	card_image.size = custom_size
@@ -978,7 +980,7 @@ func animate_retreat(old_active: card_object, new_active: card_object, discarded
 		await animate_energies_to_discard(discarded_energies, old_active, is_opponent)
 		update_discard_pile_display(is_opponent)
 	
-	display_active_pokemon_energies()
+	display_active_pokemon_energies(is_opponent)
 	
 	await show_message(old_active.metadata["name"].to_upper() + " RETREATED TO THE BENCH!")
 	
@@ -1063,36 +1065,33 @@ func get_type_colour(type_name: String) -> Color:
 		_: return Color(1.0, 1.0, 1.0)
 
 # Plays a one-shot upward particle burst over a pokemon card for evolution
-func play_evolution_effect(pokemon: card_object) -> void:
-	var target_pos: Vector2
-	var target_size: Vector2
-	var is_active: bool = false
-
-	# Determine position by checking identity against known game variables directly
-	# This avoids relying on current_location or child node lookups which can be stale
+# Determines a pokemon's screen position and size by checking against known game variables
+# Returns {"position": Vector2, "size": Vector2, "is_active": bool} or empty dict if not found
+func get_pokemon_screen_location(pokemon: card_object) -> Dictionary:
 	if pokemon == opponent_active_pokemon:
-		target_pos = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container.global_position
-		target_size = card_scales[3.5]
-		is_active = true
+		return {"position": $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container.global_position, "size": card_scales[3.5], "is_active": true}
 	elif pokemon == player_active_pokemon:
-		target_pos = $ACTIVE_POKEMON/PLAYER/player_active_pokemon_container.global_position
-		target_size = card_scales[3.5]
-		is_active = true
+		return {"position": $ACTIVE_POKEMON/PLAYER/player_active_pokemon_container.global_position, "size": card_scales[3.5], "is_active": true}
 	elif pokemon in opponent_bench:
 		var index = opponent_bench.find(pokemon)
-		target_size = card_scales[11]
+		var size = card_scales[11]
 		var separation = $CARD_COLLECTIONS/OPPONENT/opponent_bench_container.get_theme_constant("separation")
-		target_pos = $CARD_COLLECTIONS/OPPONENT/opponent_bench_container.global_position + Vector2(index * (target_size.x + separation), 0)
+		return {"position": $CARD_COLLECTIONS/OPPONENT/opponent_bench_container.global_position + Vector2(index * (size.x + separation), 0), "size": size, "is_active": false}
 	elif pokemon in player_bench:
 		var index = player_bench.find(pokemon)
-		target_size = card_scales[11]
+		var size = card_scales[11]
 		var separation = $CARD_COLLECTIONS/PLAYER/player_bench_container.get_theme_constant("separation")
-		target_pos = $CARD_COLLECTIONS/PLAYER/player_bench_container.global_position + Vector2(index * (target_size.x + separation), 0)
-	else:
+		return {"position": $CARD_COLLECTIONS/PLAYER/player_bench_container.global_position + Vector2(index * (size.x + separation), 0), "size": size, "is_active": false}
+	return {}
+
+func play_evolution_effect(pokemon: card_object) -> void:
+	var loc = get_pokemon_screen_location(pokemon)
+	if loc.is_empty():
 		print("WARNING: play_evolution_effect - could not locate pokemon: ", pokemon.metadata["name"])
 		return
-
-	print("EVOLUTION EFFECT: ", pokemon.metadata["name"], " | active=", is_active, " | pos=", target_pos, " | size=", target_size)
+	var target_pos = loc["position"]
+	var target_size = loc["size"]
+	var is_active = loc["is_active"]
 
 	var particles = CPUParticles2D.new()
 	add_child(particles)
@@ -1136,35 +1135,13 @@ func play_evolution_effect(pokemon: card_object) -> void:
 	
 # Plays a one-shot upward particle burst when energy is attached to a pokemon
 func play_energy_attached_effect(pokemon: card_object, energy_card: card_object) -> void:
-	var target_pos: Vector2
-	var target_size: Vector2
-	var is_active: bool = false
-
-	# Determine position by checking identity against known game variables directly
-	# This avoids relying on current_location or child node lookups which can be stale
-	if pokemon == opponent_active_pokemon:
-		target_pos = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container.global_position
-		target_size = card_scales[3.5]
-		is_active = true
-	elif pokemon == player_active_pokemon:
-		target_pos = $ACTIVE_POKEMON/PLAYER/player_active_pokemon_container.global_position
-		target_size = card_scales[3.5]
-		is_active = true
-	elif pokemon in opponent_bench:
-		var index = opponent_bench.find(pokemon)
-		target_size = card_scales[11]
-		var separation = $CARD_COLLECTIONS/OPPONENT/opponent_bench_container.get_theme_constant("separation")
-		target_pos = $CARD_COLLECTIONS/OPPONENT/opponent_bench_container.global_position + Vector2(index * (target_size.x + separation), 0)
-	elif pokemon in player_bench:
-		var index = player_bench.find(pokemon)
-		target_size = card_scales[11]
-		var separation = $CARD_COLLECTIONS/PLAYER/player_bench_container.get_theme_constant("separation")
-		target_pos = $CARD_COLLECTIONS/PLAYER/player_bench_container.global_position + Vector2(index * (target_size.x + separation), 0)
-	else:
+	var loc = get_pokemon_screen_location(pokemon)
+	if loc.is_empty():
 		print("WARNING: play_energy_attached_effect - could not locate pokemon: ", pokemon.metadata["name"])
 		return
-
-	print("ENERGY EFFECT: ", pokemon.metadata["name"], " | active=", is_active, " | pos=", target_pos, " | size=", target_size)
+	var target_pos = loc["position"]
+	var target_size = loc["size"]
+	var is_active = loc["is_active"]
 
 	var particles = CPUParticles2D.new()
 	add_child(particles)
@@ -1205,15 +1182,6 @@ func play_energy_attached_effect(pokemon: card_object, energy_card: card_object)
 	await get_tree().create_timer(1).timeout
 	particles.queue_free()
 
-# Animate a quick attack effect for when an attack is used
-func play_attack_animation(pokemon: card_object, is_opponent: bool) -> void:
-
-	
-	if is_opponent: 
-		print("Opponent attacking")
-	else:
-		print("Player attacking")
-		
 ############################################################## END ANIMATION FUNCTIONS ###############################################################
 ######################################################################################################################################################
 
@@ -1398,12 +1366,12 @@ func start_bench_setup_phase() -> void:
 	bench_setup_phase_active = true
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "Select a Card"
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled
 	
 	selected_card_for_action = null
 	
 	$cancel_selection_mode_view_button.text = "Done"
-	$cancel_selection_mode_view_button.theme = load("res://uiresources/kenneyUI-green.tres")
+	$cancel_selection_mode_view_button.theme = theme_green
 	
 	# Show the hand again for bench pokemon selection
 	show_enlarged_array_selection_mode(player_hand)	
@@ -1555,7 +1523,7 @@ func get_card_action(card: card_object) -> Dictionary:
 				if is_basic_pokemon(card):
 					return {"action": "SET_POKEMON", "button_text": "Place on Bench"}
 				else:
-					# Stage 1 or Stage 2 - we'll handle evolution later
+					# Stage 1 or Stage 2 cannot be played directly
 					return {"action": "EVOLVE", "button_text": "Evolve"}
 			
 			"trainer":
@@ -1599,7 +1567,7 @@ func set_player_active_pokemon() -> void:
 			player_hand.erase(selected_card_for_action)
 			print("Removed pokemon from hand")
 		"bench":
-			# We'll implement this when we build the bench system
+			# Move from bench to active if needed
 			# For now: player_bench.erase(selected_card_for_action)
 			print("Removed pokemon from bench")
 	
@@ -1635,7 +1603,7 @@ func add_pokemon_to_bench(pokemon: card_object) -> void:
 			player_hand.erase(pokemon)
 			print("Removed pokemon from hand and added to bench: ", pokemon.metadata["name"])
 		"active":
-			# We'll handle bench promotions later if needed
+			# Moved from active to bench
 			print("Moved pokemon from active to bench")
 	
 	# Add the pokemon to the bench array
@@ -1703,55 +1671,32 @@ func start_energy_attachment() -> void:
 	
 # Add this new function after start_energy_attachment()
 func perform_energy_attachment() -> void:
-	# Validate that we have an energy card awaiting attachment
-	if energy_card_awaiting_target == null:
-		print("Error: No energy card awaiting attachment")
+	if energy_card_awaiting_target == null or selected_card_for_action == null:
+		print("Error: No energy card or target Pokemon selected")
 		return
 	
 	var energy_card = energy_card_awaiting_target
-	
-	# Validate that we have a target Pokemon selected
-	if selected_card_for_action == null:
-		print("Error: No target Pokemon selected")
-		return
-	
-	# Get the target Pokemon
 	var target_pokemon = selected_card_for_action
 	
-	# Add the energy to the Pokemon's attached energies array
-	target_pokemon.attached_energies.append(energy_card_awaiting_target)
-	
-	print("Attached ", energy_card_awaiting_target.metadata.get("name", "Unknown Energy"), " to ", target_pokemon.metadata.get("name", "Unknown Pokemon"))
-	
-	# Remove the energy card from the player's hand
-	player_hand.erase(energy_card_awaiting_target)
-	
-	# Set the flag so no more energies can be attached this turn
+	target_pokemon.attached_energies.append(energy_card)
+	print("Attached ", energy_card.metadata.get("name", "Unknown Energy"), " to ", target_pokemon.metadata.get("name", "Unknown Pokemon"))
+	player_hand.erase(energy_card)
 	player_energy_played_this_turn = true
 	
-	# Clear the attachment variables
+	# Clear the attachment variables and exit attach mode
 	energy_card_awaiting_target = null
 	selected_card_for_action = null
-	
-	# Exit attach mode
 	card_attach_mode_active = false
 	
-	# Return to normal UI
 	hide_selection_mode_display_main()
-	
-	# Refresh hand first so the energy visually disappears from it
-	display_hand_cards_array(player_hand, $CARD_COLLECTIONS/PLAYER/player_hand_hbox_container, card_scales[11])
+	refresh_hand_display(false)
 	
 	# Animate energy flying from hand to the target pokemon
 	var target_node = $ACTIVE_POKEMON/PLAYER/player_active_pokemon_energies if target_pokemon == player_active_pokemon else $CARD_COLLECTIONS/PLAYER/player_bench_container
-	var energy_set = energy_card.uid.split("-")[0]
-	var energy_texture = load("res://cardimages/" + energy_set + "/Small/" + energy_card.uid + ".png")
+	var energy_texture = get_card_texture(energy_card)
 	await animate_card_a_to_b($CARD_COLLECTIONS/PLAYER/player_hand_hbox_container, target_node, 0.2, energy_texture, card_scales[12])
 		
-	# Refresh the active Pokemon display to show the attached energy
 	display_pokemon(false)	
-	
-	# Display the attached energies on the active Pokemon
 	display_active_pokemon_energies()
 
 	await get_tree().process_frame
@@ -1901,7 +1846,7 @@ func player_pick_prize_card() -> void:
 	$cancel_selection_mode_view_button.visible = false
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "TAKE PRIZE"
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled
 
 
 ############################################### Start and end of turn checks and sets ################################################
@@ -1931,7 +1876,7 @@ func player_start_turn_checks() -> void:
 	if drawn_card == null:
 		return
 
-	display_hand_cards_array(player_hand, $CARD_COLLECTIONS/PLAYER/player_hand_hbox_container, card_scales[11])
+	refresh_hand_display(false)
 	update_deck_icon(false)
 	
 # Called when the player presses the end turn button to reset per-turn variables and begin next turn
@@ -2066,7 +2011,7 @@ func start_evolution() -> void:
 	
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "EVOLVE"
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled
 
 # Replaces a Pokemon on the field with its evolution, transferring all attachments and damage
 func perform_evolution(is_opponent: bool) -> void:
@@ -2172,7 +2117,7 @@ func start_retreat() -> void:
 	$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Select " + str(retreat_cost_remaining) + " energy card(s) to discard"
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = str(retreat_cost_remaining) + " ENERGY REMAINING"
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled
 
 # Shows the player's bench for selecting which Pokemon to swap into the active spot
 func start_retreat_bench_selection() -> void:
@@ -2186,7 +2131,7 @@ func start_retreat_bench_selection() -> void:
 	$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Choose a bench Pokemon to switch into the active spot"
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "MAKE ACTIVE"
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")#
+	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled#
 
 ########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
 ######################################################################################################################################################
@@ -2248,42 +2193,9 @@ func get_energy_provided_by_card(energy_card: card_object) -> Array:
 func check_attack_requirements(attack_dict: Dictionary, pokemon_card: card_object) -> bool:
 	if pokemon_card == null:
 		return false
-	
-	var required_cost: Array = attack_dict.get("cost", [])
-	if required_cost.size() == 0:
-		return true
-	
-	# Resolve all attached energy cards into a flat pool of type strings
-	var pool: Array = []
-	for attached in pokemon_card.attached_energies:
-		pool.append_array(get_energy_provided_by_card(attached))
-	
-	# Pass 1: satisfy typed requirements first, protecting them from colorless consumption
-	for requirement in required_cost:
-		if requirement == "Colorless":
-			continue
-		var exact_index = pool.find(requirement)
-		if exact_index != -1:
-			pool.remove_at(exact_index)
-			continue
-		# Fall back to an "Any" token if no exact match
-		var any_index = pool.find("Any")
-		if any_index != -1:
-			pool.remove_at(any_index)
-			continue
-		return false
-	
-	# Pass 2: colorless requirements consume whatever tokens remain
-	for requirement in required_cost:
-		if requirement != "Colorless":
-			continue
-		if pool.size() == 0:
-			return false
-		pool.remove_at(0)
-	
-	return true
+	return get_unmet_energy_count(attack_dict, pokemon_card) == 0
 
-############################################################## Actual attacking functions #####################################################
+													######## Actual attacking functions ##########
 													
 # Parses the numeric base damage value from an attack's "damage" field string
 # Strips non-numeric characters (e.g. "30+" becomes 30, "×2" etc.)
@@ -2581,7 +2493,7 @@ func handle_post_knockout(is_opponent: bool) -> void:
 		$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "SELECT POKEMON"
 		$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
 		$opponent_turn_input_blocker.visible = false
-		$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+		$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled
 		await knockout_replacement_chosen
 		$opponent_turn_input_blocker.visible = true
 	
@@ -2927,9 +2839,9 @@ func apply_draw_effect(effect: Dictionary, is_opponent_attacking: bool) -> void:
 	var who = "CPU" if is_opponent_attacking else "Player"
 	await show_message(who.to_upper() + " DREW " + str(count) + " CARD(S)!")
 	if is_opponent_attacking:
-		display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 400, 7)
+		refresh_hand_display(true)
 	else:
-		display_hand_cards_array(player_hand, $CARD_COLLECTIONS/PLAYER/player_hand_hbox_container, card_scales[11])
+		refresh_hand_display(false)
 	print("EFFECT APPLIED: ", who, " drew ", count, " card(s)")
 
 # Heals damage from the attacker
@@ -3191,7 +3103,7 @@ func apply_card_text_effects(effects: Array, attacker: card_object, defender: ca
 func get_all_basic_pokemon(card_array: Array) -> Array:
 	var basic_pokemon = []
 	for card in card_array:
-		if card.metadata.get("supertype") == "Pokémon" and card.metadata.has("subtypes") and card.metadata["subtypes"].has("Basic"):
+		if is_basic_pokemon(card):
 			basic_pokemon.append(card)
 	return basic_pokemon
 
@@ -3272,7 +3184,6 @@ func get_minimum_cost_attack(pokemon_card: card_object) -> Dictionary:
 	var min_cost_attack = null
 	var min_cost = 999
 	
-	# Loop through all attacks to find the one with lowest converted energy cost
 	for attack in pokemon_card.metadata["attacks"]:
 		var cost = int(attack.get("convertedEnergyCost", 999))
 		if cost < min_cost:
@@ -3282,28 +3193,9 @@ func get_minimum_cost_attack(pokemon_card: card_object) -> Dictionary:
 	if min_cost_attack == null:
 		return {}
 	
-	# Extract damage value - damage can be "30", "40+", "50x", "60-" or other formats
-	var damage_str = min_cost_attack.get("damage", "0")
-	var damage = 0
-	
-	# Only parse the number part, ignoring any suffixes like +, -, or x
-	if damage_str != "" and damage_str[0].is_valid_int():
-		var numeric_part = ""
-		for numberchar in damage_str:
-			if numberchar.is_valid_int():
-				numeric_part += numberchar
-			else:
-				break
-		if numeric_part != "":
-			damage = int(numeric_part)
-	
-		#print("COST: ", min_cost)
-		#print("damage: ", damage)
-		#print("attack_name: ", min_cost_attack.get("name", ""))
-	
 	return {
 		"cost": min_cost,
-		"damage": damage,
+		"damage": parse_attack_base_damage(min_cost_attack),
 		"attack_name": min_cost_attack.get("name", ""),
 		"text": min_cost_attack.get("text", "")
 	}
@@ -3317,24 +3209,10 @@ func get_maximum_damage_attack(pokemon_card: card_object) -> Dictionary:
 	var max_damage_attack = null
 	
 	for attack in pokemon_card.metadata["attacks"]:
-		var damage_str = attack.get("damage", "")
-		
-		# Skip attacks with no damage value
-		if damage_str == "" or damage_str[0].is_valid_int() == false:
-			continue
-		
-		var numeric_part = ""
-		for numericchar in damage_str:
-			if numericchar.is_valid_int():
-				numeric_part += numericchar
-			else:
-				break
-		
-		if numeric_part != "":
-			var damage = int(numeric_part)
-			if damage > max_damage:
-				max_damage = damage
-				max_damage_attack = attack
+		var damage = parse_attack_base_damage(attack)
+		if damage > max_damage:
+			max_damage = damage
+			max_damage_attack = attack
 	
 	if max_damage_attack == null:
 		return {}
@@ -3831,33 +3709,15 @@ func evaluate_single_pokemon(pokemon: card_object) -> Dictionary:
 
 # Parses an attack's damage string and returns min/max estimate (placeholder until full effect parsing)
 func get_attack_damage_range(attack: Dictionary) -> Dictionary:
+	var base_damage = parse_attack_base_damage(attack)
 	var damage_str = str(attack.get("damage", "0"))
 
-	var numeric_part = ""
-	for character in damage_str:
-		if character.is_valid_int():
-			numeric_part += character
-		else:
-			break
-	var base_damage = int(numeric_part) if numeric_part != "" else 0
-
-	# Fixed damage: no suffix
-	if damage_str == numeric_part or damage_str == "":
-		return {"min": base_damage, "max": base_damage}
-
-	# "x" suffix: assume min 0, max double base as rough estimate
 	if "x" in damage_str or "×" in damage_str:
 		return {"min": 0, "max": base_damage * 2}
-
-	# "+" suffix: base is guaranteed, estimate +10 bonus
 	if "+" in damage_str:
 		return {"min": base_damage, "max": base_damage + 10}
-
-	# "-" suffix: could be reduced to 0, base is max
 	if "-" in damage_str:
 		return {"min": 0, "max": base_damage}
-
-	# TODO: Replace estimates above with parsed_effect_total_damage() call
 
 	return {"min": base_damage, "max": base_damage}
 
@@ -4826,7 +4686,7 @@ func opponent_setup_pokemon_from_hand() -> void:
 	
 	# Update displays
 	display_pokemon(true)  # true = opponent
-	display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 500,6)
+	refresh_hand_display(true)
 
 # Handles start-of-turn duties then hands off to the CPU decision orchestrator
 func opponent_start_turn_checks() -> void:
@@ -4842,7 +4702,7 @@ func opponent_start_turn_checks() -> void:
 	if drawn_card == null:
 		return
 
-	display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 400, 7)
+	refresh_hand_display(true)
 	update_deck_icon(true)
 
 	# Future: resolve any start-of-turn triggered effects here
@@ -4919,7 +4779,7 @@ func cpu_phase_evolution() -> void:
 
 		display_pokemon(true)
 		display_active_pokemon_energies(true)
-		display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 400, 7)
+		refresh_hand_display(true)
 
 		await get_tree().process_frame
 	
@@ -5036,11 +4896,10 @@ func cpu_phase_energy_attachment(cpu_eval: Dictionary) -> void:
 	await show_message("Opponent attached " + energy.metadata["name"].to_upper() + " to " + target.metadata["name"].to_upper() + "!")
 
 	var energy_target_node = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_energies if target == opponent_active_pokemon else $CARD_COLLECTIONS/OPPONENT/opponent_bench_container
-	var energy_set = energy.uid.split("-")[0]
-	var energy_texture = load("res://cardimages/" + energy_set + "/Small/" + energy.uid + ".png")
+	var energy_texture = get_card_texture(energy)
 	await animate_card_a_to_b($CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, energy_target_node, 0.2, energy_texture, card_scales[12])
 
-	display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 400, 7)
+	refresh_hand_display(true)
 	display_pokemon(true)
 	display_active_pokemon_energies(true)
 	await get_tree().process_frame
@@ -5129,16 +4988,16 @@ func cpu_phase_attack(cpu_eval: Dictionary) -> void:
 		display_active_pokemon_energies(true)
 		return
 	
-	if await check_defender_invincible(player_active_pokemon):
-		display_active_pokemon_energies(true)
-		return
-
 	if await handle_attack_blind(opponent_active_pokemon, true):
 		display_active_pokemon_energies(true)
 		return
 	
+	if await check_defender_invincible(player_active_pokemon):
+		display_active_pokemon_energies(true)
+		return
+
 	final_damage = await apply_defender_no_damage_shield(player_active_pokemon, final_damage)
-	
+
 	await display_and_apply_attack_damage(opponent_active_pokemon, player_active_pokemon, final_damage, result["modifiers"], true)
 	
 	await process_attack_effects(chosen_attack, opponent_active_pokemon, player_active_pokemon, true)
@@ -5182,7 +5041,7 @@ func cpu_phase_bench_play() -> void:
 		var card_texture = get_card_texture(best_card)
 		await animate_card_a_to_b($CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, $CARD_COLLECTIONS/OPPONENT/opponent_bench_container, 0.3, card_texture, card_scales[11])
 		display_pokemon(true)
-		display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 400, 7)
+		refresh_hand_display(true)
 
 # R.5: Selects the best bench replacement and performs the retreat
 func execute_cpu_retreat(cpu_eval: Dictionary) -> void:
@@ -5256,7 +5115,7 @@ func action_button_pressed_perform_action() -> void:
 	
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "Select a Card"
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled
 	
 	if retreat_mode_active:
 		retreat_mode_active = false
@@ -5344,7 +5203,7 @@ func action_button_pressed_perform_action() -> void:
 		evolution_mode_active = false
 		
 		hide_selection_mode_display_main()
-		display_hand_cards_array(player_hand, $CARD_COLLECTIONS/PLAYER/player_hand_hbox_container, card_scales[11])
+		refresh_hand_display(false)
 		
 		var target_node = null
 		var card_scale_to_animate = card_scales[12]
@@ -5398,7 +5257,7 @@ func action_button_pressed_perform_action() -> void:
 				# First turn - SET AS ACTIVE POKEMON pokemon
 				set_player_active_pokemon()
 				display_pokemon(false)  # false = player
-				display_hand_cards_array(player_hand, $CARD_COLLECTIONS/PLAYER/player_hand_hbox_container, card_scales[11])
+				refresh_hand_display(false)
 				match_just_started_basic_pokemon_required = false
 				$BUTTONS/SELECTION_BUTTONS/card_action_button.position.x -= 210 
 				
@@ -5407,7 +5266,7 @@ func action_button_pressed_perform_action() -> void:
 			else:
 				var bench_card = selected_card_for_action
 				add_pokemon_to_bench(bench_card)
-				display_hand_cards_array(player_hand, $CARD_COLLECTIONS/PLAYER/player_hand_hbox_container, card_scales[11])
+				refresh_hand_display(false)
 				
 				if bench_setup_phase_active:
 					selected_card_for_action = null
@@ -5479,7 +5338,7 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 		$opponent_turn_input_blocker.visible = true
 		bench_setup_phase_active = false
 		$cancel_selection_mode_view_button.text = "Cancel"
-		$cancel_selection_mode_view_button.theme = load("res://uiresources/kenneyUI-red.tres")
+		$cancel_selection_mode_view_button.theme = theme_red
 		draw_prize_cards(true)
 		hide_selection_mode_display_main()
 	
@@ -5532,7 +5391,7 @@ func this_card_clicked(clicked_card: card_object) -> void:
 			# Update button to show it's ready to attach
 			$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "ATTACH ENERGY"
 			$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = false
-			$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+			$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_green
 			return
 		
 		# EVOLUTION MODE EVOLUTION MODE EVOLUTION MODE EVOLUTION MODE EVOLUTION MODE EVOLUTION MODE EVOLUTION MODE	
@@ -5552,7 +5411,7 @@ func this_card_clicked(clicked_card: card_object) -> void:
 			
 			$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "EVOLVE"
 			$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = false
-			$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+			$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_green
 			return
 		
 		# RETREAT MODE RETREAT MODE RETREAT MODE RETREAT MODE RETREAT MODE RETREAT MODE RETREAT MODE RETREAT MODE
@@ -5579,11 +5438,11 @@ func this_card_clicked(clicked_card: card_object) -> void:
 			if retreat_cost_remaining <= 0:
 				$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "DISCARD & RETREAT"
 				$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = false
-				$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+				$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_green
 			else:
 				$BUTTONS/SELECTION_BUTTONS/card_action_button.text = str(retreat_cost_remaining) + " ENERGY REMAINING"
 				$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-				$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI.tres")
+				$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled
 			return
 		
 		elif retreat_bench_selection_active or knockout_bench_selection_active:
@@ -5600,7 +5459,7 @@ func this_card_clicked(clicked_card: card_object) -> void:
 			
 			$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "SET AS ACTIVE"
 			$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = false
-			$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = load("res://uiresources/kenneyUI-green.tres")
+			$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_green
 			return
 			
 			
@@ -5706,10 +5565,6 @@ func _ready() -> void:
 	$BUTTONS/SELECTION_BUTTONS/card_action_button.pressed.connect(action_button_pressed_perform_action)
 	$BUTTONS/main_screen_attack_buttons_container/cancel_attack_mode_button.pressed.connect(hide_attack_buttons)
 	$BUTTONS/main_screen_buttons_container/button_main_attack.pressed.connect(show_attack_buttons)
-	$BUTTONS/main_screen_attack_buttons_container.visible = false
-	
-	$BUTTONS/main_screen_buttons_container/button_main_attack.pressed.connect(show_attack_buttons)
-	$BUTTONS/main_screen_attack_buttons_container/cancel_attack_mode_button.pressed.connect(hide_attack_buttons)
 	$BUTTONS/main_screen_attack_buttons_container.visible = false
 	
 	$BUTTONS/main_screen_buttons_container/button_main_power.pressed.connect(flip_coin)

@@ -134,9 +134,6 @@ func _input(event: InputEvent) -> void:
 			
 			card_clicked.emit(card_ref)
 			
-			# Tell main script a card was clicked
-			get_tree().root.get_child(0).card_was_clicked_this_frame = true
-			
 			# Get reference to the main script to check if we're in selection mode
 			var main_script = get_tree().root.get_child(0)
 			if main_script.get_node("messagebox_container").visible:

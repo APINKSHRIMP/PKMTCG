@@ -1,5 +1,5 @@
 63f7b34db8d8cdea90c76aacccf841ec
-::res://::1772740715
+::res://::1772742637
 ::res://backgrounds/::1771447576
 background1.png::CompressedTexture2D::4319622225189491881::1770149641::1770149643::1::::<><><>0<>0<>f44210daa537a7438e038270b4163f34<>res://.godot/imported/background1.png-d54be7a97eb8f16b3a047d474f654630.ctex::
 background2.png::CompressedTexture2D::5827825881536004575::1771447575::1771447576::1::::<><><>0<>0<>e1d8de21c9d5d35781c76d2a8e72907c<>res://.godot/imported/background2.png-3a3822be768a8747a8aeb9c8209ec85c.ctex::
@@ -1694,13 +1694,13 @@ Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Peli
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Pokemon Square.png::CompressedTexture2D::7975275552531345460::1770808341::1771183064::1::::<><><>0<>0<>ee287859ff216f171adf577dae60c58a<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Pokemon Square.png-f5412f9af4fcfce81f675190407edccd.ctex::
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Wake Up Forest.png::CompressedTexture2D::9016169070841043957::1770808384::1771183064::1::::<><><>0<>0<>47055b80a4ee4919c2d6e4ae2f977f83<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Wake Up Forest.png-d83d0c9873d41b1328175f397b82083a.ctex::
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Whiscash Pond.png::CompressedTexture2D::564202538199469867::1770808387::1771183064::1::::<><><>0<>0<>49c17e0e692eab42328086fad63f0563<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Whiscash Pond.png-dd496132545824659bc15464d84a1900.ctex::
-::res://gdscenes/::1772739930
-backgroundscroll.gdshader::Shader::4939812685521450649::1772738820::0::1::::<><><>0<>0<><>::
-MatchStart.tscn::PackedScene::8327961863846055698::1772739930::0::1::::<><><>0<>0<><>::uid://p2djeecymjo7::::res://gdscripts/main_match_script.gd<>uid://ccm481fk14lc8::::res://gdscenes/backgroundscroll.gdshader<>uid://cpbbo8tyee1n4::::res://backgrounds/background2.png<>uid://mbsg4xqnedxi::::res://uiresources/kenneyUI-red.tres<>uid://bnhngmri4tfgr::::res://uiresources/kenneyUI-green.tres<>uid://bb6vwl0h1flws::::res://uiresources/kenneyUI-blue.tres<>uid://41l5prxtsvdk::::res://gameimageassets/menutiles/bluesquaremessagebox.png<>uid://dmay144mc3hmo::::res://cardimages/cardbacksanddecks/1deckfulltrans_clean.png<>uid://6shp5ck1tnja::::res://uiresources/kenneyUI.tres
-::res://gdscripts/::1772740705
-cardimage.gd::GDScript::8839746712978955150::1772301164::0::1::::<>TextureRect<><>0<>0<><>::
+::res://gdscenes/::1772742523
+backgroundscroll.gdshader::Shader::4939812685521450649::1772742523::0::1::::<><><>0<>0<><>::
+MatchStart.tscn::PackedScene::8327961863846055698::1772742523::0::1::::<><><>0<>0<><>::uid://7wdlo4k0jxlh::::res://gdscripts/main_match_script.gd<>uid://ccm481fk14lc8::::res://gdscenes/backgroundscroll.gdshader<>uid://cpbbo8tyee1n4::::res://backgrounds/background2.png<>uid://mbsg4xqnedxi::::res://uiresources/kenneyUI-red.tres<>uid://bnhngmri4tfgr::::res://uiresources/kenneyUI-green.tres<>uid://bb6vwl0h1flws::::res://uiresources/kenneyUI-blue.tres<>uid://41l5prxtsvdk::::res://gameimageassets/menutiles/bluesquaremessagebox.png<>uid://dmay144mc3hmo::::res://cardimages/cardbacksanddecks/1deckfulltrans_clean.png<>uid://6shp5ck1tnja::::res://uiresources/kenneyUI.tres
+::res://gdscripts/::1772742523
+cardimage.gd::GDScript::8839746712978955150::1772742269::0::1::::<>TextureRect<><>0<>0<><>::
 card_class_object.gd::GDScript::7050753202451257024::1772460377::0::1::::card_object<>RefCounted<><>0<>0<><>::
-main_match_script.gd::GDScript::4550390910175263747::1772740621::0::1::::<>Control<><>0<>0<><>::
+main_match_script.gd::GDScript::2291661882331978033::1772742523::0::1::::<>Control<><>0<>0<><>::
 ::res://icon/::1770067344
 RayquazaSprite.png::CompressedTexture2D::1656207969913314715::1770062602::1770067344::1::::<><><>0<>0<>5c1b9796eaa598df7e62bda5eabd4b61<>res://.godot/imported/RayquazaSprite.png-e2b18131d0ebafe8706566d3d48f1901.ctex::
 ::res://opponentdeckdata/::1772655686
@@ -1724,11 +1724,11 @@ NewEffectsFG.json::JSON::-1::1772655442::0::1::::<><><>0<>0<><>::
 NewEffectsWG.json::JSON::-1::1772655741::0::1::::<><><>0<>0<><>::
 StatusChecks.json::JSON::-1::1772472227::0::1::::<><><>0<>0<><>::
 testingchanseyonly.json::JSON::-1::1772301254::0::1::::<><><>0<>0<><>::
-::res://uiresources/::1772738820
-kenneyUI-blue.tres::Theme::2521920198750954642::1772738820::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
-kenneyUI-green.tres::Theme::3314126987880200601::1772738820::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
-kenneyUI-red.tres::Theme::845435681495830482::1772738820::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+::res://uiresources/::1772742523
+kenneyUI-blue.tres::Theme::2521920198750954642::1772742523::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+kenneyUI-green.tres::Theme::3314126987880200601::1772742523::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+kenneyUI-red.tres::Theme::845435681495830482::1772742523::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
 kenneyUI-yellow.tres::Theme::545356902672929525::1770817546::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
-kenneyUI.tres::Theme::2213466337489992798::1772738820::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+kenneyUI.tres::Theme::2213466337489992798::1772742523::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
 kenvector_future.ttf::FontFile::4191331151886121916::1769790644::1769790650::1::::<><><>0<>0<>b5f2fbf7341fa91df600bf6a2cd79529<>res://.godot/imported/kenvector_future.ttf-0df52ea86bc6bd37fdc474d8a1e4c7a4.fontdata::
 UIpack_vector.svg::CompressedTexture2D::8966962219257996827::1769790644::1769790651::1::::<><><>0<>0<>85e2938788acfa1d2a1358e64153b160<>res://.godot/imported/UIpack_vector.svg-de0b2e46bae3527b25cbbf9a474f3ed7.ctex::
