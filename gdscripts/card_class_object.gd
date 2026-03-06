@@ -30,6 +30,28 @@ var has_no_damage: bool = false
 var is_invincible: bool = false
 var has_destiny_bond: bool = false
 
+# Attack disable tracking: { "attack_name": "entire_game" | "while_in_play" | "end_of_turn" }
+var disabled_attacks: Dictionary = {}
+
+# Damage threshold shield (Onix Harden / Mr. Mime Invisible Wall)
+# If > 0, damage AT OR BELOW this value is prevented entirely
+var shielded_damage_threshold: int = 0
+
+# Porygon Conversion temporary type overrides (reset when leaving play)
+var temporary_weakness: String = ""   # Overrides weakness type if set
+var temporary_resistance: String = "" # Overrides resistance type if set
+
+# Utility: get damage counters (each counter = 10 damage)
+func get_damage_counters() -> int:
+	var max_hp = int(metadata.get("hp", "0"))
+	if max_hp <= 0:
+		return 0
+	return (max_hp - current_hp) / 10
+
+# Utility: get max HP from metadata
+func get_max_hp() -> int:
+	return int(metadata.get("hp", "0"))
+
 # Constructor - initialize the card with a UID and load its metadata
 func _init(card_uid: String, card_metadata: Dictionary) -> void:
 	uid = card_uid
