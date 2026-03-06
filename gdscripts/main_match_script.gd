@@ -9,8 +9,8 @@ extends Control
 # TESTING VARIABLES
 var amount_of_cards_to_draw = 15	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
 var hide_hidden_cards = true      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
-var opponent_deck_name = "TestingDratiniOnly"
-var player_deck_name = "Testing"
+var opponent_deck_name = "TestingVoltorbOnly"
+var player_deck_name = "FinalEffects"
 
 # TESTING - There are different rulesets for burn and confusion depending on what generation/set is being played.
 # Additionally I personally felt base set confusion retreat rule is horrendous, so I have created a personal rule that doesn't give free retreat but doesn't force discard then coin flip
@@ -85,6 +85,10 @@ var defender_energy_discard_active: bool = false
 # Forced switch selection (Whirlwind, Lure)  
 var forced_switch_selection_active: bool = false
 
+# Track whether an attack was made this turn (for mirror move clearing)
+var player_attacked_this_turn: bool = false
+var opponent_attacked_this_turn: bool = false
+
 # PRELOADED RESOURCES
 var theme_disabled = preload("res://uiresources/kenneyUI.tres")
 var theme_green = preload("res://uiresources/kenneyUI-green.tres")
@@ -139,6 +143,7 @@ signal forced_switch_chosen
 @onready var coin_texture = $coin_flip_container/coin_flip_texture
 @onready var opponent_blocker = $opponent_turn_input_blocker
 @onready var animation_blocker = $animation_input_blocker
+@onready var buttons_only_blocker = $allow_buttons_only_blocker
 
 # QUICK REFERENCE VECTORS JUST USED FOR EASY SWAPPING OF SIZES FOR DEVELOPMENT
 var card_scales: Dictionary = {
@@ -433,8 +438,14 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2, f
 			var larger_size = Vector2(card_size.x * 1.2, card_size.y * 1.2)
 			hand_card_to_display.load_card_image(this_card_in_hand.uid, larger_size, this_card_in_hand)
 			
-			# Align to bottom
+			# Align active pokemon to bottom
 			hand_card_to_display.size_flags_vertical = Control.SIZE_SHRINK_END
+			
+			# Also align all bench cards to bottom so they line up with the active pokemon
+			for child_idx in range(hand_container.get_child_count() - 2):  # Skip spacer and active
+				var child_node = hand_container.get_child(child_idx)
+				if child_node is TextureRect:
+					child_node.size_flags_vertical = Control.SIZE_SHRINK_END
 						
 # Refreshes the hand display for either player or opponent using standard sizes and containers
 func refresh_hand_display(is_opponent: bool) -> void:
@@ -1795,7 +1806,7 @@ func draw_card_from_deck(is_opponent: bool) -> card_object:
 	return drawn_card
 
 # Flips a coin with animation, blocks input, shows result message, returns true for heads
-func flip_coin() -> bool:
+func flip_coin(silent: bool = false) -> bool:
 	var result: bool = (randi() % 2 == 0)
 
 	# Show the input-blocking overlay and set initial coin image to heads
@@ -1838,9 +1849,13 @@ func flip_coin() -> bool:
 		sparkles = start_sparkle_effect(coin)
 	coin.scale.y = 1.0
 	
-	# Show result message using existing message system
-	var result_text = "HEADS" if result else "TAILS"
-	await show_message("Coin landed on " + result_text + "!")
+	if silent:
+		# In silent mode, just wait briefly and clean up without showing a message
+		await get_tree().create_timer(0.2).timeout
+	else:
+		# Show result message using existing message system
+		var result_text = "HEADS" if result else "TAILS"
+		await show_message("Coin landed on " + result_text + "!")
 	
 	# Clean up sparkles before hiding coin
 	if sparkles:
@@ -1972,12 +1987,15 @@ func inbetween_turn_checks(player_turn_just_ended: bool = true) -> void:
 	reset_field_pokemon_turn_flags(false)
 	reset_field_pokemon_turn_flags(true)
 	
-	# Clear mirror move tracking from the turn that just ended
-	# The attack from THIS turn is still available for the next turn's mirror move
+	# Mirror move tracking: clear if the side that just ended their turn didn't attack
 	if player_turn_just_ended:
-		last_attack_on_opponent = {}  # Clear so opponent can't mirror next turn's old data
+		if not player_attacked_this_turn:
+			last_attack_on_opponent = {}
+		player_attacked_this_turn = false
 	else:
-		last_attack_on_player = {}  # Clear so player can't mirror next turn's old data
+		if not opponent_attacked_this_turn:
+			last_attack_on_player = {}
+		opponent_attacked_this_turn = false
 
 	# Remove end-of-turn statuses from the pokemon whose owner's turn just ended
 	if player_turn_just_ended:
@@ -2349,18 +2367,21 @@ func handle_attack_blind(attacker: card_object, is_opponent: bool) -> bool:
 
 # Checks if the defender is fully invincible and blocks the attack entirely
 # Returns true if the attack is blocked
-func check_defender_invincible(defender: card_object) -> bool:
+func check_defender_invincible(defender: card_object, is_opponent: bool = false) -> bool:
 	if not defender.is_invincible:
 		return false
-	await show_message(defender.metadata["name"].to_upper() + " IS FULLY PROTECTED! ATTACK BLOCKED!")
+	var label_pos = Vector2(530, 300) if !is_opponent else Vector2(1030, 300)
+	show_floating_label("NO EFFECT", label_pos, true)
+	print("INVINCIBLE: Attack fully blocked on ", defender.metadata["name"])
 	return true
 
 # Checks if the defender has a no-damage shield active
 # Returns the adjusted damage (0 if shielded, otherwise the original value)
-func apply_defender_no_damage_shield(defender: card_object, damage: int) -> int:
+func apply_defender_no_damage_shield(defender: card_object, damage: int, is_opponent: bool = false) -> int:
 	if not defender.has_no_damage:
 		return damage
-	await show_message(defender.metadata["name"].to_upper() + " IS SHIELDED! DAMAGE PREVENTED!")
+	var label_pos = Vector2(530, 300) if !is_opponent else Vector2(1030, 300)
+	show_floating_label("NO DAMAGE", label_pos, true)
 	print("NO DAMAGE: Defender shield active, damage set to 0")
 	return 0
 
@@ -2384,8 +2405,7 @@ func resolve_attack_variable_damage(attack: Dictionary, attacker: card_object, d
 	var attack_failed: bool = false
 	
 	# ---- CONDITION-GATED ATTACKS (must check first - attack may not proceed) ----
-	# Haunter Dream Eater: "You can't use this attack unless the Defending Pokémon is Asleep."
-	if "can't use this attack unless" in text or "you can't use this attack unless" in text:
+	if "can't use this attack" in text and "unless the defending" in text:
 		if "asleep" in text and defender.special_condition != "Asleep":
 			resolved_damage = 0
 			attack_failed = true
@@ -2403,14 +2423,16 @@ func resolve_attack_variable_damage(attack: Dictionary, attacker: card_object, d
 			return {"damage": resolved_damage, "messages": messages, "flip_result": flip_result, "attack_failed": attack_failed}
 	
 	# ---- COIN FLIP MULTIPLICATIVE DAMAGE (×) ----
-	# "Flip 2 coins. This attack does 30 damage times the number of heads."
-	# "Flip a coin until you get tails. This attack does 10 damage times the number of heads."
-	if ("×" in damage_str or "x" in damage_str) and "times the number of heads" in text:
+	if ("×" in damage_str or "x" in damage_str or "X" in damage_str) and "times the number of heads" in text:
 		var flip_count = 0
 		var flip_until_tails = false
 		
 		if "flip a coin until you get tails" in text:
 			flip_until_tails = true
+		elif "flip 5 coins" in text:
+			flip_count = 5
+		elif "flip 4 coins" in text:
+			flip_count = 4
 		elif "flip 3 coins" in text:
 			flip_count = 3
 		elif "flip 2 coins" in text:
@@ -2419,24 +2441,24 @@ func resolve_attack_variable_damage(attack: Dictionary, attacker: card_object, d
 			flip_count = 1
 		
 		var heads_count = 0
+		# Use silent mode for multi-flips — just animate quickly, show summary at end
+		var use_silent = (flip_count > 1 or flip_until_tails)
 		if flip_until_tails:
 			while true:
-				var coin = await flip_coin()
+				var coin = await flip_coin(use_silent)
 				if coin:
 					heads_count += 1
 				else:
 					break
 		else:
 			for i in range(flip_count):
-				var coin = await flip_coin()
+				var coin = await flip_coin(use_silent)
 				if coin:
 					heads_count += 1
 		
 		resolved_damage = base_damage * heads_count
-		if heads_count == 0:
-			messages.append("NO HEADS! ATTACK DOES NOTHING!")
-		else:
-			messages.append(str(heads_count) + " HEADS! " + str(resolved_damage) + " DAMAGE!")
+		# Always show the final summary as a message
+		messages.append("GOT " + str(heads_count) + " HEADS! " + str(resolved_damage) + " DAMAGE!")
 		return {"damage": resolved_damage, "messages": messages, "flip_result": flip_result, "attack_failed": attack_failed}
 	
 	# ---- "IF TAILS, THIS ATTACK DOES NOTHING" (Nidoran Horn Hazard) ----
@@ -2460,7 +2482,6 @@ func resolve_attack_variable_damage(attack: Dictionary, attacker: card_object, d
 		return {"damage": resolved_damage, "messages": messages, "flip_result": flip_result, "attack_failed": attack_failed}
 	
 	# ---- HEADS/TAILS BONUS DAMAGE (Nidoking Thrash "30+", Electabuzz Thunderpunch) ----
-	# "If heads, this attack does X plus Y more damage; if tails, this attack does X and [self] does Z damage to itself."
 	if "+" in damage_str and "if heads" in text and "more damage" in text and "flip a coin" in text:
 		var bonus = extract_number_before(text, "more damage")
 		if bonus <= 0:
@@ -2469,25 +2490,18 @@ func resolve_attack_variable_damage(attack: Dictionary, attacker: card_object, d
 		if coin:
 			resolved_damage = base_damage + bonus
 			flip_result = "heads"
-			messages.append("+" + str(bonus) + " BONUS DAMAGE!")
+			print("COIN BONUS: +", bonus, " damage")
 		else:
 			flip_result = "tails"
-			# Self-damage on tails is handled by apply_card_text_effects with the flip_result passed through
-		# Fall through to check other + effects below
-	
-	# ---- STOMP-STYLE: "If heads, +10; if tails, just base" (no self damage) ----
-	# Already handled above - if tails, no bonus, no self damage
 	
 	# ---- HALF HP DAMAGE (Raticate Super Fang) ----
-	# "Does damage equal to half the Defending Pokémon's remaining HP (rounded up to the nearest 10)."
 	if "equal to half" in text and "remaining hp" in text:
 		var half_hp = defender.current_hp / 2.0
 		resolved_damage = int(ceil(half_hp / 10.0)) * 10
-		messages.append("SUPER FANG: " + str(resolved_damage) + " DAMAGE!")
+		print("SUPER FANG: ", resolved_damage, " damage (half of ", defender.current_hp, " HP)")
 		return {"damage": resolved_damage, "messages": messages, "flip_result": flip_result, "attack_failed": attack_failed}
 	
 	# ---- PER DEFENDER ENERGY (Mewtwo Psychic) ----
-	# "Does X damage plus Y more damage for each Energy card attached to the Defending Pokémon."
 	if "for each energy card attached to the defending" in text:
 		var per_energy = 10
 		var energy_pos = text.find("more damage for each energy")
@@ -2498,14 +2512,10 @@ func resolve_attack_variable_damage(attack: Dictionary, attacker: card_object, d
 		var energy_count = defender.attached_energies.size()
 		var bonus = per_energy * energy_count
 		resolved_damage += bonus
-		if bonus > 0:
-			messages.append("+" + str(bonus) + " (" + str(energy_count) + " ENERGY)")
+		print("PER DEFENDER ENERGY: +", bonus, " (", energy_count, " energies)")
 	
 	# ---- EXTRA ENERGY BEYOND COST (Poliwag Water Gun, Blastoise Hydro Pump) ----
-	# "Does X plus Y more damage for each [Type] Energy attached but not used to pay for this attack's Energy cost.
-	#  Extra [Type] Energy after the Nth don't count."
 	if "more damage for each" in text and "not used to pay" in text:
-		# Parse the energy type for the bonus
 		var bonus_energy_type = ""
 		var type_keywords = ["water", "fire", "grass", "lightning", "psychic", "fighting"]
 		for tkw in type_keywords:
@@ -2521,19 +2531,28 @@ func resolve_attack_variable_damage(attack: Dictionary, attacker: card_object, d
 				if bonus_energy_type in provided:
 					total_of_type += 1
 			
-			# Count how many are needed for the cost
+			# Calculate how many bonus-type energies are consumed by the FULL attack cost
+			# This includes typed requirements AND colorless slots filled by bonus-type energy
 			var cost = attack.get("cost", [])
-			var needed_for_cost = 0
+			var typed_needed = 0
+			var colorless_needed = 0
 			for c in cost:
 				if c == bonus_energy_type:
-					needed_for_cost += 1
+					typed_needed += 1
+				elif c == "Colorless":
+					colorless_needed += 1
 			
-			var extra_count = max(0, total_of_type - needed_for_cost)
+			# Non-bonus energies fill colorless slots first
+			var non_bonus_attached = attacker.attached_energies.size() - total_of_type
+			var colorless_filled_by_non_bonus = min(colorless_needed, non_bonus_attached)
+			var colorless_from_bonus = colorless_needed - colorless_filled_by_non_bonus
+			
+			var used_for_cost = typed_needed + colorless_from_bonus
+			var extra_count = max(0, total_of_type - used_for_cost)
 			
 			# Parse the cap: "Extra Water Energy after the 2nd don't count"
 			var cap = 99
 			if "after the" in text and "don't count" in text:
-				# Extract the ordinal number (e.g. "2nd" -> 2)
 				var after_pos = text.find("after the")
 				var after_text = text.substr(after_pos + 10, 10)
 				var cap_num = ""
@@ -2543,8 +2562,8 @@ func resolve_attack_variable_damage(attack: Dictionary, attacker: card_object, d
 					else:
 						break
 				if cap_num != "":
-					cap = int(cap_num) - needed_for_cost
-					cap = max(0, cap)
+					# Cap is the max total bonus-type that count, minus those used for cost
+					cap = max(0, int(cap_num) - used_for_cost)
 			
 			extra_count = min(extra_count, cap)
 			
@@ -2555,11 +2574,9 @@ func resolve_attack_variable_damage(attack: Dictionary, attacker: card_object, d
 			
 			var bonus = per_energy_bonus * extra_count
 			resolved_damage += bonus
-			if bonus > 0:
-				messages.append("+" + str(bonus) + " (" + str(extra_count) + " EXTRA ENERGY)")
+			print("EXTRA ENERGY: +", bonus, " (", extra_count, " extra ", bonus_energy_type, " beyond ", used_for_cost, " used for cost)")
 	
 	# ---- PER DAMAGE COUNTER ON DEFENDING (Jynx Meditate, Mr. Mime Meditate) ----
-	# "Does X plus Y more damage for each damage counter on the Defending Pokémon."
 	if "for each damage counter on the defending" in text:
 		var per_counter = 10
 		var extracted = extract_number_before(text, "more damage for each damage counter")
@@ -2568,11 +2585,9 @@ func resolve_attack_variable_damage(attack: Dictionary, attacker: card_object, d
 		var damage_counters = defender.get_damage_counters()
 		var bonus = per_counter * damage_counters
 		resolved_damage += bonus
-		if bonus > 0:
-			messages.append("+" + str(bonus) + " (" + str(damage_counters) + " DMG COUNTERS)")
+		print("DEFENDER COUNTERS: +", bonus, " (", damage_counters, " counters)")
 	
 	# ---- PER DAMAGE COUNTER ON SELF - ADDITIONAL (Tauros Rampage) ----
-	# "Does X plus Y more damage for each damage counter on [self]."
 	if ("for each damage counter on " + attacker_name) in text and "minus" not in text and "defending" not in text:
 		var per_counter = 10
 		var extracted = extract_number_before(text, "more damage for each damage counter")
@@ -2581,11 +2596,9 @@ func resolve_attack_variable_damage(attack: Dictionary, attacker: card_object, d
 		var damage_counters = attacker.get_damage_counters()
 		var bonus = per_counter * damage_counters
 		resolved_damage += bonus
-		if bonus > 0:
-			messages.append("+" + str(bonus) + " (" + str(damage_counters) + " SELF COUNTERS)")
+		print("SELF COUNTERS: +", bonus, " (", damage_counters, " counters)")
 	
 	# ---- MINUS PER DAMAGE COUNTER ON SELF (Machoke Karate Chop "50-") ----
-	# "Does X minus Y for each damage counter on [self]."
 	if "-" in damage_str and ("minus" in text or "damage minus" in text) and "damage counter" in text:
 		var per_counter = 10
 		var extracted = extract_number_before(text, "damage for each damage counter")
@@ -2594,11 +2607,9 @@ func resolve_attack_variable_damage(attack: Dictionary, attacker: card_object, d
 		var damage_counters = attacker.get_damage_counters()
 		var reduction = per_counter * damage_counters
 		resolved_damage = max(0, base_damage - reduction)
-		if reduction > 0:
-			messages.append("-" + str(reduction) + " (" + str(damage_counters) + " SELF COUNTERS)")
+		print("KARATE CHOP: -", reduction, " (", damage_counters, " counters)")
 	
 	# ---- PER BENCHED POKEMON (Wigglytuff Do the Wave) ----
-	# "Does X plus Y more damage for each of your Benched Pokémon."
 	if "for each of your benched" in text:
 		var per_bench = 10
 		var extracted = extract_number_before(text, "more damage for each")
@@ -2607,22 +2618,21 @@ func resolve_attack_variable_damage(attack: Dictionary, attacker: card_object, d
 		var bench = opponent_bench if is_opponent else player_bench
 		var bonus = per_bench * bench.size()
 		resolved_damage += bonus
-		if bonus > 0:
-			messages.append("+" + str(bonus) + " (" + str(bench.size()) + " BENCHED)")
+		print("BENCH BONUS: +", bonus, " (", bench.size(), " benched)")
 	
-	# ---- ADDITIONAL DAMAGE IF DEFENDER HAS STATUS (e.g. "if poisoned, +X more") ----
+	# ---- ADDITIONAL DAMAGE IF DEFENDER HAS STATUS ----
 	if "if the defending pokémon is poisoned" in text and "more damage" in text:
 		if defender.is_poisoned:
 			var bonus = extract_number_before(text, "more damage")
 			if bonus > 0:
 				resolved_damage += bonus
-				messages.append("+" + str(bonus) + " (POISONED)")
+				print("STATUS BONUS: +", bonus, " (poisoned)")
 	if "if the defending pokémon is confused" in text and "more damage" in text:
 		if defender.special_condition == "Confused":
 			var bonus = extract_number_before(text, "more damage")
 			if bonus > 0:
 				resolved_damage += bonus
-				messages.append("+" + str(bonus) + " (CONFUSED)")
+				print("STATUS BONUS: +", bonus, " (confused)")
 	
 	return {"damage": resolved_damage, "messages": messages, "flip_result": flip_result, "attack_failed": attack_failed}
 
@@ -2634,8 +2644,9 @@ func display_and_apply_attack_damage(attacker: card_object, defender: card_objec
 		show_floating_label(modifier, defender_label_pos, true)
 		await get_tree().create_timer(0.5).timeout
 	# Only show damage label if there is actual damage, or if the attack originally had damage
-	# but it was reduced to 0 by resistance/other modifiers (base_damage > 0 means it should have done something)
-	var show_damage_label = final_damage > 0 or (base_damage > 0 and modifiers.size() > 0)
+	# but it was reduced to 0 by resistance/other modifiers (not shields)
+	var has_shield_modifier = "NO DAMAGE" in modifiers
+	var show_damage_label = final_damage > 0 or (base_damage > 0 and modifiers.size() > 0 and not has_shield_modifier)
 	if show_damage_label:
 		show_floating_label("-" + str(final_damage) + "HP", defender_label_pos, true)
 	defender.current_hp = max(0, defender.current_hp - final_damage)
@@ -2748,19 +2759,20 @@ func perform_attack(attack_index: int) -> void:
 	var result = calculate_final_damage(resolved_base, attacking_types, opponent_active_pokemon)
 	var final_damage = result["damage"]
 	
-	if await check_defender_invincible(opponent_active_pokemon):
+	if check_defender_invincible(opponent_active_pokemon, true):
 		hide_attack_buttons()
 		await get_tree().create_timer(0.5).timeout
 		player_end_turn_checks()
 		return
 
-	final_damage = await apply_defender_no_damage_shield(opponent_active_pokemon, final_damage)
+	final_damage = apply_defender_no_damage_shield(opponent_active_pokemon, final_damage, true)
 
 	await display_and_apply_attack_damage(player_active_pokemon, opponent_active_pokemon, final_damage, result["modifiers"], false, resolved_base)
 	hide_attack_buttons()
 	
 	# Store last attack for Mirror Move tracking
 	last_attack_on_opponent = {"damage": final_damage, "attack": attack, "attacker_types": attacking_types}
+	player_attacked_this_turn = true
 	
 	await process_attack_effects(attack, player_active_pokemon, opponent_active_pokemon, false, flip_result)
 	
@@ -2809,7 +2821,7 @@ func calculate_final_damage(base_damage: int, attacking_types: Array, defending_
 	# If the damage after weakness/resistance is AT OR BELOW the threshold, prevent it entirely
 	if defending_pokemon.shielded_damage_threshold > 0 and damage > 0:
 		if damage <= defending_pokemon.shielded_damage_threshold:
-			modifiers_applied.append("SHIELDED! (≤" + str(defending_pokemon.shielded_damage_threshold) + ")")
+			modifiers_applied.append("NO DAMAGE")
 			damage = 0
 	
 	return {"damage": damage, "modifiers": modifiers_applied}
@@ -2826,6 +2838,9 @@ func check_and_handle_knockout(pokemon: card_object, is_opponent: bool) -> bool:
 	var bench = opponent_bench if is_opponent else player_bench
 	var discard_node = opponent_discard_icon if is_opponent else player_discard_icon
 	var active_container = opponent_active_container if is_opponent else player_active_container
+	
+	# Save destiny bond flag BEFORE send_card_to_discard clears it
+	var had_destiny_bond = pokemon.has_destiny_bond
 	
 	await show_message(ko_name.to_upper() + " WAS KNOCKED OUT!")
 	
@@ -2865,11 +2880,13 @@ func check_and_handle_knockout(pokemon: card_object, is_opponent: bool) -> bool:
 	display_hp_circles_above_align(active if pokemon != active else null, is_opponent)
 	
 	# DESTINY BOND: If the KO'd pokemon had destiny bond active, knock out the opposing active
-	if pokemon.has_destiny_bond:
+	if had_destiny_bond:
 		var opposing_active = player_active_pokemon if is_opponent else opponent_active_pokemon
 		if opposing_active != null and opposing_active.current_hp > 0:
-			await show_message("DESTINY BOND ACTIVATES! " + opposing_active.metadata["name"].to_upper() + " IS ALSO KNOCKED OUT!")
+			await show_message(ko_name.to_upper() + "'S DESTINY BOND TOOK " + opposing_active.metadata["name"].to_upper() + " DOWN WITH IT!")
 			opposing_active.current_hp = 0
+			# Update HP circles to show all red
+			display_hp_circles_above_align(opposing_active, !is_opponent)
 			print("DESTINY BOND: ", opposing_active.metadata["name"], " knocked out by destiny bond")
 	
 	return true
@@ -3251,24 +3268,41 @@ func apply_energy_discard_self(effect: Dictionary, attacker: card_object, is_opp
 		await animate_card_a_to_b(from_node, discard_node, 0.2, energy_texture, card_scales[10])
 		display_active_pokemon_energies(is_opponent_attacking)
 
-	var count_text = "ALL" if count == -1 else str(to_discard.size())
-	await show_message(name.to_upper() + " DISCARDED " + count_text + " ENERGY!")
+	# Update discard pile display immediately (no message box)
 	update_discard_pile_display(is_opponent_attacking)
 	display_active_pokemon_energies(is_opponent_attacking)
 	print("EFFECT APPLIED: ", name, " discarded ", to_discard.size(), " energy cards")
 
-# Discards energy from the defending pokemon - with selection UI for player choice
+# Discards energy from the defending pokemon - with selection UI for choosing which energy
 func apply_energy_discard_defender(effect: Dictionary, defender: card_object, is_opponent_attacking: bool) -> void:
 	if defender.attached_energies.size() == 0:
 		print("EFFECT SKIPPED: Defender has no energy to discard")
 		return
 	var name = defender.metadata.get("name", "Unknown")
 	var is_defender_player = is_opponent_attacking
+	var is_defender_opponent = !is_opponent_attacking
 	
 	var energy_to_discard: card_object = null
 	
-	if is_defender_player:
-		# Player must choose which energy to discard from their own active pokemon
+	if is_defender_opponent:
+		# Player is attacking — player chooses which of opponent's energies to discard
+		defender_energy_discard_active = true
+		show_enlarged_array_selection_mode(defender.attached_energies)
+		cancel_button.visible = false
+		header_label.text = "DISCARD AN ENERGY FROM " + name.to_upper()
+		hint_label.text = "Choose an energy card to discard from the defending Pokemon"
+		action_button.text = "DISCARD"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		# Centralise action button
+		action_button.offset_left = -219.0
+		action_button.offset_right = 219.0
+		await defender_energy_chosen
+		energy_to_discard = selected_card_for_action
+		defender_energy_discard_active = false
+		hide_selection_mode_display_main()
+	elif is_defender_player:
+		# Opponent is attacking — player chooses which of their own energies to discard
 		defender_energy_discard_active = true
 		show_enlarged_array_selection_mode(defender.attached_energies)
 		cancel_button.visible = false
@@ -3277,35 +3311,36 @@ func apply_energy_discard_defender(effect: Dictionary, defender: card_object, is
 		action_button.text = "DISCARD"
 		action_button.disabled = true
 		action_button.theme = theme_disabled
+		action_button.offset_left = -219.0
+		action_button.offset_right = 219.0
 		await defender_energy_chosen
 		energy_to_discard = selected_card_for_action
 		defender_energy_discard_active = false
 		hide_selection_mode_display_main()
-	else:
-		# CPU chooses: discard the least useful energy (furthest from completing an attack)
-		# Simple heuristic: discard the last attached energy
-		energy_to_discard = defender.attached_energies.back()
 	
 	if energy_to_discard != null:
 		var energy_texture = get_card_texture(energy_to_discard)
 		var from_node = find_card_ui_for_object(defender)
+		var defender_is_opp = is_defender_opponent
 		if from_node == null:
-			from_node = player_active_container if is_defender_player else opponent_active_container
-		var discard_node = player_discard_icon if is_defender_player else opponent_discard_icon
+			from_node = opponent_active_container if defender_is_opp else player_active_container
+		var discard_node = opponent_discard_icon if defender_is_opp else player_discard_icon
 		
 		defender.attached_energies.erase(energy_to_discard)
 		energy_to_discard.current_location = "discard"
-		var discard_pile = player_discard_pile if is_defender_player else opponent_discard_pile
+		var discard_pile = opponent_discard_pile if defender_is_opp else player_discard_pile
 		discard_pile.append(energy_to_discard)
 		
 		await animate_card_a_to_b(from_node, discard_node, 0.2, energy_texture, card_scales[10])
-		update_discard_pile_display(is_defender_player)
+		update_discard_pile_display(defender_is_opp)
 		
 		await show_message("AN ENERGY WAS DISCARDED FROM " + name.to_upper() + "!")
-		display_active_pokemon_energies(is_defender_player)
+		# Refresh the defender's energy display (not the attacker's)
+		display_active_pokemon_energies(defender_is_opp)
 		print("EFFECT APPLIED: Discarded energy from ", name)
 
 # Applies damage to benched pokemon based on target scope
+# Applies damage to benched pokemon based on target scope, showing floating labels sequentially
 func apply_bench_damage(effect: Dictionary, is_opponent_attacking: bool) -> void:
 	var bench_target = effect.get("target", "opponent_bench")
 	var damage = effect.get("damage", 10)
@@ -3325,16 +3360,23 @@ func apply_bench_damage(effect: Dictionary, is_opponent_attacking: bool) -> void
 		benches_to_hit.append({"bench": player_bench, "is_opponent": false})
 		benches_to_hit.append({"bench": opponent_bench, "is_opponent": true})
 
-	var total_hit = 0
 	for bench_info in benches_to_hit:
-		for pokemon in bench_info["bench"]:
+		var bench_container = opponent_bench_container if bench_info["is_opponent"] else player_bench_container
+		for i in range(bench_info["bench"].size()):
+			var pokemon = bench_info["bench"][i]
 			pokemon.current_hp = max(0, pokemon.current_hp - damage)
-			total_hit += 1
 			print("BENCH DAMAGE: ", pokemon.metadata.get("name", ""), " took ", damage, " damage. HP: ", pokemon.current_hp)
-
-	if total_hit > 0:
-		var side_label = bench_target.replace("_", " ").to_upper()
-		await show_message(str(damage) + " DAMAGE TO EACH BENCHED POKEMON! (" + side_label + ")")
+			
+			# Show floating label at this bench pokemon's approximate position
+			var bench_card_ui = null
+			if i < bench_container.get_child_count():
+				bench_card_ui = bench_container.get_child(i)
+			if bench_card_ui != null and is_instance_valid(bench_card_ui):
+				var label_pos = bench_card_ui.global_position + Vector2(0, -20)
+				show_floating_label("-" + str(damage), label_pos, true)
+			
+			# Stagger labels by 0.1 seconds for visual sequence
+			await get_tree().create_timer(0.1).timeout
 
 # Sets the blind flag on the defending pokemon and updates icons
 func apply_blind_effect(defender: card_object, is_opponent_attacking: bool) -> void:
@@ -3348,14 +3390,12 @@ func apply_blind_effect(defender: card_object, is_opponent_attacking: bool) -> v
 func apply_no_damage_effect(attacker: card_object, is_opponent_attacking: bool) -> void:
 	attacker.has_no_damage = true
 	update_status_icons(attacker, is_opponent_attacking)
-	await show_message(attacker.metadata.get("name", "").to_upper() + " IS PROTECTED FROM DAMAGE!")
 	print("EFFECT APPLIED: ", attacker.metadata.get("name", ""), " has no_damage shield")
 
 # Sets the invincible flag on the attacker and updates icons
 func apply_invincible_effect(attacker: card_object, is_opponent_attacking: bool) -> void:
 	attacker.is_invincible = true
 	update_status_icons(attacker, is_opponent_attacking)
-	await show_message(attacker.metadata.get("name", "").to_upper() + " IS FULLY PROTECTED!")
 	print("EFFECT APPLIED: ", attacker.metadata.get("name", ""), " is invincible")
 
 # Sets the retreat lock on the defending pokemon
@@ -3422,54 +3462,102 @@ func apply_shielded_damage(effect: Dictionary, attacker: card_object, is_opponen
 	var threshold = effect.get("threshold", 30)
 	attacker.shielded_damage_threshold = threshold
 	update_status_icons(attacker, is_opponent_attacking)
-	await show_message(attacker.metadata.get("name", "").to_upper() + " IS HARDENED! BLOCKS DAMAGE OF " + str(threshold) + " OR LESS!")
 	print("EFFECT APPLIED: ", attacker.metadata.get("name", ""), " shielded damage threshold = ", threshold)
 
 # Forces the defending player to switch their active pokemon with a bench pokemon
+# chooser: "defender" = defender picks (Whirlwind), "attacker" = attacker picks (Lure)
 func apply_force_switch(effect: Dictionary, is_opponent_attacking: bool) -> void:
-	# Determine which side is being forced to switch
 	var target_bench = player_bench if is_opponent_attacking else opponent_bench
 	var is_target_opponent = !is_opponent_attacking
+	var chooser = effect.get("chooser", "defender")
 	
 	if target_bench.size() == 0:
-		await show_message("NO BENCH POKEMON TO SWITCH IN!")
 		print("FORCE SWITCH: No bench pokemon available")
 		return
 	
+	var new_active: card_object = null
+	
 	if is_target_opponent:
-		# Opponent (CPU) forced to switch - use existing priority scoring
-		var cpu_eval = build_cpu_evaluation()
-		var new_active = pick_best_bench_replacement(opponent_bench, player_active_pokemon, cpu_eval)
-		if new_active == null:
-			new_active = opponent_bench[0]
+		# Target is the opponent (CPU)
+		if chooser == "attacker":
+			# Lure: PLAYER picks from opponent's bench
+			forced_switch_selection_active = true
+			show_enlarged_array_selection_mode(opponent_bench)
+			cancel_button.visible = false
+			header_label.text = "CHOOSE A POKEMON TO SWITCH IN!"
+			hint_label.text = "Select an opponent's bench Pokemon to force into active"
+			action_button.text = "FORCE SWITCH"
+			action_button.disabled = true
+			action_button.theme = theme_disabled
+			await forced_switch_chosen
+			new_active = selected_card_for_action
+			forced_switch_selection_active = false
+			hide_selection_mode_display_main()
+		else:
+			# Whirlwind: CPU picks its own bench replacement
+			var cpu_eval = build_cpu_evaluation()
+			new_active = pick_best_bench_replacement(opponent_bench, player_active_pokemon, cpu_eval)
+			if new_active == null:
+				new_active = opponent_bench[0]
 		
-		# Perform the swap
-		var old_active = opponent_active_pokemon
-		opponent_bench.erase(new_active)
-		opponent_bench.append(old_active)
-		old_active.current_location = "bench"
-		new_active.current_location = "active"
-		opponent_active_pokemon = new_active
-		
-		# Clear statuses on the retreating pokemon (like a normal retreat)
-		clear_all_statuses(old_active, true)
-		
-		display_pokemon(true)
-		display_active_pokemon_energies(true)
-		await show_message("OPPONENT WAS FORCED TO SWITCH TO " + new_active.metadata["name"].to_upper() + "!")
-		print("FORCE SWITCH: Opponent switched to ", new_active.metadata["name"])
+		if new_active != null:
+			var old_active = opponent_active_pokemon
+			await show_message("OPPONENT WAS FORCED TO SWITCH TO " + new_active.metadata["name"].to_upper() + "!")
+			
+			# Animate the swap
+			await animate_retreat(old_active, new_active, [], true)
+			
+			# Perform the swap
+			opponent_bench.erase(new_active)
+			opponent_bench.append(old_active)
+			old_active.current_location = "bench"
+			new_active.current_location = "active"
+			opponent_active_pokemon = new_active
+			clear_all_statuses(old_active, true)
+			
+			display_pokemon(true)
+			display_active_pokemon_energies(true)
 	else:
-		# Player forced to switch - let them choose
-		forced_switch_selection_active = true
-		show_enlarged_array_selection_mode(player_bench)
-		cancel_button.visible = false
-		header_label.text = "FORCED SWITCH!"
-		hint_label.text = "Choose a bench Pokemon to switch in as your new active"
-		action_button.text = "SWITCH IN"
-		action_button.disabled = true
-		action_button.theme = theme_disabled
-		await forced_switch_chosen
-		forced_switch_selection_active = false
+		# Target is the player
+		if chooser == "attacker":
+			# Lure: CPU picks from player's bench (pick the weakest)
+			var worst_pokemon: card_object = null
+			var worst_hp = 9999
+			for bp in player_bench:
+				if bp.current_hp < worst_hp:
+					worst_hp = bp.current_hp
+					worst_pokemon = bp
+			new_active = worst_pokemon if worst_pokemon else player_bench[0]
+		else:
+			# Whirlwind: Player picks their own bench replacement
+			forced_switch_selection_active = true
+			show_enlarged_array_selection_mode(player_bench)
+			cancel_button.visible = false
+			header_label.text = "FORCED SWITCH!"
+			hint_label.text = "Choose a bench Pokemon to switch in as your new active"
+			action_button.text = "SWITCH IN"
+			action_button.disabled = true
+			action_button.theme = theme_disabled
+			await forced_switch_chosen
+			new_active = selected_card_for_action
+			forced_switch_selection_active = false
+			hide_selection_mode_display_main()
+		
+		if new_active != null:
+			var old_active = player_active_pokemon
+			await show_message("FORCED TO SWITCH TO " + new_active.metadata["name"].to_upper() + "!")
+			
+			await animate_retreat(old_active, new_active, [], false)
+			
+			player_bench.erase(new_active)
+			player_bench.append(old_active)
+			old_active.current_location = "bench"
+			new_active.current_location = "active"
+			player_active_pokemon = new_active
+			clear_all_statuses(old_active, false)
+			
+			display_pokemon(false)
+			display_active_pokemon_energies(false)
 
 ######################################################### SPECIAL ATTACK FUNCTIONS ############################################################
 
@@ -3498,6 +3586,7 @@ func execute_metronome(attacker: card_object, defender: card_object, is_opponent
 	else:
 		# Player chooses: show attack names as buttons
 		special_attack_selection_active = true
+		buttons_only_blocker.visible = true
 		
 		# Clear and show attack buttons
 		for child in attack_buttons_container.get_children():
@@ -3507,13 +3596,17 @@ func execute_metronome(attacker: card_object, defender: card_object, is_opponent
 		
 		attack_buttons_container.visible = true
 		main_buttons_container.visible = false
+		# Hide the cancel button within the attack buttons container
+		for child in attack_buttons_container.get_children():
+			if child.name == "cancel_attack_mode_button":
+				child.visible = false
 		
 		for i in range(defender_attacks.size()):
 			var atk = defender_attacks[i]
 			var btn = Button.new()
 			btn.text = atk.get("name", "Attack") + " (" + str(atk.get("damage", "0")) + ")"
 			btn.custom_minimum_size = Vector2(350, 50)
-			btn.theme = theme_blue
+			btn.theme = theme_green
 			attack_buttons_container.add_child(btn)
 			btn.pressed.connect(func(): special_attack_selected.emit(i))
 		
@@ -3523,11 +3616,13 @@ func execute_metronome(attacker: card_object, defender: card_object, is_opponent
 		# Clean up buttons
 		for child in attack_buttons_container.get_children():
 			if child.name == "cancel_attack_mode_button":
+				child.visible = true
 				continue
 			child.queue_free()
 		attack_buttons_container.visible = false
 		main_buttons_container.visible = true
 		special_attack_selection_active = false
+		buttons_only_blocker.visible = false
 	
 	await show_message(attacker.metadata["name"].to_upper() + " COPIES " + chosen_attack.get("name", "").to_upper() + "!")
 	
@@ -3550,10 +3645,11 @@ func execute_metronome(attacker: card_object, defender: card_object, is_opponent
 	var final_damage = result["damage"]
 	
 	if defender.is_invincible:
-		await show_message(defender.metadata["name"].to_upper() + " IS FULLY PROTECTED!")
+		var inv_label_pos = Vector2(530, 300) if !is_opponent else Vector2(1030, 300)
+		show_floating_label("NO EFFECT", inv_label_pos, true)
 		return
 	
-	final_damage = await apply_defender_no_damage_shield(defender, final_damage)
+	final_damage = apply_defender_no_damage_shield(defender, final_damage, !is_opponent)
 	await display_and_apply_attack_damage(attacker, defender, final_damage, result["modifiers"], is_opponent, resolved_base)
 	
 	# Apply non-discard effects from the copied attack
@@ -3580,10 +3676,11 @@ func execute_mirror_move(attacker: card_object, defender: card_object, is_oppone
 	await show_message(attacker.metadata["name"].to_upper() + " MIRRORS THE LAST ATTACK FOR " + str(mirrored_damage) + " DAMAGE!")
 	
 	if defender.is_invincible:
-		await show_message(defender.metadata["name"].to_upper() + " IS FULLY PROTECTED!")
+		var inv_label_pos = Vector2(530, 300) if !is_opponent else Vector2(1030, 300)
+		show_floating_label("NO EFFECT", inv_label_pos, true)
 		return
 	
-	mirrored_damage = await apply_defender_no_damage_shield(defender, mirrored_damage)
+	mirrored_damage = apply_defender_no_damage_shield(defender, mirrored_damage, !is_opponent)
 	
 	if mirrored_damage > 0:
 		var defender_label_pos = Vector2(530, 300) if is_opponent else Vector2(1030, 300)
@@ -3606,7 +3703,6 @@ func execute_amnesia(attacker: card_object, defender: card_object, is_opponent: 
 	var chosen_attack_name: String = ""
 	
 	if is_opponent:
-		# CPU chooses: disable the defender's best attack
 		var best_score = -999.0
 		var defender_types = defender.metadata.get("types", ["Colorless"])
 		for attack in defender_attacks:
@@ -3617,8 +3713,8 @@ func execute_amnesia(attacker: card_object, defender: card_object, is_opponent: 
 				best_score = score
 				chosen_attack_name = attack.get("name", "")
 	else:
-		# Player chooses: show attack names as buttons
 		special_attack_selection_active = true
+		buttons_only_blocker.visible = true
 		
 		for child in attack_buttons_container.get_children():
 			if child.name == "cancel_attack_mode_button":
@@ -3627,13 +3723,17 @@ func execute_amnesia(attacker: card_object, defender: card_object, is_opponent: 
 		
 		attack_buttons_container.visible = true
 		main_buttons_container.visible = false
+		# Hide the cancel button within the attack buttons container
+		for child in attack_buttons_container.get_children():
+			if child.name == "cancel_attack_mode_button":
+				child.visible = false
 		
 		for i in range(defender_attacks.size()):
 			var atk = defender_attacks[i]
 			var btn = Button.new()
 			btn.text = "DISABLE: " + atk.get("name", "Attack")
 			btn.custom_minimum_size = Vector2(350, 50)
-			btn.theme = theme_red
+			btn.theme = theme_green
 			attack_buttons_container.add_child(btn)
 			btn.pressed.connect(func(): special_attack_selected.emit(i))
 		
@@ -3642,11 +3742,13 @@ func execute_amnesia(attacker: card_object, defender: card_object, is_opponent: 
 		
 		for child in attack_buttons_container.get_children():
 			if child.name == "cancel_attack_mode_button":
+				child.visible = true
 				continue
 			child.queue_free()
 		attack_buttons_container.visible = false
 		main_buttons_container.visible = true
 		special_attack_selection_active = false
+		buttons_only_blocker.visible = false
 	
 	if chosen_attack_name != "":
 		defender.disabled_attacks[chosen_attack_name] = "end_of_turn"
@@ -3657,6 +3759,13 @@ func execute_amnesia(attacker: card_object, defender: card_object, is_opponent: 
 func execute_conversion(attacker: card_object, defender: card_object, is_opponent: bool, is_conversion_1: bool) -> void:
 	var energy_types = ["Fighting", "Fire", "Grass", "Lightning", "Psychic", "Water"]
 	var chosen_type: String = ""
+	
+	# Conversion 1: Only works if the defending pokemon has a weakness
+	if is_conversion_1:
+		var weaknesses = defender.metadata.get("weaknesses", [])
+		if weaknesses.size() == 0:
+			await show_message("CONVERSION FAILED! OPPONENT HAS NO WEAKNESS!")
+			return
 	
 	if is_opponent:
 		if is_conversion_1:
@@ -3689,6 +3798,9 @@ func execute_conversion(attacker: card_object, defender: card_object, is_opponen
 			action_button.text = "SELECT TYPE"
 			action_button.disabled = true
 			action_button.theme = theme_disabled
+			# Centralise action button
+			action_button.offset_left = -219.0
+			action_button.offset_right = 219.0
 			await energy_type_selected
 			chosen_type = selected_card_for_action.metadata.get("name", "").replace(" Energy", "").strip_edges() if selected_card_for_action else ""
 			energy_type_selection_active = false
@@ -3873,13 +3985,18 @@ func parse_card_text_effects(attack_text: String, attacker_name: String) -> Arra
 			print("EFFECT PARSED: Shielded Damage -> threshold ", threshold)
 
 	# --- FORCE SWITCH (Pidgey/Pidgeotto Whirlwind, Ninetales Lure) ---
-	# "If your opponent has any Benched Pokémon, he or she chooses 1 of them and switches it with the Defending Pokémon."
-	# "choose 1 of them and switch it with his or her Active Pokémon."
+	# Whirlwind: "he or she chooses 1" = defender picks
+	# Lure: "choose 1 of them and switch it" (without "he or she") = attacker picks
 	if ("switches it with" in text or "switch it with" in text) and ("benched" in text or "bench" in text):
 		if "defending pokémon" in text or "active pokémon" in text:
 			var flip = get_flip_context(text, text.find("switch"))
-			effects.append({"type": "force_switch", "target": "defender", "flip": flip})
-			print("EFFECT PARSED: Force Switch -> Defender | Flip: ", flip)
+			var chooser = "defender"
+			# "he or she chooses" = defender picks (Whirlwind)
+			# Otherwise attacker picks (Lure)
+			if "he or she chooses" not in text and "they choose" not in text:
+				chooser = "attacker"
+			effects.append({"type": "force_switch", "target": "defender", "chooser": chooser, "flip": flip})
+			print("EFFECT PARSED: Force Switch -> Defender | Chooser: ", chooser, " | Flip: ", flip)
 
 	if effects.size() == 0:
 		print("EFFECT PARSED: No recognised effects in: ", text.left(80))
@@ -3928,9 +4045,9 @@ func apply_card_text_effects(effects: Array, attacker: card_object, defender: ca
 		if effect["type"] == "blind":
 			await apply_blind_effect(defender, is_opponent_attacking)
 		if effect["type"] == "no_damage":
-			await apply_no_damage_effect(attacker, is_opponent_attacking)
+			apply_no_damage_effect(attacker, is_opponent_attacking)
 		if effect["type"] == "invincible":
-			await apply_invincible_effect(attacker, is_opponent_attacking)
+			apply_invincible_effect(attacker, is_opponent_attacking)
 		if effect["type"] == "retreat_lock":
 			await apply_retreat_lock(defender, is_opponent_attacking)
 		if effect["type"] == "draw":
@@ -3940,7 +4057,7 @@ func apply_card_text_effects(effects: Array, attacker: card_object, defender: ca
 		if effect["type"] == "destiny_bond":
 			await apply_destiny_bond(attacker, is_opponent_attacking)
 		if effect["type"] == "shielded_damage":
-			await apply_shielded_damage(effect, attacker, is_opponent_attacking)
+			apply_shielded_damage(effect, attacker, is_opponent_attacking)
 		if effect["type"] == "force_switch":
 			await apply_force_switch(effect, is_opponent_attacking)
 			
@@ -5871,6 +5988,29 @@ func evaluate_retreat_reasons(cpu_eval: Dictionary) -> bool:
 			print("CPU NOT retreating: mutual KO - will attack and trade")
 			return false  # Don't retreat, attack instead
 		else:
+			# Before retreating, check if any bench pokemon would actually survive
+			# If all bench options would ALSO be guaranteed KO'd, retreating is pointless
+			var any_bench_survives = false
+			var player_types = player_active_pokemon.metadata.get("types", ["Colorless"])
+			for bench_pokemon in opponent_bench:
+				var bench_hp = bench_pokemon.current_hp
+				var bench_would_die = false
+				for p_attack in player_active_pokemon.metadata.get("attacks", []):
+					if get_unmet_energy_count(p_attack, player_active_pokemon) > 0:
+						continue
+					var p_range = get_attack_damage_range(p_attack, player_active_pokemon, bench_pokemon)
+					var p_result = calculate_final_damage(p_range["min"], player_types, bench_pokemon)
+					if p_result["damage"] >= bench_hp:
+						bench_would_die = true
+						break
+				if not bench_would_die:
+					any_bench_survives = true
+					break
+			
+			if not any_bench_survives:
+				print("CPU NOT retreating: all bench pokemon also face guaranteed KO")
+				return false
+			
 			print("CPU considering retreat: guaranteed KO threat and cannot KO back")
 			return true  # Do retreat, we'd lose the trade
 
@@ -6210,16 +6350,17 @@ func cpu_phase_attack(cpu_eval: Dictionary) -> void:
 	var result = calculate_final_damage(resolved_base, cpu_types, player_active_pokemon)
 	var final_damage = result["damage"]
 	
-	if await check_defender_invincible(player_active_pokemon):
+	if check_defender_invincible(player_active_pokemon, false):
 		display_active_pokemon_energies(true)
 		return
 
-	final_damage = await apply_defender_no_damage_shield(player_active_pokemon, final_damage)
+	final_damage = apply_defender_no_damage_shield(player_active_pokemon, final_damage, false)
 
 	await display_and_apply_attack_damage(opponent_active_pokemon, player_active_pokemon, final_damage, result["modifiers"], true, resolved_base)
 	
 	# Store last attack for Mirror Move tracking
 	last_attack_on_player = {"damage": final_damage, "attack": chosen_attack, "attacker_types": cpu_types}
+	opponent_attacked_this_turn = true
 	
 	await process_attack_effects(chosen_attack, opponent_active_pokemon, player_active_pokemon, true, flip_result)
 

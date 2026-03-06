@@ -1,6 +1,6 @@
 [gd_scene load_steps=12 format=3 uid="uid://dqwekyllekveg"]
 
-[ext_resource type="Script" uid="uid://b2tq5svaklw74" path="res://gdscripts/main_match_script.gd" id="1_c6k6o"]
+[ext_resource type="Script" uid="uid://6jiuqkbo55wu" path="res://gdscripts/main_match_script.gd" id="1_c6k6o"]
 [ext_resource type="Shader" uid="uid://ccm481fk14lc8" path="res://gdscenes/backgroundscroll.gdshader" id="2_0kjtx"]
 [ext_resource type="Texture2D" uid="uid://cpbbo8tyee1n4" path="res://backgrounds/background2.png" id="2_1cpm0"]
 [ext_resource type="Theme" uid="uid://mbsg4xqnedxi" path="res://uiresources/kenneyUI-red.tres" id="2_6pfim"]
@@ -561,6 +561,17 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 1, 1, 0)
+
+[node name="allow_buttons_only_blocker" type="ColorRect" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_bottom = -168.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(1, 1, 1, 0)
