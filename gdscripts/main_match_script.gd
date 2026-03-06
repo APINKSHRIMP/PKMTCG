@@ -83,6 +83,44 @@ signal message_acknowledged
 signal prize_card_taken
 signal knockout_replacement_chosen
 
+# CACHED NODE PATHS - These are assigned once when the node enters the scene tree via @onready.
+# In GDScript, @onready runs the assignment at the same time as _ready(), meaning the scene tree
+# is fully built. This avoids repeated get_node() calls every time we reference these paths with $.
+@onready var action_button = $BUTTONS/SELECTION_BUTTONS/card_action_button
+@onready var cancel_button = $cancel_selection_mode_view_button
+@onready var header_label = $SCREEN_LABELS/MAIN_LABELS/large_header_text_label
+@onready var hint_label = $SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label
+@onready var player_active_container = $ACTIVE_POKEMON/PLAYER/player_active_pokemon_container
+@onready var opponent_active_container = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container
+@onready var player_bench_container = $CARD_COLLECTIONS/PLAYER/player_bench_container
+@onready var opponent_bench_container = $CARD_COLLECTIONS/OPPONENT/opponent_bench_container
+@onready var player_hand_container = $CARD_COLLECTIONS/PLAYER/player_hand_hbox_container
+@onready var opponent_hand_container = $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container
+@onready var player_energy_container = $ACTIVE_POKEMON/PLAYER/player_active_pokemon_energies
+@onready var opponent_energy_container = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_energies
+@onready var player_hp_container = $ACTIVE_POKEMON/PLAYER/player_active_pokemon_hp_container
+@onready var opponent_hp_container = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_hp_container
+@onready var player_status_container = $ACTIVE_POKEMON/PLAYER/player_active_pokemon_status_container
+@onready var opponent_status_container = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_status_container
+@onready var player_prize_container = $CARD_COLLECTIONS/PLAYER/player_prize_cards_container
+@onready var opponent_prize_container = $CARD_COLLECTIONS/OPPONENT/opponent_prize_cards_container
+@onready var player_deck_icon = $CARD_COLLECTIgerdazONS/PLAYER/player_deck_icon
+@onready var opponent_deck_icon = $CARD_COLLECTIONS/OPPONENT/opponent_deck_icon
+@onready var player_discard_icon = $CARD_COLLECTIONS/PLAYER/player_discard_pile_icon
+@onready var opponent_discard_icon = $CARD_COLLECTIONS/OPPONENT/opponent_discard_pile_icon
+@onready var small_selection_container = $SELECTION_MODE/small_selection_mode_container
+@onready var selection_scroller = $SELECTION_MODE/selection_mode_scroller
+@onready var large_selection_container = $SELECTION_MODE/selection_mode_scroller/large_selection_mode_container
+@onready var attack_buttons_container = $BUTTONS/main_screen_attack_buttons_container
+@onready var main_buttons_container = $BUTTONS/main_screen_buttons_container
+@onready var msgbox_container = $messagebox_container
+@onready var msgbox_texture = $messagebox_container/messagebox_texture
+@onready var msgbox_label = $messagebox_container/messagebox_text_label
+@onready var coin_container = $coin_flip_container
+@onready var coin_texture = $coin_flip_container/coin_flip_texture
+@onready var opponent_blocker = $opponent_turn_input_blocker
+@onready var animation_blocker = $animation_input_blocker
+
 # QUICK REFERENCE VECTORS JUST USED FOR EASY SWAPPING OF SIZES FOR DEVELOPMENT
 var card_scales: Dictionary = {
 	1: Vector2(450, 619),
@@ -131,9 +169,9 @@ var card_scales: Dictionary = {
 # Main reusable function to display any array passed in a LARGE viewing mode, hide everything else on the screen and allows selection of cards for action
 func show_enlarged_array_selection_mode(card_array: Array) -> void:
 	
-	$SELECTION_MODE/selection_mode_scroller.visible = false
-	$SELECTION_MODE/selection_mode_scroller/large_selection_mode_container.visible = false
-	$SELECTION_MODE/small_selection_mode_container.visible = false
+	selection_scroller.visible = false
+	large_selection_container.visible = false
+	small_selection_container.visible = false
 	
 	# Prevent showing empty arrays
 	if card_array.size() == 0:
@@ -141,7 +179,7 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 		return
 	
 	# Hide attack buttons if they are currently showing
-	if $BUTTONS/main_screen_attack_buttons_container.visible:
+	if attack_buttons_container.visible:
 		hide_attack_buttons()
 	
 	# If we are showing an enlarged display then card selection mode is enabled.
@@ -151,26 +189,26 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 	var amount_of_cards_to_show = card_array.size()
 	
 	# In enlarged selection mode, we want to hide everything on the main screen and only show the enlarged array and buttons
-	$CARD_COLLECTIONS/PLAYER/player_hand_hbox_container.visible = false
-	$CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container.visible = false
+	player_hand_container.visible = false
+	opponent_hand_container.visible = false
 	
-	$ACTIVE_POKEMON/PLAYER/player_active_pokemon_container.visible = false
-	$ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container.visible = false
+	player_active_container.visible = false
+	opponent_active_container.visible = false
 	
-	$ACTIVE_POKEMON/PLAYER/player_active_pokemon_container.mouse_filter = MOUSE_FILTER_IGNORE
-	$ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container.mouse_filter = MOUSE_FILTER_IGNORE
+	player_active_container.mouse_filter = MOUSE_FILTER_IGNORE
+	opponent_active_container.mouse_filter = MOUSE_FILTER_IGNORE
 	
-	$ACTIVE_POKEMON/PLAYER/player_active_pokemon_energies.visible = false
-	$ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_energies.visible = false
+	player_energy_container.visible = false
+	opponent_energy_container.visible = false
 	
-	$ACTIVE_POKEMON/PLAYER/player_active_pokemon_hp_container.visible = false
-	$ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_hp_container.visible = false
+	player_hp_container.visible = false
+	opponent_hp_container.visible = false
 	
-	$ACTIVE_POKEMON/PLAYER/player_active_pokemon_status_container.visible = false
-	$ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_status_container.visible = false
+	player_status_container.visible = false
+	opponent_status_container.visible = false
 	
-	$CARD_COLLECTIONS/PLAYER/player_bench_container.visible = false
-	$CARD_COLLECTIONS/OPPONENT/opponent_bench_container.visible = false
+	player_bench_container.visible = false
+	opponent_bench_container.visible = false
 	
 	$SCREEN_LABELS/OPPONENT/opponent_bench_cards_label.visible = false
 	$SCREEN_LABELS/PLAYER/player_bench_cards_label.visible = false
@@ -178,34 +216,34 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 	$SCREEN_LABELS/OPPONENT/opponent_prize_cards_label.visible = false
 	$SCREEN_LABELS/PLAYER/player_prize_cards_label.visible = false
 	
-	$CARD_COLLECTIONS/OPPONENT/opponent_prize_cards_container.visible = false
-	$CARD_COLLECTIONS/PLAYER/player_prize_cards_container.visible = false
+	opponent_prize_container.visible = false
+	player_prize_container.visible = false
 	
-	$CARD_COLLECTIONS/PLAYER/player_deck_icon.visible = false
-	$CARD_COLLECTIONS/OPPONENT/opponent_deck_icon.visible = false
+	player_deck_icon.visible = false
+	opponent_deck_icon.visible = false
 	
-	$CARD_COLLECTIONS/PLAYER/player_discard_pile_icon.visible = false
-	$CARD_COLLECTIONS/OPPONENT/opponent_discard_pile_icon.visible = false
+	player_discard_icon.visible = false
+	opponent_discard_icon.visible = false
 	
 	# We do however want to show the header and hint labels
-	$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.visible = true
-	$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.visible = true
+	hint_label.visible = true
+	header_label.visible = true
 	
-	$BUTTONS/main_screen_buttons_container.visible = false
+	main_buttons_container.visible = false
 	
-	for card in $ACTIVE_POKEMON/PLAYER/player_active_pokemon_container.get_children():
+	for card in player_active_container.get_children():
 		card.mouse_filter = MOUSE_FILTER_IGNORE
-	for card in $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container.get_children():
+	for card in opponent_active_container.get_children():
 		card.mouse_filter = MOUSE_FILTER_IGNORE
 	
 	# Show the buttons
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.visible = true
+	action_button.visible = true
 	
 	# A specific clause for the start of the game, a basic pokemon HAS to be chosen so we cannot allow cancelling out.
 	if match_just_started_basic_pokemon_required == true or knockout_bench_selection_active == true:
-		$cancel_selection_mode_view_button.visible = false
+		cancel_button.visible = false
 	else:
-		$cancel_selection_mode_view_button.visible = true
+		cancel_button.visible = true
 	
 	# Hide action button for view-only arrays (prize cards are only actionable during prize selection)
 	var is_view_only_array = card_array in [opponent_hand, opponent_bench, player_discard_pile, opponent_discard_pile]
@@ -213,21 +251,18 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 		is_view_only_array = is_view_only_array or card_array in [player_prize_cards, opponent_prize_cards]
 		
 	if is_view_only_array:
-		$BUTTONS/SELECTION_BUTTONS/card_action_button.visible = false		
+		action_button.visible = false		
 	else:
-		$BUTTONS/SELECTION_BUTTONS/card_action_button.visible = true
+		action_button.visible = true
 		
-	if $BUTTONS/SELECTION_BUTTONS/card_action_button.visible:
-		$cancel_selection_mode_view_button.offset_left = 35.0
-		$cancel_selection_mode_view_button.offset_right = 473.0
+	if action_button.visible:
+		cancel_button.offset_left = 35.0
+		cancel_button.offset_right = 473.0
 	else:
-		$cancel_selection_mode_view_button.offset_left = -219.0
-		$cancel_selection_mode_view_button.offset_right = 219.0
+		cancel_button.offset_left = -219.0
+		cancel_button.offset_right = 219.0
 		
 	update_selection_mode_labels(card_array, match_just_started_basic_pokemon_required)
-	
-	$SELECTION_MODE/selection_mode_scroller.visible = false
-	$SELECTION_MODE/selection_mode_scroller/large_selection_mode_container.visible = false
 	
 	# Hide opponents hand but show player's
 	var should_hide = hide_hidden_cards and (card_array == opponent_hand or card_array == player_prize_cards or card_array == opponent_prize_cards)
@@ -235,20 +270,20 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 	# If the card array is OVER 7 then use the scroller box. If it's UNDER 7 then just use a box central aligned
 	if amount_of_cards_to_show > 7:
 		# If OVER 7 cards then use a scrolling box container
-		$SELECTION_MODE/selection_mode_scroller.visible = true
-		$SELECTION_MODE/selection_mode_scroller/large_selection_mode_container.visible = true
+		selection_scroller.visible = true
+		large_selection_container.visible = true
 		
 		# Now display the passed through card array to the selection mode container in large pixel format
-		display_hand_cards_array(card_array, $SELECTION_MODE/selection_mode_scroller/large_selection_mode_container, card_scales[5], should_hide)
+		display_hand_cards_array(card_array, large_selection_container, card_scales[5], should_hide)
 		
 		# If UNDER 8 cards (small array)	
 	else:
 		# DON'T use the scrolling box container
-		$SELECTION_MODE/small_selection_mode_container.visible = true
-		$SELECTION_MODE/small_selection_mode_container.custom_minimum_size = Vector2(0, 0)
+		small_selection_container.visible = true
+		small_selection_container.custom_minimum_size = Vector2(0, 0)
 		
 		# Now display the passed through card array to the selection mode container in large pixel format
-		display_hand_cards_array(card_array, $SELECTION_MODE/small_selection_mode_container, card_scales[amount_of_cards_to_show], should_hide)
+		display_hand_cards_array(card_array, small_selection_container, card_scales[amount_of_cards_to_show], should_hide)
 
 # Both the cancel button and action button will hide selection mode so function is vaguely named for both actions
 func hide_selection_mode_display_main() -> void:
@@ -264,36 +299,36 @@ func hide_selection_mode_display_main() -> void:
 	update_action_button()  
 	
 	# Hide the enlarged selection mode cards
-	$SELECTION_MODE/small_selection_mode_container.visible = false
-	$SELECTION_MODE/selection_mode_scroller.visible = false
-	$SELECTION_MODE/selection_mode_scroller/large_selection_mode_container.visible = false
+	small_selection_container.visible = false
+	selection_scroller.visible = false
+	large_selection_container.visible = false
 	
 	# Hide the buttons
-	$cancel_selection_mode_view_button.visible = false
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.visible = false
+	cancel_button.visible = false
+	action_button.visible = false
 	
 	# Show the player and opponents hands
-	$CARD_COLLECTIONS/PLAYER/player_hand_hbox_container.visible = true
-	$CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container.visible = true
+	player_hand_container.visible = true
+	opponent_hand_container.visible = true
 	
 	# Show the player and opponents active pokemon
-	$ACTIVE_POKEMON/PLAYER/player_active_pokemon_container.visible = true
-	$ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container.visible = true
+	player_active_container.visible = true
+	opponent_active_container.visible = true
 	
-	$ACTIVE_POKEMON/PLAYER/player_active_pokemon_energies.visible = true
-	$ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_energies.visible = true
+	player_energy_container.visible = true
+	opponent_energy_container.visible = true
 	
-	$ACTIVE_POKEMON/PLAYER/player_active_pokemon_hp_container.visible = true
-	$ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_hp_container.visible = true
+	player_hp_container.visible = true
+	opponent_hp_container.visible = true
 	
-	$ACTIVE_POKEMON/PLAYER/player_active_pokemon_status_container.visible = true
-	$ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_status_container.visible = true
+	player_status_container.visible = true
+	opponent_status_container.visible = true
 	
-	$BUTTONS/main_screen_buttons_container.visible = true
+	main_buttons_container.visible = true
 	
 	# Show the player and oppoents bench
-	$CARD_COLLECTIONS/PLAYER/player_bench_container.visible = true
-	$CARD_COLLECTIONS/OPPONENT/opponent_bench_container.visible = true
+	player_bench_container.visible = true
+	opponent_bench_container.visible = true
 	
 	$SCREEN_LABELS/OPPONENT/opponent_bench_cards_label.visible = true
 	$SCREEN_LABELS/PLAYER/player_bench_cards_label.visible = true
@@ -301,35 +336,35 @@ func hide_selection_mode_display_main() -> void:
 	$SCREEN_LABELS/OPPONENT/opponent_prize_cards_label.visible = true
 	$SCREEN_LABELS/PLAYER/player_prize_cards_label.visible = true
 	
-	$CARD_COLLECTIONS/OPPONENT/opponent_prize_cards_container.visible = true
-	$CARD_COLLECTIONS/PLAYER/player_prize_cards_container.visible = true
+	opponent_prize_container.visible = true
+	player_prize_container.visible = true
 	
-	$CARD_COLLECTIONS/PLAYER/player_deck_icon.visible = true
-	$CARD_COLLECTIONS/OPPONENT/opponent_deck_icon.visible = true
+	player_deck_icon.visible = true
+	opponent_deck_icon.visible = true
 
-	$CARD_COLLECTIONS/PLAYER/player_discard_pile_icon.visible = true
-	$CARD_COLLECTIONS/OPPONENT/opponent_discard_pile_icon.visible = true
+	player_discard_icon.visible = true
+	opponent_discard_icon.visible = true
 	
 	update_deck_icon(false)
 	update_deck_icon(true)
 	
 	# We do however want to show the header and hint labels
-	$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.visible = false
-	$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.visible = false
+	hint_label.visible = false
+	header_label.visible = false
 	
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "Select a Card"
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled
+	action_button.text = "Select a Card"
+	action_button.disabled = true
+	action_button.theme = theme_disabled
 	
 	# Re-enable mouse input on previously hidden containers
-	$ACTIVE_POKEMON/PLAYER/player_active_pokemon_container.mouse_filter = MOUSE_FILTER_PASS
-	$ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container.mouse_filter = MOUSE_FILTER_PASS
-	$CARD_COLLECTIONS/PLAYER/player_bench_container.mouse_filter = MOUSE_FILTER_PASS
+	player_active_container.mouse_filter = MOUSE_FILTER_PASS
+	opponent_active_container.mouse_filter = MOUSE_FILTER_PASS
+	player_bench_container.mouse_filter = MOUSE_FILTER_PASS
 	
 	# Re-enable input on cards in the active pokemon containers
-	for card in $ACTIVE_POKEMON/PLAYER/player_active_pokemon_container.get_children():
+	for card in player_active_container.get_children():
 		card.mouse_filter = MOUSE_FILTER_PASS
-	for card in $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container.get_children():
+	for card in opponent_active_container.get_children():
 		card.mouse_filter = MOUSE_FILTER_PASS
 	
 # Displays both the player and opponents hand cards. Shows players at the top of screen and opponents in top right smaller.
@@ -385,16 +420,16 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2, f
 # Refreshes the hand display for either player or opponent using standard sizes and containers
 func refresh_hand_display(is_opponent: bool) -> void:
 	if is_opponent:
-		display_hand_cards_array(opponent_hand, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, card_scales[11.55], hide_hidden_cards, 400, 7)
+		display_hand_cards_array(opponent_hand, opponent_hand_container, card_scales[11.55], hide_hidden_cards, 400, 7)
 	else:
-		display_hand_cards_array(player_hand, $CARD_COLLECTIONS/PLAYER/player_hand_hbox_container, card_scales[11])
+		display_hand_cards_array(player_hand, player_hand_container, card_scales[11])
 
 # Display active and bench pokemon for either player or opponent. is_opponent: true for opponent, false for player
 func display_pokemon(is_opponent: bool) -> void:
 	var active_pokemon = opponent_active_pokemon if is_opponent else player_active_pokemon
 	var bench_pokemon_array = opponent_bench if is_opponent else player_bench
-	var active_container = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container if is_opponent else $ACTIVE_POKEMON/PLAYER/player_active_pokemon_container
-	var bench_container = $CARD_COLLECTIONS/OPPONENT/opponent_bench_container if is_opponent else $CARD_COLLECTIONS/PLAYER/player_bench_container
+	var active_container = opponent_active_container if is_opponent else player_active_container
+	var bench_container = opponent_bench_container if is_opponent else player_bench_container
 	
 	# Clear active pokemon container
 	for child in active_container.get_children():
@@ -431,53 +466,53 @@ func update_selection_mode_labels(array_displayed: Array, is_starting_game: bool
 	
 	# Special case: if we're in bench setup phase, use specific text
 	if bench_setup_phase_active:
-		$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "Build Your Bench"
-		$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Select up to 5 Pokémon to place on your bench"
+		header_label.text = "Build Your Bench"
+		hint_label.text = "Select up to 5 Pokémon to place on your bench"
 		return
 	
 	# Determine which array we're displaying and set appropriate text
 	if array_displayed == player_hand:
 		if is_starting_game:
-			$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "Select a Basic Pokémon"
-			$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "You must place a Basic Pokémon as your Active Pokémon to start"
+			header_label.text = "Select a Basic Pokémon"
+			hint_label.text = "You must place a Basic Pokémon as your Active Pokémon to start"
 		else:
-			$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "Your Hand"
-			$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Select a card to play"
+			header_label.text = "Your Hand"
+			hint_label.text = "Select a card to play"
 	
 	elif array_displayed == player_bench:
-		$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "Your Bench"
-		$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Select a card to set as your Active Pokémon"
+		header_label.text = "Your Bench"
+		hint_label.text = "Select a card to set as your Active Pokémon"
 	
 	elif array_displayed == opponent_hand:
-		$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "Opponent's Hand"
-		$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Viewing opponent's hand"
+		header_label.text = "Opponent's Hand"
+		hint_label.text = "Viewing opponent's hand"
 		
 	elif array_displayed == opponent_bench:
-		$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "Opponent's Bench"
-		$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Viewing opponent's bench"
+		header_label.text = "Opponent's Bench"
+		hint_label.text = "Viewing opponent's bench"
 		
 	elif array_displayed == player_prize_cards:
-		$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "Your Prize Cards"
-		$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Viewing your prize cards"
+		header_label.text = "Your Prize Cards"
+		hint_label.text = "Viewing your prize cards"
 		
 	elif array_displayed == opponent_prize_cards:
-		$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "Opponent's prize cards"
-		$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Viewing opponent's prize cards"
+		header_label.text = "Opponent's prize cards"
+		hint_label.text = "Viewing opponent's prize cards"
 
 	elif array_displayed == player_discard_pile:
-		$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "Your Discard Pile"
-		$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Viewing your discard pile"
+		header_label.text = "Your Discard Pile"
+		hint_label.text = "Viewing your discard pile"
 		
 	elif array_displayed == opponent_discard_pile:
-		$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "Opponent's Discard Pile"
-		$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Viewing opponent's discard pile"
+		header_label.text = "Opponent's Discard Pile"
+		hint_label.text = "Viewing opponent's discard pile"
 
 # Function to change the text, enabled mode and function of the action button.
 func update_action_button() -> void:
 	
 	# We need to see what the button can do by running the function get_card_action
 	var action_info = get_card_action(selected_card_for_action)
-	var action_button = $BUTTONS/SELECTION_BUTTONS/card_action_button
+	var action_button = action_button
 	var action_type = action_info["action"]
 	
 	if action_type == "SET_POKEMON" and not match_just_started_basic_pokemon_required:
@@ -566,10 +601,10 @@ func display_prize_cards(is_opponent: bool) -> void:
 	var prize_cards: Array
 	
 	if is_opponent:
-		prize_cards_container = $CARD_COLLECTIONS/OPPONENT/opponent_prize_cards_container
+		prize_cards_container = opponent_prize_container
 		prize_cards = opponent_prize_cards		
 	else:
-		prize_cards_container = $CARD_COLLECTIONS/PLAYER/player_prize_cards_container
+		prize_cards_container = player_prize_container
 		prize_cards = player_prize_cards
 
 	# Clear any existing cards from the container
@@ -598,7 +633,7 @@ func display_prize_cards(is_opponent: bool) -> void:
 
 # Displays attached energy cards next to the active Pokemon, stacking with overlap
 func display_active_pokemon_energies(is_opponent: bool = false) -> void:
-	var energy_container = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_energies if is_opponent else $ACTIVE_POKEMON/PLAYER/player_active_pokemon_energies
+	var energy_container = opponent_energy_container if is_opponent else player_energy_container
 	var active_pokemon = opponent_active_pokemon if is_opponent else player_active_pokemon
 
 	for child in energy_container.get_children():
@@ -630,7 +665,7 @@ func display_active_pokemon_energies(is_opponent: bool = false) -> void:
 		
 # Displays HP circles above the active pokemon, colouring red from damage taken
 func display_hp_circles_above_align(active_pokemon: card_object, is_opponent: bool) -> void:
-	var hp_grid_container = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_hp_container if is_opponent else $ACTIVE_POKEMON/PLAYER/player_active_pokemon_hp_container
+	var hp_grid_container = opponent_hp_container if is_opponent else player_hp_container
 	
 	for child in hp_grid_container.get_children():
 		child.queue_free()
@@ -654,47 +689,38 @@ func display_hp_circles_above_align(active_pokemon: card_object, is_opponent: bo
 	var top_red = min(red_circles, top_row_circles)
 	var bottom_red = red_circles - top_red
 	
-	if is_opponent:
-		for i in range(top_row_circles):
-			var circle = ColorRect.new()
-			circle.custom_minimum_size = Vector2(30, 30)
-			circle.color = Color.RED if i < top_red else Color.GREEN
-			hp_grid_container.add_child(circle)
-		for _i in range(top_row_spacers):
-			var spacer = Control.new()
-			spacer.custom_minimum_size = Vector2(30, 30)
-			hp_grid_container.add_child(spacer)
+	# Opponent draws circles first (left-aligned), player draws spacers first (right-aligned)
+	_add_hp_row(hp_grid_container, top_row_circles, top_row_spacers, top_red, is_opponent, false)
+	_add_hp_row(hp_grid_container, bottom_row_circles, bottom_row_spacers, bottom_red, is_opponent, is_opponent)
+
+# Adds one row of HP circles and spacers to the grid container
+# circles_first: if true, circles are drawn before spacers (left-aligned for opponent)
+# red_from_right: if true, red fills from the right side of the row (opponent bottom row)
+func _add_hp_row(container: GridContainer, circle_count: int, spacer_count: int, red_count: int, circles_first: bool, red_from_right: bool) -> void:
+	if circles_first:
+		_add_hp_circles(container, circle_count, red_count, red_from_right)
+		_add_hp_spacers(container, spacer_count)
 	else:
-		for _i in range(top_row_spacers):
-			var spacer = Control.new()
-			spacer.custom_minimum_size = Vector2(30, 30)
-			hp_grid_container.add_child(spacer)
-		for i in range(top_row_circles):
-			var circle = ColorRect.new()
-			circle.custom_minimum_size = Vector2(30, 30)
-			circle.color = Color.RED if i < top_red else Color.GREEN
-			hp_grid_container.add_child(circle)
-	
-	if is_opponent:
-		for i in range(bottom_row_circles):
-			var circle = ColorRect.new()
-			circle.custom_minimum_size = Vector2(30, 30)
-			circle.color = Color.RED if i >= (bottom_row_circles - bottom_red) else Color.GREEN
-			hp_grid_container.add_child(circle)
-		for _i in range(bottom_row_spacers):
-			var spacer = Control.new()
-			spacer.custom_minimum_size = Vector2(30, 30)
-			hp_grid_container.add_child(spacer)
-	else:
-		for _i in range(bottom_row_spacers):
-			var spacer = Control.new()
-			spacer.custom_minimum_size = Vector2(30, 30)
-			hp_grid_container.add_child(spacer)
-		for i in range(bottom_row_circles):
-			var circle = ColorRect.new()
-			circle.custom_minimum_size = Vector2(30, 30)
-			circle.color = Color.RED if i < bottom_red else Color.GREEN
-			hp_grid_container.add_child(circle)
+		_add_hp_spacers(container, spacer_count)
+		_add_hp_circles(container, circle_count, red_count, red_from_right)
+
+# Draws colored circles into the HP grid, coloring red for damage taken
+func _add_hp_circles(container: GridContainer, count: int, red_count: int, red_from_right: bool) -> void:
+	for i in range(count):
+		var circle = ColorRect.new()
+		circle.custom_minimum_size = Vector2(30, 30)
+		if red_from_right:
+			circle.color = Color.RED if i >= (count - red_count) else Color.GREEN
+		else:
+			circle.color = Color.RED if i < red_count else Color.GREEN
+		container.add_child(circle)
+
+# Draws invisible spacer cells to align HP circles within the 12-column grid
+func _add_hp_spacers(container: GridContainer, count: int) -> void:
+	for _i in range(count):
+		var spacer = Control.new()
+		spacer.custom_minimum_size = Vector2(30, 30)
+		container.add_child(spacer)
 
 # Hides the main action buttons and generates one attack button per attack the pokemon has
 func show_attack_buttons() -> void:
@@ -714,8 +740,8 @@ func show_attack_buttons() -> void:
 		hide_attack_buttons()
 		return
 	
-	$BUTTONS/main_screen_buttons_container.visible = false
-	$BUTTONS/main_screen_attack_buttons_container.visible = true
+	main_buttons_container.visible = false
+	attack_buttons_container.visible = true
 	
 	var attacks = get_attacks_for_card(player_active_pokemon)
 	
@@ -729,7 +755,7 @@ func show_attack_buttons() -> void:
 		var btn = Button.new()
 		btn.text = attack.get("name", "Attack")
 		btn.custom_minimum_size = Vector2(350, 50)
-		$BUTTONS/main_screen_attack_buttons_container.add_child(btn)
+		attack_buttons_container.add_child(btn)
 		
 		# Enable and colour green if requirements met, disable and grey out if not
 		if check_attack_requirements(attack, player_active_pokemon):
@@ -744,30 +770,30 @@ func show_attack_buttons() -> void:
 
 # Clears generated attack buttons and restores the main action buttons
 func hide_attack_buttons() -> void:
-	for child in $BUTTONS/main_screen_attack_buttons_container.get_children():
+	for child in attack_buttons_container.get_children():
 		# Skip the cancel button — it's a permanent node, not dynamically generated
 		if child.name == "cancel_attack_mode_button":
 			continue
 		child.queue_free()
 	
-	$BUTTONS/main_screen_attack_buttons_container.visible = false
-	$BUTTONS/main_screen_buttons_container.visible = true
+	attack_buttons_container.visible = false
+	main_buttons_container.visible = true
 
 # Displays the message box with given text and pauses execution until the player clicks
 func show_message(message_text: String) -> void:
-	$messagebox_container.visible = true
-	$messagebox_container/messagebox_texture.visible = true
-	$messagebox_container/messagebox_text_label.visible = true
-	$messagebox_container/messagebox_text_label.text = message_text
+	msgbox_container.visible = true
+	msgbox_texture.visible = true
+	msgbox_label.visible = true
+	msgbox_label.text = message_text
 	await message_acknowledged
-	$messagebox_container/messagebox_text_label.visible = false
-	$messagebox_container/messagebox_texture.visible = false
-	$messagebox_container.visible = false
+	msgbox_label.visible = false
+	msgbox_texture.visible = false
+	msgbox_container.visible = false
 
 # Changes the deck icon to show how many cards are (roughly)
 func update_deck_icon(is_opponent: bool) -> void:
 	var deck = opponent_deck if is_opponent else player_deck
-	var widget = $CARD_COLLECTIONS/OPPONENT/opponent_deck_icon if is_opponent else $CARD_COLLECTIONS/PLAYER/player_deck_icon
+	var widget = opponent_deck_icon if is_opponent else player_deck_icon
 	var count = deck.size()
 
 	var count_label = widget.get_node("opponent_deck_count_label") if is_opponent else widget.get_node("player_deck_count_label")
@@ -803,26 +829,21 @@ func update_main_screen_buttons() -> void:
 		retreat_bench_selection_active
 	)
 
-	if should_disable:
-		$BUTTONS/main_screen_buttons_container/button_main_attack.theme = theme_disabled
-		$BUTTONS/main_screen_buttons_container/button_main_power.theme = theme_disabled
-		$BUTTONS/main_screen_buttons_container/button_main_retreat.theme = theme_disabled
-		$BUTTONS/main_screen_buttons_container/button_main_endturn.theme = theme_disabled
-	else:
-		$BUTTONS/main_screen_buttons_container/button_main_attack.theme = theme_blue
-		$BUTTONS/main_screen_buttons_container/button_main_power.theme = theme_blue
-		$BUTTONS/main_screen_buttons_container/button_main_retreat.theme = theme_blue
-		$BUTTONS/main_screen_buttons_container/button_main_endturn.theme = theme_blue	
-				
-	$BUTTONS/main_screen_buttons_container/button_main_attack.disabled = should_disable
-	$BUTTONS/main_screen_buttons_container/button_main_power.disabled = should_disable
-	$BUTTONS/main_screen_buttons_container/button_main_retreat.disabled = should_disable
-	$BUTTONS/main_screen_buttons_container/button_main_endturn.disabled = should_disable	
+	var btn_theme = theme_disabled if should_disable else theme_blue
+	var buttons = [
+		main_buttons_container.get_node("button_main_attack"),
+		main_buttons_container.get_node("button_main_power"),
+		main_buttons_container.get_node("button_main_retreat"),
+		main_buttons_container.get_node("button_main_endturn"),
+	]
+	for btn in buttons:
+		btn.theme = btn_theme
+		btn.disabled = should_disable
 
 # Updates the discard pile icon to show the top card and count for the specified player
 func update_discard_pile_display(is_opponent: bool) -> void:
 	var discard = opponent_discard_pile if is_opponent else player_discard_pile
-	var icon = $CARD_COLLECTIONS/OPPONENT/opponent_discard_pile_icon if is_opponent else $CARD_COLLECTIONS/PLAYER/player_discard_pile_icon
+	var icon = opponent_discard_icon if is_opponent else player_discard_icon
 	var label_name = "opponent_discard_pile_label" if is_opponent else "player_discard_pile_label"
 	
 	icon.get_node(label_name).text = str(discard.size())
@@ -845,7 +866,7 @@ func update_discard_pile_display(is_opponent: bool) -> void:
 
 # Clears and rebuilds status condition icons for a pokemon's status container
 func update_status_icons(pokemon: card_object, is_opponent: bool) -> void:
-	var container = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_status_container if is_opponent else $ACTIVE_POKEMON/PLAYER/player_active_pokemon_status_container
+	var container = opponent_status_container if is_opponent else player_status_container
 	for child in container.get_children():
 		child.queue_free()
 
@@ -926,7 +947,7 @@ func show_floating_label(message: String, spawn_position: Vector2, upwards: bool
 
 # Animates a card back image sliding from one node's position to another
 func animate_card_a_to_b(from_node: Control, to_node: Control, animation_speed: float = 0.8, custom_texture: Texture2D = null, custom_size: Vector2 = Vector2(83, 113)) -> void:
-	$animation_input_blocker.visible = true
+	animation_blocker.visible = true
 	var card_image = TextureRect.new()
 	card_image.texture = custom_texture if custom_texture else card_back_texture
 	card_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -942,11 +963,11 @@ func animate_card_a_to_b(from_node: Control, to_node: Control, animation_speed: 
 	tween.tween_property(card_image, "global_position", target_pos, animation_speed).set_ease(Tween.EASE_IN_OUT)
 	tween.tween_callback(card_image.queue_free)
 	await tween.finished
-	$animation_input_blocker.visible = false
+	animation_blocker.visible = false
 
 # Animate discarding for reatreat and knockout
 func animate_energies_to_discard(energy_cards: Array, pokemon: card_object, is_opponent: bool) -> void:
-	var discard_node = $CARD_COLLECTIONS/OPPONENT/opponent_discard_pile_icon if is_opponent else $CARD_COLLECTIONS/PLAYER/player_discard_pile_icon
+	var discard_node = opponent_discard_icon if is_opponent else player_discard_icon
 	var discard_pile = opponent_discard_pile if is_opponent else player_discard_pile
 	var from_node = find_card_ui_for_object(pokemon)
 
@@ -973,8 +994,8 @@ func animate_energies_to_discard(energy_cards: Array, pokemon: card_object, is_o
 				
 # Animates the retreat sequence: energies to discard, message, then swap pokemon positions
 func animate_retreat(old_active: card_object, new_active: card_object, discarded_energies: Array, is_opponent: bool) -> void:
-	var active_container = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container if is_opponent else $ACTIVE_POKEMON/PLAYER/player_active_pokemon_container
-	var bench_container = $CARD_COLLECTIONS/OPPONENT/opponent_bench_container if is_opponent else $CARD_COLLECTIONS/PLAYER/player_bench_container
+	var active_container = opponent_active_container if is_opponent else player_active_container
+	var bench_container = opponent_bench_container if is_opponent else player_bench_container
 	
 	if discarded_energies.size() > 0:
 		await animate_energies_to_discard(discarded_energies, old_active, is_opponent)
@@ -1069,19 +1090,19 @@ func get_type_colour(type_name: String) -> Color:
 # Returns {"position": Vector2, "size": Vector2, "is_active": bool} or empty dict if not found
 func get_pokemon_screen_location(pokemon: card_object) -> Dictionary:
 	if pokemon == opponent_active_pokemon:
-		return {"position": $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container.global_position, "size": card_scales[3.5], "is_active": true}
+		return {"position": opponent_active_container.global_position, "size": card_scales[3.5], "is_active": true}
 	elif pokemon == player_active_pokemon:
-		return {"position": $ACTIVE_POKEMON/PLAYER/player_active_pokemon_container.global_position, "size": card_scales[3.5], "is_active": true}
+		return {"position": player_active_container.global_position, "size": card_scales[3.5], "is_active": true}
 	elif pokemon in opponent_bench:
 		var index = opponent_bench.find(pokemon)
 		var size = card_scales[11]
-		var separation = $CARD_COLLECTIONS/OPPONENT/opponent_bench_container.get_theme_constant("separation")
-		return {"position": $CARD_COLLECTIONS/OPPONENT/opponent_bench_container.global_position + Vector2(index * (size.x + separation), 0), "size": size, "is_active": false}
+		var separation = opponent_bench_container.get_theme_constant("separation")
+		return {"position": opponent_bench_container.global_position + Vector2(index * (size.x + separation), 0), "size": size, "is_active": false}
 	elif pokemon in player_bench:
 		var index = player_bench.find(pokemon)
 		var size = card_scales[11]
-		var separation = $CARD_COLLECTIONS/PLAYER/player_bench_container.get_theme_constant("separation")
-		return {"position": $CARD_COLLECTIONS/PLAYER/player_bench_container.global_position + Vector2(index * (size.x + separation), 0), "size": size, "is_active": false}
+		var separation = player_bench_container.get_theme_constant("separation")
+		return {"position": player_bench_container.global_position + Vector2(index * (size.x + separation), 0), "size": size, "is_active": false}
 	return {}
 
 func play_evolution_effect(pokemon: card_object) -> void:
@@ -1255,7 +1276,7 @@ func setup_player():
 	
 	# Load the players CURRENT deck from saved files
 	var player_deck_path = "res://playerdata/"+player_deck_name+".json"
-	var player_hand_container = $CARD_COLLECTIONS/PLAYER/player_hand_hbox_container
+	var player_hand_container = player_hand_container
 	
 	# Load and shuffle deck
 	player_deck = load_deck_from_file(player_deck_path)
@@ -1271,7 +1292,7 @@ func setup_opponent(opponent_id: String):
 	
 	# We will need to eventually pass a number of different decks depending on the NPC opponent so load the correct one from file
 	var opponent_deck_path = "res://opponentdeckdata/"+opponent_id+".json"
-	var opponent_hand_container = $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container
+	var opponent_hand_container = opponent_hand_container
 	
 	# Load the deck from the opponent data folder file
 	opponent_deck = load_deck_from_file(opponent_deck_path)
@@ -1364,14 +1385,14 @@ func start_bench_setup_phase() -> void:
 		
 	# Set the flag so we know we're in bench setup mode
 	bench_setup_phase_active = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "Select a Card"
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled
+	action_button.text = "Select a Card"
+	action_button.disabled = true
+	action_button.theme = theme_disabled
 	
 	selected_card_for_action = null
 	
-	$cancel_selection_mode_view_button.text = "Done"
-	$cancel_selection_mode_view_button.theme = theme_green
+	cancel_button.text = "Done"
+	cancel_button.theme = theme_green
 	
 	# Show the hand again for bench pokemon selection
 	show_enlarged_array_selection_mode(player_hand)	
@@ -1613,31 +1634,44 @@ func add_pokemon_to_bench(pokemon: card_object) -> void:
 # Function that get's the card position/location/object. Called from various functions when trying to find a specific card object
 func find_card_ui_for_object(card_obj: card_object) -> TextureRect:
 	# Check small selection container
-	if $SELECTION_MODE/small_selection_mode_container.visible:
-		for card_ui in $SELECTION_MODE/small_selection_mode_container.get_children():
+	if small_selection_container.visible:
+		for card_ui in small_selection_container.get_children():
 			# Only check if this is a TextureRect with card_ref
 			if card_ui is TextureRect and "card_ref" in card_ui:
 				if card_ui.card_ref == card_obj:
 					return card_ui
 	
 	# Check large selection container
-	if $SELECTION_MODE/selection_mode_scroller.visible:
-		for card_ui in $SELECTION_MODE/selection_mode_scroller/large_selection_mode_container.get_children():
+	if selection_scroller.visible:
+		for card_ui in large_selection_container.get_children():
 			if card_ui is TextureRect and "card_ref" in card_ui:
 				if card_ui.card_ref == card_obj:
 					return card_ui
 	
 	# Check main screen containers
-	for container in [$ACTIVE_POKEMON/PLAYER/player_active_pokemon_container, $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container, 
-			$CARD_COLLECTIONS/PLAYER/player_bench_container, $CARD_COLLECTIONS/OPPONENT/opponent_bench_container,
-			$ACTIVE_POKEMON/PLAYER/player_active_pokemon_energies, $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_energies,
-			$CARD_COLLECTIONS/PLAYER/player_hand_hbox_container, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container]:
+	for container in [player_active_container, opponent_active_container, 
+			player_bench_container, opponent_bench_container,
+			player_energy_container, opponent_energy_container,
+			player_hand_container, opponent_hand_container]:
 		for card_ui in container.get_children():
 			if card_ui is TextureRect and "card_ref" in card_ui:
 				if card_ui.card_ref == card_obj:
 					return card_ui
 	
 	return null
+
+# Deselects the currently selected card and selects a new card, updating the UI visuals
+func select_card_in_ui(new_card: card_object) -> void:
+	if selected_card_for_action != null:
+		var prev_display = find_card_ui_for_object(selected_card_for_action)
+		if prev_display:
+			prev_display.set_selected(false)
+	
+	selected_card_for_action = new_card
+	
+	var card_display = find_card_ui_for_object(new_card)
+	if card_display:
+		card_display.set_selected(true)
 
 # Function called when selecting an energy card to attach to a pokemon. Calls show enlarged array as a subfunction	
 func start_energy_attachment() -> void:
@@ -1663,11 +1697,11 @@ func start_energy_attachment() -> void:
 	
 	# Update labels for energy attachment context
 	var energy_name = energy_card_awaiting_target.metadata.get("name", "Unknown Energy")
-	$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "ATTACHING " + energy_name.to_upper()
-	$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Select a Pokémon to attach " + energy_name + " to"
+	header_label.text = "ATTACHING " + energy_name.to_upper()
+	hint_label.text = "Select a Pokémon to attach " + energy_name + " to"
 	
 	# Update action button text
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "ATTACH ENERGY"
+	action_button.text = "ATTACH ENERGY"
 	
 # Add this new function after start_energy_attachment()
 func perform_energy_attachment() -> void:
@@ -1692,9 +1726,9 @@ func perform_energy_attachment() -> void:
 	refresh_hand_display(false)
 	
 	# Animate energy flying from hand to the target pokemon
-	var target_node = $ACTIVE_POKEMON/PLAYER/player_active_pokemon_energies if target_pokemon == player_active_pokemon else $CARD_COLLECTIONS/PLAYER/player_bench_container
+	var target_node = player_energy_container if target_pokemon == player_active_pokemon else player_bench_container
 	var energy_texture = get_card_texture(energy_card)
-	await animate_card_a_to_b($CARD_COLLECTIONS/PLAYER/player_hand_hbox_container, target_node, 0.2, energy_texture, card_scales[12])
+	await animate_card_a_to_b(player_hand_container, target_node, 0.2, energy_texture, card_scales[12])
 		
 	display_pokemon(false)	
 	display_active_pokemon_energies()
@@ -1727,9 +1761,9 @@ func draw_card_from_deck(is_opponent: bool) -> card_object:
 	hand.append(drawn_card)
 
 	if is_opponent:
-		await animate_card_a_to_b($CARD_COLLECTIONS/OPPONENT/opponent_deck_icon, $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, 0.2)
+		await animate_card_a_to_b(opponent_deck_icon, opponent_hand_container, 0.2)
 	else:
-		await animate_card_a_to_b($CARD_COLLECTIONS/PLAYER/player_deck_icon, $CARD_COLLECTIONS/PLAYER/player_hand_hbox_container,0.3)
+		await animate_card_a_to_b(player_deck_icon, player_hand_container,0.3)
 
 	return drawn_card
 
@@ -1738,8 +1772,8 @@ func flip_coin() -> bool:
 	var result: bool = (randi() % 2 == 0)
 
 	# Show the input-blocking overlay and set initial coin image to heads
-	$coin_flip_container.visible = true
-	var coin = $coin_flip_container/coin_flip_texture
+	coin_container.visible = true
+	var coin = coin_texture
 	coin.texture = tex_heads
 	coin.visible = true
 	
@@ -1786,7 +1820,7 @@ func flip_coin() -> bool:
 		sparkles.queue_free()
 	
 	# Clean up: hide the coin overlay
-	$coin_flip_container.visible = false
+	coin_container.visible = false
 	coin.visible = false
 	
 	return result
@@ -1819,8 +1853,8 @@ func send_card_to_discard(card: card_object, is_opponent: bool) -> void:
 func take_prize_card(card: card_object, is_opponent: bool) -> void:
 	var prizes = opponent_prize_cards if is_opponent else player_prize_cards
 	var hand = opponent_hand if is_opponent else player_hand
-	var prize_container = $CARD_COLLECTIONS/OPPONENT/opponent_prize_cards_container if is_opponent else $CARD_COLLECTIONS/PLAYER/player_prize_cards_container
-	var hand_container = $CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container if is_opponent else $CARD_COLLECTIONS/PLAYER/player_hand_hbox_container
+	var prize_container = opponent_prize_container if is_opponent else player_prize_container
+	var hand_container = opponent_hand_container if is_opponent else player_hand_container
 	
 	var card_ui = find_card_ui_for_object(card)
 	var card_texture = get_card_texture(card)
@@ -1839,14 +1873,14 @@ func take_prize_card(card: card_object, is_opponent: bool) -> void:
 # Opens selection mode to choose a prize card and return that as the object to put into hand
 func player_pick_prize_card() -> void:
 	prize_card_selection_active = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.position.x += 210
+	action_button.position.x += 210
 	show_enlarged_array_selection_mode(player_prize_cards)
-	$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "TAKE A PRIZE CARD"
-	$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Select a prize card to add to your hand"
-	$cancel_selection_mode_view_button.visible = false
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "TAKE PRIZE"
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled
+	header_label.text = "TAKE A PRIZE CARD"
+	hint_label.text = "Select a prize card to add to your hand"
+	cancel_button.visible = false
+	action_button.text = "TAKE PRIZE"
+	action_button.disabled = true
+	action_button.theme = theme_disabled
 
 
 ############################################### Start and end of turn checks and sets ################################################
@@ -1864,7 +1898,7 @@ func reset_field_pokemon_turn_flags(is_opponent: bool) -> void:
 
 # Called at the start of the player's turn to perform mandatory actions
 func player_start_turn_checks() -> void:
-	$opponent_turn_input_blocker.visible = false
+	opponent_blocker.visible = false
 	show_floating_label("Start turn", Vector2(50, 180), false)
 	turn_number += 1
 	print("PLAYER'S TURN START. TURN NUMBER IS ", turn_number)
@@ -1881,14 +1915,13 @@ func player_start_turn_checks() -> void:
 	
 # Called when the player presses the end turn button to reset per-turn variables and begin next turn
 func player_end_turn_checks() -> void:
-	$opponent_turn_input_blocker.visible = true
+	opponent_blocker.visible = true
 	opponents_turn_active = true
 	update_main_screen_buttons()
 	show_floating_label("End turn", Vector2(1500, 880))
 	
 	await check_all_knockouts()
 	
-	reset_field_pokemon_turn_flags(false)
 	await inbetween_turn_checks(true)
 
 # Resets shared state between turns, processes status effects, and starts the next turn
@@ -2006,12 +2039,12 @@ func start_evolution() -> void:
 	show_enlarged_array_selection_mode(valid_targets)
 	
 	var evo_name = evolution_card_awaiting_target.metadata.get("name", "Unknown")
-	$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "EVOLVING INTO " + evo_name.to_upper()
-	$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Select a Pokémon to evolve into " + evo_name
+	header_label.text = "EVOLVING INTO " + evo_name.to_upper()
+	hint_label.text = "Select a Pokémon to evolve into " + evo_name
 	
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "EVOLVE"
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled
+	action_button.text = "EVOLVE"
+	action_button.disabled = true
+	action_button.theme = theme_disabled
 
 # Replaces a Pokemon on the field with its evolution, transferring all attachments and damage
 func perform_evolution(is_opponent: bool) -> void:
@@ -2113,11 +2146,11 @@ func start_retreat() -> void:
 	
 	show_enlarged_array_selection_mode(display_array)
 	
-	$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "RETREAT - SELECT ENERGY TO DISCARD"
-	$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Select " + str(retreat_cost_remaining) + " energy card(s) to discard"
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = str(retreat_cost_remaining) + " ENERGY REMAINING"
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled
+	header_label.text = "RETREAT - SELECT ENERGY TO DISCARD"
+	hint_label.text = "Select " + str(retreat_cost_remaining) + " energy card(s) to discard"
+	action_button.text = str(retreat_cost_remaining) + " ENERGY REMAINING"
+	action_button.disabled = true
+	action_button.theme = theme_disabled
 
 # Shows the player's bench for selecting which Pokemon to swap into the active spot
 func start_retreat_bench_selection() -> void:
@@ -2127,11 +2160,11 @@ func start_retreat_bench_selection() -> void:
 	
 	show_enlarged_array_selection_mode(player_bench)
 	
-	$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "SELECT NEW ACTIVE POKEMON"
-	$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Choose a bench Pokemon to switch into the active spot"
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "MAKE ACTIVE"
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled#
+	header_label.text = "SELECT NEW ACTIVE POKEMON"
+	hint_label.text = "Choose a bench Pokemon to switch into the active spot"
+	action_button.text = "MAKE ACTIVE"
+	action_button.disabled = true
+	action_button.theme = theme_disabled#
 
 ########################################################## END CORE FUNCTIONALITY FUNCTIONS ##########################################################
 ######################################################################################################################################################
@@ -2367,8 +2400,8 @@ func check_and_handle_knockout(pokemon: card_object, is_opponent: bool) -> bool:
 	var ko_name = pokemon.metadata.get("name", "Unknown")
 	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
 	var bench = opponent_bench if is_opponent else player_bench
-	var discard_node = $CARD_COLLECTIONS/OPPONENT/opponent_discard_pile_icon if is_opponent else $CARD_COLLECTIONS/PLAYER/player_discard_pile_icon
-	var active_container = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container if is_opponent else $ACTIVE_POKEMON/PLAYER/player_active_pokemon_container
+	var discard_node = opponent_discard_icon if is_opponent else player_discard_icon
+	var active_container = opponent_active_container if is_opponent else player_active_container
 	
 	await show_message(ko_name.to_upper() + " WAS KNOCKED OUT!")
 	
@@ -2428,10 +2461,10 @@ func check_all_knockouts() -> Dictionary:
 			
 	for i in range(results["opponent_kos"]):
 		if player_prize_cards.size() > 0:
-			$opponent_turn_input_blocker.visible = false
+			opponent_blocker.visible = false
 			await player_pick_prize_card()
 			await prize_card_taken
-			$opponent_turn_input_blocker.visible = true
+			opponent_blocker.visible = true
 	
 	# Opponent takes prizes for player KOs
 	for i in range(results["player_kos"]):
@@ -2458,8 +2491,8 @@ func check_all_knockouts() -> Dictionary:
 func handle_post_knockout(is_opponent: bool) -> void:
 	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
 	var bench = opponent_bench if is_opponent else player_bench
-	var active_container = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container if is_opponent else $ACTIVE_POKEMON/PLAYER/player_active_pokemon_container
-	var bench_container = $CARD_COLLECTIONS/OPPONENT/opponent_bench_container if is_opponent else $CARD_COLLECTIONS/PLAYER/player_bench_container
+	var active_container = opponent_active_container if is_opponent else player_active_container
+	var bench_container = opponent_bench_container if is_opponent else player_bench_container
 	
 	if active != null:
 		return
@@ -2487,15 +2520,15 @@ func handle_post_knockout(is_opponent: bool) -> void:
 	else:
 		knockout_bench_selection_active = true
 		show_enlarged_array_selection_mode(player_bench)
-		$cancel_selection_mode_view_button.visible = false
-		$SCREEN_LABELS/MAIN_LABELS/large_header_text_label.text = "YOUR ACTIVE POKEMON WAS KNOCKED OUT"
-		$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Choose a bench Pokemon to set as your new active"
-		$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "SELECT POKEMON"
-		$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-		$opponent_turn_input_blocker.visible = false
-		$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled
+		cancel_button.visible = false
+		header_label.text = "YOUR ACTIVE POKEMON WAS KNOCKED OUT"
+		hint_label.text = "Choose a bench Pokemon to set as your new active"
+		action_button.text = "SELECT POKEMON"
+		action_button.disabled = true
+		opponent_blocker.visible = false
+		action_button.theme = theme_disabled
 		await knockout_replacement_chosen
-		$opponent_turn_input_blocker.visible = true
+		opponent_blocker.visible = true
 	
 ########################################################## END ATTACK AND DAMAGE FUNCTIONS ###########################################################
 ######################################################################################################################################################
@@ -4772,10 +4805,10 @@ func cpu_phase_evolution() -> void:
 
 		await show_message("Opponent evolved " + best["target"].metadata["name"].to_upper() + " into " + best["evo_card"].metadata["name"].to_upper() + "!")
 	
-		var evo_target_node = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_container if best["evo_card"].current_location == "active" else $CARD_COLLECTIONS/OPPONENT/opponent_bench_container
+		var evo_target_node = opponent_active_container if best["evo_card"].current_location == "active" else opponent_bench_container
 		var evo_scale = card_scales[8] if best["evo_card"].current_location == "active" else card_scales[11]
 		var evo_texture = get_card_texture(best["evo_card"])
-		await animate_card_a_to_b($CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, evo_target_node, 0.3, evo_texture, evo_scale)
+		await animate_card_a_to_b(opponent_hand_container, evo_target_node, 0.3, evo_texture, evo_scale)
 
 		display_pokemon(true)
 		display_active_pokemon_energies(true)
@@ -4895,9 +4928,9 @@ func cpu_phase_energy_attachment(cpu_eval: Dictionary) -> void:
 
 	await show_message("Opponent attached " + energy.metadata["name"].to_upper() + " to " + target.metadata["name"].to_upper() + "!")
 
-	var energy_target_node = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_energies if target == opponent_active_pokemon else $CARD_COLLECTIONS/OPPONENT/opponent_bench_container
+	var energy_target_node = opponent_energy_container if target == opponent_active_pokemon else opponent_bench_container
 	var energy_texture = get_card_texture(energy)
-	await animate_card_a_to_b($CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, energy_target_node, 0.2, energy_texture, card_scales[12])
+	await animate_card_a_to_b(opponent_hand_container, energy_target_node, 0.2, energy_texture, card_scales[12])
 
 	refresh_hand_display(true)
 	display_pokemon(true)
@@ -5039,7 +5072,7 @@ func cpu_phase_bench_play() -> void:
 
 		await show_message("Opponent placed " + best_card.metadata["name"].to_upper() + " on the bench!")
 		var card_texture = get_card_texture(best_card)
-		await animate_card_a_to_b($CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container, $CARD_COLLECTIONS/OPPONENT/opponent_bench_container, 0.3, card_texture, card_scales[11])
+		await animate_card_a_to_b(opponent_hand_container, opponent_bench_container, 0.3, card_texture, card_scales[11])
 		display_pokemon(true)
 		refresh_hand_display(true)
 
@@ -5113,9 +5146,9 @@ func opponent_take_prize_card() -> void:
 # Card action button is the physical button that appears when in card selection mode, allows attaching energies, playing pokemon and trainer cards
 func action_button_pressed_perform_action() -> void:
 	
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "Select a Card"
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled
+	action_button.text = "Select a Card"
+	action_button.disabled = true
+	action_button.theme = theme_disabled
 	
 	if retreat_mode_active:
 		retreat_mode_active = false
@@ -5123,119 +5156,136 @@ func action_button_pressed_perform_action() -> void:
 		return
 	
 	if retreat_bench_selection_active:
-		var new_active = selected_card_for_action
-
-		var pre_check = await check_confused_retreat(player_active_pokemon, false, "pre_energy")
-		if not pre_check:
-			retreat_bench_selection_active = false
-			selected_card_for_action = null
-			hide_selection_mode_display_main()
-			display_hp_circles_above_align(player_active_pokemon, false)
-			await check_all_knockouts()
-			display_pokemon(false)
-			return
-
-		var post_check = await check_confused_retreat(player_active_pokemon, false, "post_energy")
-		if not post_check:
-			retreat_bench_selection_active = false
-			selected_card_for_action = null
-			hide_selection_mode_display_main()
-			display_pokemon(false)
-			display_active_pokemon_energies()
-			return
-
-		player_bench.erase(new_active)
-		player_bench.append(player_active_pokemon)
-
-		player_active_pokemon.current_location = "bench"
-		new_active.current_location = "active"
-
-		player_retreated_this_turn = true
-		retreat_bench_selection_active = false
-		selected_card_for_action = null
-
-		hide_selection_mode_display_main()
-		await animate_retreat(player_active_pokemon, new_active, retreat_energies_selected, false)
-
-		clear_all_statuses(player_active_pokemon, false)
-		player_active_pokemon = new_active
-		retreat_energies_selected.clear()
-
-		display_pokemon(false)
-		display_active_pokemon_energies()
+		await handle_action_retreat_bench()
 		return
 	
 	if knockout_bench_selection_active:
-		var new_active = selected_card_for_action
-		player_bench.erase(new_active)
-		new_active.current_location = "active"
-		player_active_pokemon = new_active
-
-		knockout_bench_selection_active = false
-		selected_card_for_action = null
-
-		hide_selection_mode_display_main()
-
-		var new_texture = get_card_texture(new_active)
-		await animate_card_a_to_b($CARD_COLLECTIONS/PLAYER/player_bench_container, $ACTIVE_POKEMON/PLAYER/player_active_pokemon_container, 0.3, new_texture, card_scales[9])
-
-		display_pokemon(false)
-		display_active_pokemon_energies()
-		display_hp_circles_above_align(player_active_pokemon, false)
-
-		knockout_replacement_chosen.emit()
+		await handle_action_knockout_bench()
 		return
 	
-	# Check if we're in attach mode - handle differently
 	if card_attach_mode_active:
-		# In attach mode, we're attaching the energy to the selected Pokemon
 		perform_energy_attachment()
 		return
 	
 	if evolution_mode_active:
-		var evo_card = evolution_card_awaiting_target
-		var target_card = selected_card_for_action
-		
-		perform_evolution(false)
-		
-		evolution_card_awaiting_target = null
-		selected_card_for_action = null
-		evolution_mode_active = false
-		
-		hide_selection_mode_display_main()
-		refresh_hand_display(false)
-		
-		var target_node = null
-		var card_scale_to_animate = card_scales[12]
-		
-		if evo_card.current_location == "active": 
-			target_node = $ACTIVE_POKEMON/PLAYER/player_active_pokemon_container
-			card_scale_to_animate = card_scales[8]
-		else:
-			target_node = $CARD_COLLECTIONS/PLAYER/player_bench_container
-			card_scale_to_animate = card_scales[11]
-			
-		var evo_texture = get_card_texture(evo_card)
-		await animate_card_a_to_b($CARD_COLLECTIONS/PLAYER/player_hand_hbox_container, target_node, 0.3, evo_texture, card_scale_to_animate)
-		
-		display_pokemon(false)
-		await get_tree().process_frame
-		await play_evolution_effect(evo_card)
-		display_active_pokemon_energies()
-		
+		await handle_action_evolution()
 		return
 	
 	if prize_card_selection_active:
-		var prize_card = selected_card_for_action
-		prize_card_selection_active = false
-		selected_card_for_action = null
-		
-		$BUTTONS/SELECTION_BUTTONS/card_action_button.position.x -= 210
-		hide_selection_mode_display_main()
-		await take_prize_card(prize_card, false)
-		prize_card_taken.emit()
+		await handle_action_prize_card()
 		return
+	
+	await handle_action_normal_card()
+
+# Performs the player's retreat: confusion checks, bench swap, animation, and status clearing
+func handle_action_retreat_bench() -> void:
+	var new_active = selected_card_for_action
+
+	var pre_check = await check_confused_retreat(player_active_pokemon, false, "pre_energy")
+	if not pre_check:
+		retreat_bench_selection_active = false
+		selected_card_for_action = null
+		hide_selection_mode_display_main()
+		display_hp_circles_above_align(player_active_pokemon, false)
+		await check_all_knockouts()
+		display_pokemon(false)
+		return
+
+	var post_check = await check_confused_retreat(player_active_pokemon, false, "post_energy")
+	if not post_check:
+		retreat_bench_selection_active = false
+		selected_card_for_action = null
+		hide_selection_mode_display_main()
+		display_pokemon(false)
+		display_active_pokemon_energies()
+		return
+
+	player_bench.erase(new_active)
+	player_bench.append(player_active_pokemon)
+
+	player_active_pokemon.current_location = "bench"
+	new_active.current_location = "active"
+
+	player_retreated_this_turn = true
+	retreat_bench_selection_active = false
+	selected_card_for_action = null
+
+	hide_selection_mode_display_main()
+	await animate_retreat(player_active_pokemon, new_active, retreat_energies_selected, false)
+
+	clear_all_statuses(player_active_pokemon, false)
+	player_active_pokemon = new_active
+	retreat_energies_selected.clear()
+
+	display_pokemon(false)
+	display_active_pokemon_energies()
+
+# Moves a bench pokemon to the active slot after a knockout and triggers post-knockout signals
+func handle_action_knockout_bench() -> void:
+	var new_active = selected_card_for_action
+	player_bench.erase(new_active)
+	new_active.current_location = "active"
+	player_active_pokemon = new_active
+
+	knockout_bench_selection_active = false
+	selected_card_for_action = null
+
+	hide_selection_mode_display_main()
+
+	var new_texture = get_card_texture(new_active)
+	await animate_card_a_to_b(player_bench_container, player_active_container, 0.3, new_texture, card_scales[9])
+
+	display_pokemon(false)
+	display_active_pokemon_energies()
+	display_hp_circles_above_align(player_active_pokemon, false)
+
+	knockout_replacement_chosen.emit()
+
+# Evolves the selected target pokemon, plays animations, and refreshes the display
+func handle_action_evolution() -> void:
+	var evo_card = evolution_card_awaiting_target
+	var target_card = selected_card_for_action
+	
+	perform_evolution(false)
+	
+	evolution_card_awaiting_target = null
+	selected_card_for_action = null
+	evolution_mode_active = false
+	
+	hide_selection_mode_display_main()
+	refresh_hand_display(false)
+	
+	var target_node = null
+	var card_scale_to_animate = card_scales[12]
+	
+	if evo_card.current_location == "active": 
+		target_node = player_active_container
+		card_scale_to_animate = card_scales[8]
+	else:
+		target_node = player_bench_container
+		card_scale_to_animate = card_scales[11]
 		
+	var evo_texture = get_card_texture(evo_card)
+	await animate_card_a_to_b(player_hand_container, target_node, 0.3, evo_texture, card_scale_to_animate)
+	
+	display_pokemon(false)
+	await get_tree().process_frame
+	await play_evolution_effect(evo_card)
+	display_active_pokemon_energies()
+
+# Takes the selected prize card and adds it to the player's hand with animation
+func handle_action_prize_card() -> void:
+	var prize_card = selected_card_for_action
+	prize_card_selection_active = false
+	selected_card_for_action = null
+	
+	action_button.position.x -= 210
+	hide_selection_mode_display_main()
+	await take_prize_card(prize_card, false)
+	prize_card_taken.emit()
+
+# Handles playing a card from the player's hand: placing pokemon, attaching energy, evolving, or playing trainers
+func handle_action_normal_card() -> void:
 	# Don't do anything if no card is selected
 	if selected_card_for_action == null:
 		print("Error: No card selected for action")
@@ -5259,7 +5309,7 @@ func action_button_pressed_perform_action() -> void:
 				display_pokemon(false)  # false = player
 				refresh_hand_display(false)
 				match_just_started_basic_pokemon_required = false
-				$BUTTONS/SELECTION_BUTTONS/card_action_button.position.x -= 210 
+				action_button.position.x -= 210 
 				
 				# After active pokemon is set, start the bench setup phase
 				start_bench_setup_phase()
@@ -5277,7 +5327,7 @@ func action_button_pressed_perform_action() -> void:
 					await get_tree().process_frame
 					await get_tree().process_frame
 					var bench_texture = get_card_texture(bench_card)
-					await animate_card_a_to_b($CARD_COLLECTIONS/PLAYER/player_hand_hbox_container, $CARD_COLLECTIONS/PLAYER/player_bench_container, 0.3, bench_texture, card_scales[11])
+					await animate_card_a_to_b(player_hand_container, player_bench_container, 0.3, bench_texture, card_scales[11])
 					display_pokemon(false)
 		
 		"PLAY_TRAINER":
@@ -5335,10 +5385,10 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 	
 	# If we were in bench setup phase, end it and draw prize cards
 	elif bench_setup_phase_active:
-		$opponent_turn_input_blocker.visible = true
+		opponent_blocker.visible = true
 		bench_setup_phase_active = false
-		$cancel_selection_mode_view_button.text = "Cancel"
-		$cancel_selection_mode_view_button.theme = theme_red
+		cancel_button.text = "Cancel"
+		cancel_button.theme = theme_red
 		draw_prize_cards(true)
 		hide_selection_mode_display_main()
 	
@@ -5358,60 +5408,40 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 # Opens any card array in enlarged selection mode when its container is clicked
 func array_container_clicked(event: InputEvent, card_array: Array) -> void:
 	if event is InputEventMouseButton and event.pressed:
-		if $messagebox_container.visible or $coin_flip_container.visible: return
+		if msgbox_container.visible or coin_container.visible: return
 		if card_array.size() > 0:
 			show_enlarged_array_selection_mode(card_array)
 
 # Called when a card in selection mode is clicked
 func this_card_clicked(clicked_card: card_object) -> void:
 	# Don't allow card selection if action button is hidden (view-only mode) or messagebox is being displayed
-	if $messagebox_container.visible or $coin_flip_container.visible: return
-	if not $BUTTONS/SELECTION_BUTTONS/card_action_button.visible: return
+	if msgbox_container.visible or coin_container.visible: return
+	if not action_button.visible: return
 	
 	if card_selection_mode_enabled == true:
 		
 		# ATTACHMENT MODE ATTACHMENT MODE ATTACHMENT MODE ATTACHMENT MODE ATTACHMENT MODE ATTACHMENT MODE ATTACHMENT MODE
 		if card_attach_mode_active:
 			# In attach mode, we're selecting a target Pokemon, not performing a card action
-			if selected_card_for_action != null:
-				var prev_card_display = find_card_ui_for_object(selected_card_for_action)
-				if prev_card_display:
-					prev_card_display.set_selected(false)
-			
-			# Store the selected target Pokemon
-			selected_card_for_action = clicked_card
+			select_card_in_ui(clicked_card)
 			
 			print("Selected target Pokemon for energy attachment: ", selected_card_for_action.metadata["name"])
 			
-			# Apply visual effect to newly selected Pokemon
-			var card_display = find_card_ui_for_object(clicked_card)
-			if card_display:
-				card_display.set_selected(true)
-			
 			# Update button to show it's ready to attach
-			$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "ATTACH ENERGY"
-			$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = false
-			$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_green
+			action_button.text = "ATTACH ENERGY"
+			action_button.disabled = false
+			action_button.theme = theme_green
 			return
 		
 		# EVOLUTION MODE EVOLUTION MODE EVOLUTION MODE EVOLUTION MODE EVOLUTION MODE EVOLUTION MODE EVOLUTION MODE	
 		elif evolution_mode_active:
-			if selected_card_for_action != null:
-				var prev_card_display = find_card_ui_for_object(selected_card_for_action)
-				if prev_card_display:
-					prev_card_display.set_selected(false)
-			
-			selected_card_for_action = clicked_card
+			select_card_in_ui(clicked_card)
 			
 			print("Selected evolution target: ", selected_card_for_action.metadata["name"])
 			
-			var card_display = find_card_ui_for_object(clicked_card)
-			if card_display:
-				card_display.set_selected(true)
-			
-			$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "EVOLVE"
-			$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = false
-			$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_green
+			action_button.text = "EVOLVE"
+			action_button.disabled = false
+			action_button.theme = theme_green
 			return
 		
 		# RETREAT MODE RETREAT MODE RETREAT MODE RETREAT MODE RETREAT MODE RETREAT MODE RETREAT MODE RETREAT MODE
@@ -5433,53 +5463,30 @@ func this_card_clicked(clicked_card: card_object) -> void:
 					card_display.set_selected(true)
 			
 			retreat_cost_remaining = get_retreat_cost(player_active_pokemon) - retreat_energies_selected.size()
-			$SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label.text = "Select " + str(retreat_cost_remaining) + " energy card(s) to discard"
+			hint_label.text = "Select " + str(retreat_cost_remaining) + " energy card(s) to discard"
 			
 			if retreat_cost_remaining <= 0:
-				$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "DISCARD & RETREAT"
-				$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = false
-				$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_green
+				action_button.text = "DISCARD & RETREAT"
+				action_button.disabled = false
+				action_button.theme = theme_green
 			else:
-				$BUTTONS/SELECTION_BUTTONS/card_action_button.text = str(retreat_cost_remaining) + " ENERGY REMAINING"
-				$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = true
-				$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_disabled
+				action_button.text = str(retreat_cost_remaining) + " ENERGY REMAINING"
+				action_button.disabled = true
+				action_button.theme = theme_disabled
 			return
 		
 		elif retreat_bench_selection_active or knockout_bench_selection_active:
-			if selected_card_for_action != null:
-				var prev_card_display = find_card_ui_for_object(selected_card_for_action)
-				if prev_card_display:
-					prev_card_display.set_selected(false)
+			select_card_in_ui(clicked_card)
 			
-			selected_card_for_action = clicked_card
-			
-			var card_display = find_card_ui_for_object(clicked_card)
-			if card_display:
-				card_display.set_selected(true)
-			
-			$BUTTONS/SELECTION_BUTTONS/card_action_button.text = "SET AS ACTIVE"
-			$BUTTONS/SELECTION_BUTTONS/card_action_button.disabled = false
-			$BUTTONS/SELECTION_BUTTONS/card_action_button.theme = theme_green
+			action_button.text = "SET AS ACTIVE"
+			action_button.disabled = false
+			action_button.theme = theme_green
 			return
-			
-			
-			
-		# Normal card selection mode (not in attach mode)
-		# Remove visual effect from previously selected card
-		if selected_card_for_action != null:
-			var prev_card_display = find_card_ui_for_object(selected_card_for_action)
-			if prev_card_display:
-				prev_card_display.set_selected(false)
 		
-		# Store reference to the selected card
-		selected_card_for_action = clicked_card
+		# Normal card selection mode (not in attach mode)
+		select_card_in_ui(clicked_card)
 		
 		print("Selected card for action: ", selected_card_for_action.metadata["name"])
-		
-		# Apply visual effect to newly selected card
-		var card_display = find_card_ui_for_object(clicked_card)
-		if card_display:
-			card_display.set_selected(true)
 		
 		# Update the button text and state based on the selected card
 		update_action_button()
@@ -5508,7 +5515,7 @@ func _input(event: InputEvent) -> void:
 			
 	if event is InputEventMouseButton and event.pressed:
 		
-		if $messagebox_container.visible:
+		if msgbox_container.visible:
 			message_acknowledged.emit()
 			get_viewport().set_input_as_handled()
 			return
@@ -5516,25 +5523,25 @@ func _input(event: InputEvent) -> void:
 		var mouse_pos = get_global_mouse_position()
 		
 		# Check if click is on the cancel or action button - if so, ignore
-		if $cancel_selection_mode_view_button.visible and $cancel_selection_mode_view_button.get_global_rect().has_point(mouse_pos):
+		if cancel_button.visible and cancel_button.get_global_rect().has_point(mouse_pos):
 			return
-		if $BUTTONS/SELECTION_BUTTONS/card_action_button.visible and $BUTTONS/SELECTION_BUTTONS/card_action_button.get_global_rect().has_point(mouse_pos):
+		if action_button.visible and action_button.get_global_rect().has_point(mouse_pos):
 			return
 		
 		# Check if mouse is over any card in the visible containers
 		var clicked_on_card = false
 		
 		# NEW: Only check small selection container if it's visible
-		if $SELECTION_MODE/small_selection_mode_container.visible:
-			for card_ui in $SELECTION_MODE/small_selection_mode_container.get_children():
+		if small_selection_container.visible:
+			for card_ui in small_selection_container.get_children():
 				if card_ui.get_global_rect().has_point(mouse_pos) and card_selection_mode_enabled == true:
 					clicked_on_card = true
 					print("the game thinks a card has been clicked")
 					break
 
 		# NEW: Only check large selection container if it's visible
-		if $SELECTION_MODE/selection_mode_scroller.visible:
-			for card_ui in $SELECTION_MODE/selection_mode_scroller/large_selection_mode_container.get_children():
+		if selection_scroller.visible:
+			for card_ui in large_selection_container.get_children():
 				if card_ui.get_global_rect().has_point(mouse_pos) and card_selection_mode_enabled == true:
 					clicked_on_card = true
 					break
@@ -5554,31 +5561,31 @@ func _input(event: InputEvent) -> void:
 func _ready() -> void:
 		
 	# Connect all the signals so that when parts of the UI are clicked by mouse they can perform actions
-	$CARD_COLLECTIONS/PLAYER/player_bench_container.gui_input.connect(array_container_clicked.bind(player_bench))
-	$CARD_COLLECTIONS/OPPONENT/opponent_bench_container.gui_input.connect(array_container_clicked.bind(opponent_bench))
-	$CARD_COLLECTIONS/PLAYER/player_prize_cards_container.gui_input.connect(array_container_clicked.bind(player_prize_cards))
-	$CARD_COLLECTIONS/OPPONENT/opponent_prize_cards_container.gui_input.connect(array_container_clicked.bind(opponent_prize_cards))
-	$CARD_COLLECTIONS/PLAYER/player_discard_pile_icon.gui_input.connect(array_container_clicked.bind(player_discard_pile))
-	$CARD_COLLECTIONS/OPPONENT/opponent_discard_pile_icon.gui_input.connect(array_container_clicked.bind(opponent_discard_pile))
+	player_bench_container.gui_input.connect(array_container_clicked.bind(player_bench))
+	opponent_bench_container.gui_input.connect(array_container_clicked.bind(opponent_bench))
+	player_prize_container.gui_input.connect(array_container_clicked.bind(player_prize_cards))
+	opponent_prize_container.gui_input.connect(array_container_clicked.bind(opponent_prize_cards))
+	player_discard_icon.gui_input.connect(array_container_clicked.bind(player_discard_pile))
+	opponent_discard_icon.gui_input.connect(array_container_clicked.bind(opponent_discard_pile))
 
-	$cancel_selection_mode_view_button.pressed.connect(cancel_button_pressed_hide_selection_mode)
-	$BUTTONS/SELECTION_BUTTONS/card_action_button.pressed.connect(action_button_pressed_perform_action)
-	$BUTTONS/main_screen_attack_buttons_container/cancel_attack_mode_button.pressed.connect(hide_attack_buttons)
-	$BUTTONS/main_screen_buttons_container/button_main_attack.pressed.connect(show_attack_buttons)
-	$BUTTONS/main_screen_attack_buttons_container.visible = false
+	cancel_button.pressed.connect(cancel_button_pressed_hide_selection_mode)
+	action_button.pressed.connect(action_button_pressed_perform_action)
+	attack_buttons_container.get_node("cancel_attack_mode_button").pressed.connect(hide_attack_buttons)
+	main_buttons_container.get_node("button_main_attack").pressed.connect(show_attack_buttons)
+	attack_buttons_container.visible = false
 	
-	$BUTTONS/main_screen_buttons_container/button_main_power.pressed.connect(flip_coin)
+	main_buttons_container.get_node("button_main_power").pressed.connect(flip_coin)
 	
-	$BUTTONS/main_screen_buttons_container/button_main_retreat.pressed.connect(start_retreat)
+	main_buttons_container.get_node("button_main_retreat").pressed.connect(start_retreat)
 	
-	$BUTTONS/main_screen_buttons_container/button_main_endturn.pressed.connect(player_end_turn_checks)
+	main_buttons_container.get_node("button_main_endturn").pressed.connect(player_end_turn_checks)
 
 	setup_player()
 	setup_opponent(opponent_deck_name)
 	
 	# Player hand and opponent hand have to be connected after the intiial setup to prevent bugs on clicking
-	$CARD_COLLECTIONS/PLAYER/player_hand_hbox_container.gui_input.connect(array_container_clicked.bind(player_hand))
-	$CARD_COLLECTIONS/OPPONENT/opponent_hand_hbox_container.gui_input.connect(array_container_clicked.bind(opponent_hand))
+	player_hand_container.gui_input.connect(array_container_clicked.bind(player_hand))
+	opponent_hand_container.gui_input.connect(array_container_clicked.bind(opponent_hand))
 	
 	opponent_setup_pokemon_from_hand()
 	draw_prize_cards(false)
