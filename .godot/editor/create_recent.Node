@@ -1,7 +1,7 @@
-VBoxContainer
 Control
-TextureRect
 ColorRect
+VBoxContainer
+TextureRect
 Label
 GridContainer
 Button

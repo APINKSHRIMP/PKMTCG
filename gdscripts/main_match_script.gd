@@ -9,8 +9,8 @@ extends Control
 # TESTING VARIABLES
 var amount_of_cards_to_draw = 15	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
 var hide_hidden_cards = true      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
-var opponent_deck_name = "TestingVoltorbOnly"
-var player_deck_name = "FinalEffects"
+var opponent_deck_name = "TestingKangaskhan"
+var player_deck_name = "Trainers"
 
 # TESTING - There are different rulesets for burn and confusion depending on what generation/set is being played.
 # Additionally I personally felt base set confusion retreat rule is horrendous, so I have created a personal rule that doesn't give free retreat but doesn't force discard then coin flip
@@ -89,6 +89,33 @@ var forced_switch_selection_active: bool = false
 var player_attacked_this_turn: bool = false
 var opponent_attacked_this_turn: bool = false
 
+# TRAINER CARD VARIABLES
+var trainer_card_mode_active: bool = false
+var trainer_discard_selection_active: bool = false
+var trainer_discard_cards_needed: int = 0
+var trainer_discard_selected: Array = []
+var trainer_deck_search_active: bool = false
+var trainer_pokemon_selection_active: bool = false
+var trainer_energy_selection_active: bool = false
+var trainer_reorder_active: bool = false
+var trainer_bench_token_discard_active: bool = false
+
+# Pokedex reorder tracking
+var pokedex_cards: Array = []
+var pokedex_reorder_result: Array = []
+
+# Stadium zone placeholder (future-proofing)
+var current_stadium_card: card_object = null
+
+# POKEMON POWER VARIABLES
+var power_menu_active: bool = false
+var damage_swap_mode_active: bool = false
+var damage_swap_source: card_object = null
+var rain_dance_mode_active: bool = false
+var energy_trans_mode_active: bool = false
+var energy_trans_source: card_object = null
+var buzzap_mode_active: bool = false
+
 # PRELOADED RESOURCES
 var theme_disabled = preload("res://uiresources/kenneyUI.tres")
 var theme_green = preload("res://uiresources/kenneyUI-green.tres")
@@ -105,6 +132,13 @@ signal special_attack_selected(attack_index: int)
 signal energy_type_selected(energy_type: String)
 signal defender_energy_chosen(energy_card: card_object)
 signal forced_switch_chosen
+
+# Trainer card signals
+signal trainer_discard_selection_done
+signal trainer_target_selected
+signal trainer_deck_search_done
+signal trainer_reorder_done
+signal power_action_done
 
 # CACHED NODE PATHS - These are assigned once when the node enters the scene tree via @onready.
 # In GDScript, @onready runs the assignment at the same time as _ready(), meaning the scene tree
@@ -144,6 +178,10 @@ signal forced_switch_chosen
 @onready var opponent_blocker = $opponent_turn_input_blocker
 @onready var animation_blocker = $animation_input_blocker
 @onready var buttons_only_blocker = $allow_buttons_only_blocker
+@onready var trainer_block_container = $trainer_block_screen_container
+@onready var played_trainer_container = $trainer_block_screen_container/played_trainer_card_container
+@onready var player_attached_cards_container = $ACTIVE_POKEMON/PLAYER/player_active_pokemon_attached_cards
+@onready var opponent_attached_cards_container = $ACTIVE_POKEMON/OPPONENT/opponent_active_pokemon_attached_cards
 
 # QUICK REFERENCE VECTORS JUST USED FOR EASY SWAPPING OF SIZES FOR DEVELOPMENT
 var card_scales: Dictionary = {
@@ -264,7 +302,7 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 	action_button.visible = true
 	
 	# A specific clause for the start of the game, a basic pokemon HAS to be chosen so we cannot allow cancelling out.
-	if match_just_started_basic_pokemon_required == true or knockout_bench_selection_active == true or forced_switch_selection_active == true or defender_energy_discard_active == true or energy_type_selection_active == true:
+	if match_just_started_basic_pokemon_required == true or knockout_bench_selection_active == true or forced_switch_selection_active == true or defender_energy_discard_active == true or energy_type_selection_active == true or trainer_discard_selection_active == true or trainer_pokemon_selection_active == true or trainer_deck_search_active == true:
 		cancel_button.visible = false
 	else:
 		cancel_button.visible = true
@@ -666,6 +704,9 @@ func display_active_pokemon_energies(is_opponent: bool = false) -> void:
 	var energy_container = opponent_energy_container if is_opponent else player_energy_container
 	var active_pokemon = opponent_active_pokemon if is_opponent else player_active_pokemon
 
+	# Always refresh attached trainer cards display (PlusPower, Defender)
+	display_attached_trainer_cards(is_opponent)
+
 	for child in energy_container.get_children():
 		child.queue_free()
 
@@ -862,7 +903,11 @@ func update_main_screen_buttons() -> void:
 		card_attach_mode_active or
 		evolution_mode_active or
 		retreat_mode_active or
-		retreat_bench_selection_active
+		retreat_bench_selection_active or
+		trainer_pokemon_selection_active or
+		trainer_discard_selection_active or
+		trainer_deck_search_active or
+		power_menu_active
 	)
 
 	var btn_theme = theme_disabled if should_disable else theme_blue
@@ -1894,6 +1939,13 @@ func send_card_to_discard(card: card_object, is_opponent: bool) -> void:
 	card.temporary_resistance = ""
 	card.shielded_damage_threshold = 0
 	card.has_destiny_bond = false
+	card.pluspower_count = 0
+	card.defender_turns_remaining = -1
+	card.no_prize_on_ko = false
+	card.is_bench_token = false
+	card.power_used_this_turn = false
+	card.is_electrode_energy = false
+	card.electrode_energy_type = ""
 	# Clear while_in_play and end_of_turn disabled attacks (keep entire_game)
 	var keys_to_remove = []
 	for atk_name in card.disabled_attacks:
@@ -2002,10 +2054,26 @@ func inbetween_turn_checks(player_turn_just_ended: bool = true) -> void:
 		clear_end_of_turn_statuses(player_active_pokemon, false)
 		clear_defensive_statuses(opponent_active_pokemon, true)
 		player_retreat_disabled = false
+		# Discard PlusPower from player's active at end of player's turn
+		if player_active_pokemon != null:
+			await discard_pluspower_from_pokemon(player_active_pokemon, false)
+		# Tick down Defender on opponent's pokemon (Defender discards at end of opponent's NEXT turn)
+		await tick_defender_counters(true)
 	else:
 		clear_end_of_turn_statuses(opponent_active_pokemon, true)
 		clear_defensive_statuses(player_active_pokemon, false)
 		opponent_retreat_disabled = false
+		# Discard PlusPower from opponent's active at end of opponent's turn
+		if opponent_active_pokemon != null:
+			await discard_pluspower_from_pokemon(opponent_active_pokemon, true)
+		# Tick down Defender on player's pokemon
+		await tick_defender_counters(false)
+	
+	# Reset power_used_this_turn for all pokemon
+	if player_turn_just_ended:
+		reset_power_used_flags(false)
+	else:
+		reset_power_used_flags(true)
 
 	# Process between-turn effects (poison, burn, sleep) for both active pokemon
 	if player_active_pokemon != null:
@@ -2194,6 +2262,8 @@ func can_retreat(is_opponent: bool) -> Dictionary:
 		return {"can_retreat": false, "reason": "You have already retreated this turn!"}
 	if active == null:
 		return {"can_retreat": false, "reason": "No active Pokemon!"}
+	if active.is_bench_token:
+		return {"can_retreat": false, "reason": active.metadata.get("name", "") + " cannot retreat!"}
 	if bench.size() == 0:
 		return {"can_retreat": false, "reason": "Cannot retreat with no Pokemon on your bench!"}
 	if is_disabled:
@@ -2280,6 +2350,10 @@ func get_attacks_for_card(card: card_object) -> Array:
 func get_energy_provided_by_card(energy_card: card_object) -> Array:
 	if energy_card == null:
 		return []
+	
+	# Electrode Buzzap: this card is an Electrode acting as energy
+	if energy_card.is_electrode_energy:
+		return [energy_card.electrode_energy_type]
 	
 	var supertype = energy_card.metadata.get("supertype", "").to_lower()
 	if supertype != "energy":
@@ -2652,6 +2726,10 @@ func display_and_apply_attack_damage(attacker: card_object, defender: card_objec
 	defender.current_hp = max(0, defender.current_hp - final_damage)
 	print(attacker.metadata["name"] + " dealt " + str(final_damage) + " damage to " + defender.metadata["name"] + "! HP remaining: " + str(defender.current_hp))
 	display_hp_circles_above_align(defender, !is_opponent)
+	
+	# Check for Machamp's Strikes Back power (triggers when Machamp takes damage)
+	if final_damage > 0:
+		await check_strikes_back(defender, attacker, !is_opponent)
 
 # Parses the attack text for card effects and applies them
 # pre_flip_result: if a coin was already flipped during damage resolution, pass "heads" or "tails" to skip re-flipping
@@ -2756,7 +2834,7 @@ func perform_attack(attack_index: int) -> void:
 		await show_message(msg)
 	
 	var attacking_types = player_active_pokemon.metadata.get("types", ["Colorless"])
-	var result = calculate_final_damage(resolved_base, attacking_types, opponent_active_pokemon)
+	var result = calculate_final_damage(resolved_base, attacking_types, opponent_active_pokemon, player_active_pokemon)
 	var final_damage = result["damage"]
 	
 	if check_defender_invincible(opponent_active_pokemon, true):
@@ -2782,7 +2860,7 @@ func perform_attack(attack_index: int) -> void:
 	player_end_turn_checks()
 	
 # Returns final damage and a list of modifiers applied, for display purposes
-func calculate_final_damage(base_damage: int, attacking_types: Array, defending_pokemon: card_object) -> Dictionary:
+func calculate_final_damage(base_damage: int, attacking_types: Array, defending_pokemon: card_object, attacker_pokemon: card_object = null) -> Dictionary:
 	var damage = base_damage
 	var modifiers_applied = []
 	
@@ -2823,6 +2901,19 @@ func calculate_final_damage(base_damage: int, attacking_types: Array, defending_
 		if damage <= defending_pokemon.shielded_damage_threshold:
 			modifiers_applied.append("NO DAMAGE")
 			damage = 0
+	
+	# Apply PlusPower bonus (+10 per PlusPower attached to the attacker)
+	# PlusPower is applied AFTER weakness/resistance per original TCG rules
+	if damage > 0 and attacker_pokemon != null and attacker_pokemon.pluspower_count > 0:
+		var pp_bonus = attacker_pokemon.pluspower_count * 10
+		damage += pp_bonus
+		modifiers_applied.append("PLUSPOWER +" + str(pp_bonus))
+	
+	# Apply Defender reduction (-20 damage if Defender is attached to the defending pokemon)
+	if damage > 0 and defending_pokemon.defender_turns_remaining >= 0:
+		var reduction = min(damage, 20)
+		damage -= reduction
+		modifiers_applied.append("DEFENDER -" + str(reduction))
 	
 	return {"damage": damage, "modifiers": modifiers_applied}
 
@@ -2894,6 +2985,9 @@ func check_and_handle_knockout(pokemon: card_object, is_opponent: bool) -> bool:
 # Scans all Pokemon on the field for both players, handles each KO, and returns a summary of what was knocked out
 func check_all_knockouts() -> Dictionary:
 	var results = {"player_kos": 0, "opponent_kos": 0}
+	# Track KOs that should award prizes separately from bench token KOs
+	var opponent_prize_kos = 0
+	var player_prize_kos = 0
 	
 	var player_to_check = []
 	if player_active_pokemon != null:
@@ -2906,14 +3000,20 @@ func check_all_knockouts() -> Dictionary:
 	opponent_to_check.append_array(opponent_bench.duplicate())
 	
 	for pokemon in opponent_to_check:
+		var should_award_prize = not pokemon.no_prize_on_ko
 		if await check_and_handle_knockout(pokemon, true):
 			results["opponent_kos"] += 1
+			if should_award_prize:
+				opponent_prize_kos += 1
 	
 	for pokemon in player_to_check:
+		var should_award_prize = not pokemon.no_prize_on_ko
 		if await check_and_handle_knockout(pokemon, false):
 			results["player_kos"] += 1
+			if should_award_prize:
+				player_prize_kos += 1
 			
-	for i in range(results["opponent_kos"]):
+	for i in range(opponent_prize_kos):
 		if player_prize_cards.size() > 0:
 			opponent_blocker.visible = false
 			await player_pick_prize_card()
@@ -2921,7 +3021,7 @@ func check_all_knockouts() -> Dictionary:
 			opponent_blocker.visible = true
 	
 	# Opponent takes prizes for player KOs
-	for i in range(results["player_kos"]):
+	for i in range(player_prize_kos):
 		if opponent_prize_cards.size() > 0:
 			await opponent_take_prize_card()
 	
@@ -2932,10 +3032,10 @@ func check_all_knockouts() -> Dictionary:
 		await handle_post_knockout(false)
 	
 	# Check win condition: all prize cards taken
-	if player_prize_cards.size() == 0 and results["opponent_kos"] > 0:
+	if player_prize_cards.size() == 0 and opponent_prize_kos > 0:
 		await show_message("YOU TOOK YOUR LAST PRIZE CARD!")
 		game_end_logic(false)  # false = opponent loses
-	if opponent_prize_cards.size() == 0 and results["player_kos"] > 0:
+	if opponent_prize_cards.size() == 0 and player_prize_kos > 0:
 		await show_message("OPPONENT TOOK THEIR LAST PRIZE CARD!")
 		game_end_logic(true)  # true = player loses
 
@@ -3038,6 +3138,11 @@ func apply_status_effect(effect: Dictionary, attacker: card_object, defender: ca
 	else:
 		target_pokemon = attacker
 		is_target_opponent = is_opponent_attacking
+
+	# Bench tokens cannot be affected by status conditions
+	if target_pokemon.is_bench_token:
+		print("STATUS BLOCKED: ", target_pokemon.metadata.get("name", ""), " is a bench token - immune to status")
+		return
 
 	var status = effect["status"]
 	var mutually_exclusive = ["Paralyzed", "Asleep", "Confused"]
@@ -4903,7 +5008,16 @@ func get_unmet_energy_count(attack: Dictionary, pokemon: card_object) -> int:
 
 	var pool = []
 	for attached in pokemon.attached_energies:
-		pool.append_array(get_energy_provided_by_card(attached))
+		# Charizard Energy Burn: all energy attached to Charizard counts as Fire
+		if is_energy_burn_active(pokemon):
+			pool.append("Fire")
+			# If the energy provides 2 (like DCE), add a second Fire
+			var provided = get_energy_provided_by_card(attached)
+			if provided.size() > 1:
+				for _i in range(provided.size() - 1):
+					pool.append("Fire")
+		else:
+			pool.append_array(get_energy_provided_by_card(attached))
 
 	var unmet = 0
 
@@ -5215,6 +5329,20 @@ func score_energy_pair(pokemon: card_object, energy_card: card_object, cpu_eval:
 	var score = 0.0
 	var is_active = (pokemon == opponent_active_pokemon)
 	var energy_types = get_energy_provided_by_card(energy_card)
+	
+	# DCE restriction: only attach to pokemon with an attack requiring 2+ Colorless
+	if is_double_colorless_energy(energy_card):
+		var has_2_colorless_attack = false
+		for attack in pokemon.metadata.get("attacks", []):
+			var colorless_count = 0
+			for req in attack.get("cost", []):
+				if req == "Colorless":
+					colorless_count += 1
+			if colorless_count >= 2:
+				has_2_colorless_attack = true
+				break
+		if not has_2_colorless_attack:
+			return -500.0  # Hard disqualification: this pokemon can't effectively use DCE
 	
 	# Flat active/bench modifier: active pokemon almost always takes priority
 	if is_active:
@@ -5887,7 +6015,11 @@ func opponent_start_turn_checks() -> void:
 
 # Orchestrates all CPU decision phases in the correct order
 func cpu_turn_orchestrator() -> void:
-	# Phase 1: Trainer card plays (not yet implemented - reserve this slot)
+	# Phase 0: Activate beneficial Pokemon Powers (Rain Dance, Energy Trans, Damage Swap)
+	await cpu_phase_activate_powers()
+	
+	# Phase 1a: Play Bill first (always highest priority)
+	await cpu_phase_play_trainer_cards_priority()
 
 	# Phase 2: Evolution plays
 	await cpu_phase_evolution()
@@ -5897,6 +6029,9 @@ func cpu_turn_orchestrator() -> void:
 
 	# Phase 4: Build evaluation AFTER all board-altering plays have resolved
 	var cpu_eval = build_cpu_evaluation()
+
+	# Phase 4b: Play remaining trainer cards after evolutions/bench plays
+	await cpu_phase_play_trainer_cards_remaining()
 
 	# Phase 5: First retreat evaluation (before energy attachment)
 	var retreat_deferred = await cpu_phase_retreat_first_pass(cpu_eval)
@@ -5908,6 +6043,9 @@ func cpu_turn_orchestrator() -> void:
 	if retreat_deferred:
 		cpu_eval = build_cpu_evaluation()
 		await cpu_phase_retreat_second_pass(cpu_eval)
+
+	# Phase 7b: Final trainer card check (re-evaluate after energy/retreat)
+	await cpu_phase_play_trainer_cards_remaining()
 
 	# Phase 8: Attack decision (must always be last)
 	await cpu_phase_attack(cpu_eval)
@@ -6347,7 +6485,7 @@ func cpu_phase_attack(cpu_eval: Dictionary) -> void:
 	for msg in variable_result["messages"]:
 		await show_message(msg)
 	
-	var result = calculate_final_damage(resolved_base, cpu_types, player_active_pokemon)
+	var result = calculate_final_damage(resolved_base, cpu_types, player_active_pokemon, opponent_active_pokemon)
 	var final_damage = result["damage"]
 	
 	if check_defender_invincible(player_active_pokemon, false):
@@ -6464,6 +6602,2647 @@ func opponent_take_prize_card() -> void:
 ################################################## END OPPONENT PRIORITISE FUNCTIONALITY FUNCTIONS ###################################################
 ######################################################################################################################################################
 
+######################################################################################################################################################
+#  ########  ######     ##     ########  ##    ##  ########  ######          ######          #######    #######  ##      ##  ########  ######    #######
+#     ##     ##   ##   ####       ##     ###   ##  ##        ##   ##        ##      ##       ##    ##  ##     ## ##      ##  ##        ##   ##  ##
+#     ##     ######   ##  ##      ##     ## ## ##  ########  ######    ###  ########    ###  #######   ##     ## ##  ##  ##  ########  ######    #######
+#     ##     ##  ##  ########     ##     ##  ####  ##        ##  ##        ##      ##       ##        ##     ## ## #### ##  ##        ##  ##         ##
+#     ##     ##   ## ##      ##   ##     ##   ###  ########  ##   ##        ######          ##         #######   ###  ###   ########  ##   ##  #######
+######################################################################################################################################################
+##################################################### TRAINER CARD & POKEMON POWER FUNCTIONS ########################################################
+
+############################################### Section A: HELPER FUNCTIONS #########################################################################
+
+# Returns true if the Pokemon has any status condition that blocks Pokemon Powers
+func is_power_blocked_by_status(pokemon: card_object) -> bool:
+	if pokemon == null:
+		return true
+	if pokemon.special_condition in ["Paralyzed", "Asleep", "Confused"]:
+		return true
+	if pokemon.is_poisoned:
+		return true
+	return false
+
+# Returns true if a card is a trainer card
+func is_trainer_card(card: card_object) -> bool:
+	return card.metadata.get("supertype", "").to_lower() == "trainer"
+
+# Returns true if a card is a bench token trainer (Clefairy Doll, Mysterious Fossil)
+func is_bench_token_trainer(card: card_object) -> bool:
+	if not is_trainer_card(card):
+		return false
+	# Bench tokens have an HP field in their metadata
+	if card.metadata.has("hp") and int(card.metadata.get("hp", "0")) > 0:
+		var rules = card.metadata.get("rules", [])
+		for rule in rules:
+			if "as if it were a basic" in rule.to_lower():
+				return true
+	return false
+
+# Returns true if a card is an attached trainer (PlusPower, Defender)
+func is_attached_trainer(card: card_object) -> bool:
+	if not is_trainer_card(card):
+		return false
+	var card_name = card.metadata.get("name", "").to_lower()
+	return card_name in ["pluspower", "defender"]
+
+# Returns true if a card is a stadium trainer (future-proofing)
+func is_stadium_trainer(card: card_object) -> bool:
+	if not is_trainer_card(card):
+		return false
+	var subtypes = card.metadata.get("subtypes", [])
+	for st in subtypes:
+		if st.to_lower() == "stadium":
+			return true
+	return false
+
+# Checks if Charizard's Energy Burn power is active on a pokemon
+func is_energy_burn_active(pokemon: card_object) -> bool:
+	if pokemon == null:
+		return false
+	var name = pokemon.metadata.get("name", "")
+	if name != "Charizard":
+		return false
+	# Check if it has the Energy Burn ability
+	var abilities = pokemon.metadata.get("abilities", [])
+	for ability in abilities:
+		if ability.get("name", "") == "Energy Burn":
+			# Blocked by status
+			if is_power_blocked_by_status(pokemon):
+				return false
+			return true
+	return false
+
+# Resets power_used_this_turn for all pokemon on one side
+func reset_power_used_flags(is_opponent: bool) -> void:
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench = opponent_bench if is_opponent else player_bench
+	if active != null:
+		active.power_used_this_turn = false
+	for bp in bench:
+		bp.power_used_this_turn = false
+
+# Discards PlusPower from a pokemon at end of turn
+func discard_pluspower_from_pokemon(pokemon: card_object, is_opponent: bool) -> void:
+	if pokemon == null or pokemon.pluspower_count <= 0:
+		return
+	# Remove PlusPower attached_cards
+	var to_remove = []
+	for card in pokemon.attached_cards:
+		if card.metadata.get("name", "").to_lower() == "pluspower":
+			to_remove.append(card)
+	for card in to_remove:
+		pokemon.attached_cards.erase(card)
+		card.current_location = "discard"
+		var discard = opponent_discard_pile if is_opponent else player_discard_pile
+		discard.append(card)
+	pokemon.pluspower_count = 0
+	update_discard_pile_display(is_opponent)
+	display_attached_trainer_cards(is_opponent)
+	if to_remove.size() > 0:
+		print("END OF TURN: Discarded ", to_remove.size(), " PlusPower(s) from ", pokemon.metadata.get("name", ""))
+
+# Ticks down Defender turn counters and discards expired Defenders
+func tick_defender_counters(is_opponent: bool) -> void:
+	var all_pokemon = []
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench = opponent_bench if is_opponent else player_bench
+	if active != null:
+		all_pokemon.append(active)
+	all_pokemon.append_array(bench)
+	
+	for pokemon in all_pokemon:
+		if pokemon.defender_turns_remaining < 0:
+			continue
+		pokemon.defender_turns_remaining -= 1
+		if pokemon.defender_turns_remaining < 0:
+			# Discard the Defender card
+			var to_remove = []
+			for card in pokemon.attached_cards:
+				if card.metadata.get("name", "").to_lower() == "defender":
+					to_remove.append(card)
+			for card in to_remove:
+				pokemon.attached_cards.erase(card)
+				card.current_location = "discard"
+				var discard = opponent_discard_pile if is_opponent else player_discard_pile
+				discard.append(card)
+			update_discard_pile_display(is_opponent)
+			display_attached_trainer_cards(is_opponent)
+			print("DEFENDER EXPIRED on ", pokemon.metadata.get("name", ""))
+
+# Displays attached trainer cards (PlusPower, Defender) next to active pokemon
+func display_attached_trainer_cards(is_opponent: bool) -> void:
+	var container = opponent_attached_cards_container if is_opponent else player_attached_cards_container
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	
+	for child in container.get_children():
+		child.queue_free()
+	
+	if active == null:
+		return
+	
+	var card_size = card_scales[12]
+	var offset = 0
+	for i in range(active.attached_cards.size()):
+		var attached = active.attached_cards[i]
+		var display = TextureRect.new()
+		display.set_script(card_display_script)
+		container.add_child(display)
+		display.load_card_image(attached.uid, card_size, attached)
+		display.position.x = offset
+		display.mouse_filter = MOUSE_FILTER_IGNORE
+		offset += 55
+
+############################################### Section B: SHARED CPU DISCARD PRIORITY #############################################################
+
+# Returns the lowest-priority cards from the CPU's hand for discarding
+# exclude_card: the trainer card being played (must not be discarded)
+func cpu_get_discard_priority(hand: Array, count: int, exclude_card: card_object = null) -> Array:
+	var candidates = []
+	for card in hand:
+		if card == exclude_card:
+			continue
+		var priority = _score_card_for_discard(card)
+		candidates.append({"card": card, "priority": priority})
+	
+	# Sort by priority ascending (lowest priority = discard first)
+	candidates.sort_custom(func(a, b): return a["priority"] < b["priority"])
+	
+	var result = []
+	for i in range(min(count, candidates.size())):
+		result.append(candidates[i]["card"])
+	return result
+
+# Scores a card for discard priority (lower = more likely to be discarded)
+func _score_card_for_discard(card: card_object) -> float:
+	var score = 50.0 # default middle
+	var supertype = card.metadata.get("supertype", "").to_lower()
+	var subtypes = card.metadata.get("subtypes", [])
+	
+	# Priority 1: Duplicate Basic Pokemon already in play
+	if supertype == "pokémon" and is_basic_pokemon(card):
+		var card_name = card.metadata.get("name", "")
+		var already_in_play = false
+		if opponent_active_pokemon != null and opponent_active_pokemon.metadata.get("name", "") == card_name:
+			already_in_play = true
+		for bp in opponent_bench:
+			if bp.metadata.get("name", "") == card_name:
+				already_in_play = true
+		if already_in_play and opponent_bench.size() >= 2:
+			return 10.0
+	
+	# Priority 2: Excess energy (if hand has 3+ energy cards)
+	if supertype == "energy":
+		var energy_count = 0
+		for c in opponent_hand:
+			if c.metadata.get("supertype", "").to_lower() == "energy":
+				energy_count += 1
+		if energy_count >= 4:
+			return 15.0
+		elif energy_count >= 3:
+			return 25.0
+		# Never discard last energy
+		if energy_count <= 1:
+			return 90.0
+		return 40.0
+	
+	# Priority 3: Unplayable evolution cards
+	if supertype == "pokémon" and not is_basic_pokemon(card):
+		var evolves_from = card.metadata.get("evolvesFrom", "")
+		var has_base_in_play = false
+		var has_base_in_hand = false
+		if opponent_active_pokemon != null and opponent_active_pokemon.metadata.get("name", "") == evolves_from:
+			has_base_in_play = true
+		for bp in opponent_bench:
+			if bp.metadata.get("name", "") == evolves_from:
+				has_base_in_play = true
+		for c in opponent_hand:
+			if c.metadata.get("name", "") == evolves_from:
+				has_base_in_hand = true
+		
+		if not has_base_in_play and not has_base_in_hand:
+			# Check if it's Stage 2 (never discard if possible)
+			if "Stage 2" in subtypes:
+				return 30.0
+			return 20.0
+		# Has matching base: high value, don't discard
+		if "Stage 2" in subtypes:
+			return 95.0
+		return 80.0
+	
+	# Priority 4: Low-priority trainer cards
+	if supertype == "trainer":
+		var trainer_score = cpu_score_trainer_card(card)
+		if trainer_score <= 0:
+			return 18.0
+		if trainer_score <= 30:
+			return 35.0
+		return 70.0
+	
+	# Priority 5: Basic pokemon with full bench
+	if supertype == "pokémon" and is_basic_pokemon(card):
+		if opponent_bench.size() >= 4:
+			return 22.0
+		return 55.0
+	
+	return score
+
+############################################### Section C: TRAINER CARD PLAY ANIMATION ##############################################################
+
+# Main entry point for playing a trainer card (handles animation, routing, and discard)
+func play_trainer_card(card: card_object, is_opponent: bool) -> void:
+	var hand = opponent_hand if is_opponent else player_hand
+	var discard = opponent_discard_pile if is_opponent else player_discard_pile
+	var who = "Opponent" if is_opponent else "You"
+	var card_name = card.metadata.get("name", "Unknown")
+	
+	# Remove from hand first
+	hand.erase(card)
+	refresh_hand_display(is_opponent)
+	
+	# Step 1: Show trainer card animation
+	await show_trainer_card_played_animation(card, is_opponent)
+	
+	# Step 2: Route to the correct handler based on card type
+	if is_bench_token_trainer(card):
+		await resolve_bench_token_trainer(card, is_opponent)
+	elif is_attached_trainer(card):
+		await resolve_attached_trainer(card, is_opponent)
+	elif is_stadium_trainer(card):
+		# Future-proofing: route to stadium handler
+		print("Stadium cards not yet implemented")
+		card.current_location = "discard"
+		discard.append(card)
+	else:
+		# Standard trainer: resolve effect, then discard
+		card.current_location = "discard"
+		discard.append(card)
+		await resolve_standard_trainer(card, is_opponent)
+	
+	update_discard_pile_display(is_opponent)
+	refresh_hand_display(is_opponent)
+	display_pokemon(is_opponent)
+	display_pokemon(not is_opponent)
+
+# Displays the trainer card animation overlay
+func show_trainer_card_played_animation(card: card_object, is_opponent: bool) -> void:
+	var who = "Opponent" if is_opponent else "You"
+	var card_name = card.metadata.get("name", "Unknown")
+	
+	# Show the overlay
+	trainer_block_container.visible = true
+	
+	# Display the card in the container
+	var card_display = TextureRect.new()
+	card_display.set_script(card_display_script)
+	played_trainer_container.add_child(card_display)
+	card_display.load_card_image(card.uid, card_scales[1], card)
+	
+	# Show message
+	await show_message(who + " played " + card_name + "!")
+	
+	# Clean up overlay
+	trainer_block_container.visible = false
+	for child in played_trainer_container.get_children():
+		child.queue_free()
+	
+	# Animate card to appropriate destination
+	var hand_container_node = opponent_hand_container if is_opponent else player_hand_container
+	var card_texture = get_card_texture(card)
+	
+	if is_bench_token_trainer(card):
+		# Bench tokens animate to the bench container
+		var bench_container_node = opponent_bench_container if is_opponent else player_bench_container
+		await animate_card_a_to_b(hand_container_node, bench_container_node, 0.3, card_texture, card_scales[10])
+	elif is_attached_trainer(card):
+		# Attached trainers animate to the active pokemon container
+		var active_container_node = opponent_active_container if is_opponent else player_active_container
+		await animate_card_a_to_b(hand_container_node, active_container_node, 0.3, card_texture, card_scales[10])
+	else:
+		# Standard trainers animate to the discard pile
+		var discard_node = opponent_discard_icon if is_opponent else player_discard_icon
+		await animate_card_a_to_b(hand_container_node, discard_node, 0.3, card_texture, card_scales[10])
+
+############################################### Section D: STANDARD TRAINER CARD EFFECTS ############################################################
+
+# Routes a standard trainer card to its specific effect function
+func resolve_standard_trainer(card: card_object, is_opponent: bool) -> void:
+	var card_id = card.uid.to_lower()
+	var card_name = card.metadata.get("name", "").to_lower()
+	
+	match card_id:
+		"base1-91": await effect_bill(is_opponent)
+		"base1-88": await effect_professor_oak(card, is_opponent)
+		"base1-71": await effect_computer_search(card, is_opponent)
+		"base1-72": await effect_devolution_spray(is_opponent)
+		"base1-73": await effect_impostor_professor_oak(is_opponent)
+		"base1-74": await effect_item_finder(card, is_opponent)
+		"base1-75": await effect_lass(is_opponent)
+		"base1-76": await effect_pokemon_breeder(is_opponent)
+		"base1-77": await effect_pokemon_trader(card, is_opponent)
+		"base1-78": await effect_scoop_up(is_opponent)
+		"base1-79": await effect_super_energy_removal(is_opponent)
+		"base1-81": await effect_energy_retrieval(card, is_opponent)
+		"base1-82": await effect_full_heal(is_opponent)
+		"base1-83": await effect_maintenance(card, is_opponent)
+		"base1-85": await effect_pokemon_center(is_opponent)
+		"base1-86": await effect_pokemon_flute(is_opponent)
+		"base1-87": await effect_pokedex(is_opponent)
+		"base1-89": await effect_revive(is_opponent)
+		"base1-90": await effect_super_potion(is_opponent)
+		"base1-92": await effect_energy_removal(is_opponent)
+		"base1-93": await effect_gust_of_wind(is_opponent)
+		"base1-94": await effect_potion(is_opponent)
+		"base1-95": await effect_switch(is_opponent)
+		_:
+			print("Unknown trainer card: ", card_id, " (", card_name, ")")
+
+# Resolves bench token trainer placement (Clefairy Doll, Mysterious Fossil)
+func resolve_bench_token_trainer(card: card_object, is_opponent: bool) -> void:
+	var bench = opponent_bench if is_opponent else player_bench
+	if bench.size() >= 5:
+		await show_message("Bench is full! Cannot place " + card.metadata.get("name", "") + "!")
+		var discard = opponent_discard_pile if is_opponent else player_discard_pile
+		card.current_location = "discard"
+		discard.append(card)
+		return
+	
+	# Place on bench with proper flags
+	card.current_location = "bench"
+	card.placed_on_field_this_turn = true
+	card.no_prize_on_ko = true
+	card.is_bench_token = true
+	# Read HP from card metadata, fallback to 10
+	var hp_str = card.metadata.get("hp", "10")
+	card.current_hp = int(hp_str) if hp_str != "" else 10
+	bench.append(card)
+	
+	display_pokemon(is_opponent)
+	var name = card.metadata.get("name", "")
+	await show_message(name + " was placed on the bench!")
+	print("BENCH TOKEN: ", name, " placed on bench with ", card.current_hp, " HP")
+
+# Resolves attached trainer card placement (PlusPower, Defender)
+func resolve_attached_trainer(card: card_object, is_opponent: bool) -> void:
+	var card_name = card.metadata.get("name", "").to_lower()
+	
+	if card_name == "pluspower":
+		# Attach to active pokemon
+		var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+		if active == null:
+			await show_message("No active Pokemon to attach PlusPower to!")
+			var discard = opponent_discard_pile if is_opponent else player_discard_pile
+			card.current_location = "discard"
+			discard.append(card)
+			return
+		active.attached_cards.append(card)
+		active.pluspower_count += 1
+		display_attached_trainer_cards(is_opponent)
+		await show_message("PlusPower attached to " + active.metadata.get("name", "") + "! (+10 damage)")
+		print("PLUSPOWER: Attached to ", active.metadata.get("name", ""), " (total: ", active.pluspower_count, ")")
+	
+	elif card_name == "defender":
+		if is_opponent:
+			# CPU always attaches to its own active
+			var active = opponent_active_pokemon
+			if active == null:
+				return
+			active.attached_cards.append(card)
+			active.defender_turns_remaining = 0  # Discards at end of opponent's (player's) next turn
+			display_attached_trainer_cards(true)
+			await show_message("Defender attached to " + active.metadata.get("name", "") + "! (-20 damage)")
+		else:
+			# Player chooses target
+			var targets = []
+			if player_active_pokemon != null:
+				targets.append(player_active_pokemon)
+			targets.append_array(player_bench)
+			if targets.size() == 0:
+				return
+			
+			trainer_pokemon_selection_active = true
+			show_enlarged_array_selection_mode(targets)
+			header_label.text = "ATTACH DEFENDER"
+			hint_label.text = "Choose a Pokemon to attach Defender to"
+			action_button.text = "ATTACH"
+			action_button.disabled = true
+			action_button.theme = theme_disabled
+			cancel_button.visible = false
+			await trainer_target_selected
+			var target = selected_card_for_action
+			trainer_pokemon_selection_active = false
+			hide_selection_mode_display_main()
+			
+			if target != null:
+				target.attached_cards.append(card)
+				target.defender_turns_remaining = 0
+				display_attached_trainer_cards(false)
+				await show_message("Defender attached to " + target.metadata.get("name", "") + "!")
+
+# --- INDIVIDUAL TRAINER EFFECTS ---
+
+# base1-91 — Bill: Draw 2 cards
+func effect_bill(is_opponent: bool) -> void:
+	for i in range(2):
+		await draw_card_from_deck(is_opponent)
+	refresh_hand_display(is_opponent)
+	update_deck_icon(is_opponent)
+	var who = "Opponent" if is_opponent else "You"
+	await show_message(who + " drew 2 cards!")
+
+# base1-88 — Professor Oak: Discard hand, draw 7
+func effect_professor_oak(played_card: card_object, is_opponent: bool) -> void:
+	var hand = opponent_hand if is_opponent else player_hand
+	var discard = opponent_discard_pile if is_opponent else player_discard_pile
+	
+	# Discard entire remaining hand
+	var hand_copy = hand.duplicate()
+	for card in hand_copy:
+		card.current_location = "discard"
+		discard.append(card)
+	hand.clear()
+	refresh_hand_display(is_opponent)
+	update_discard_pile_display(is_opponent)
+	
+	await show_message("Entire hand discarded!")
+	
+	# Draw 7 new cards
+	for i in range(7):
+		await draw_card_from_deck(is_opponent)
+	refresh_hand_display(is_opponent)
+	update_deck_icon(is_opponent)
+	await show_message("Drew 7 new cards!")
+
+# base1-71 — Computer Search: Discard 2, search deck for any 1 card
+func effect_computer_search(played_card: card_object, is_opponent: bool) -> void:
+	var hand = opponent_hand if is_opponent else player_hand
+	var deck = opponent_deck if is_opponent else player_deck
+	var discard = opponent_discard_pile if is_opponent else player_discard_pile
+	
+	if is_opponent:
+		# CPU: use discard priority and search priority
+		var to_discard = cpu_get_discard_priority(hand, 2, played_card)
+		for card in to_discard:
+			hand.erase(card)
+			card.current_location = "discard"
+			discard.append(card)
+		refresh_hand_display(true)
+		
+		# CPU search logic
+		var search_card = cpu_search_deck_for_best_card(deck)
+		if search_card != null:
+			deck.erase(search_card)
+			search_card.current_location = "hand"
+			hand.append(search_card)
+			await show_message("Opponent searched their deck for a card!")
+		deck.shuffle()
+		refresh_hand_display(true)
+		update_deck_icon(true)
+	else:
+		# Player: select 2 cards to discard
+		if hand.size() < 2:
+			await show_message("Not enough cards in hand to discard!")
+			return
+		
+		await player_select_cards_to_discard(hand, 2, "COMPUTER SEARCH", "Select 2 cards to discard")
+		for card in trainer_discard_selected:
+			hand.erase(card)
+			card.current_location = "discard"
+			discard.append(card)
+		trainer_discard_selected.clear()
+		refresh_hand_display(false)
+		update_discard_pile_display(false)
+		
+		# Player searches deck
+		if deck.size() > 0:
+			trainer_deck_search_active = true
+			show_enlarged_array_selection_mode(deck)
+			header_label.text = "SEARCH YOUR DECK"
+			hint_label.text = "Select any card to add to your hand"
+			action_button.text = "TAKE CARD"
+			action_button.disabled = true
+			action_button.theme = theme_disabled
+			cancel_button.visible = false
+			await trainer_target_selected
+			var chosen = selected_card_for_action
+			trainer_deck_search_active = false
+			hide_selection_mode_display_main()
+			
+			if chosen != null:
+				deck.erase(chosen)
+				chosen.current_location = "hand"
+				hand.append(chosen)
+		
+		deck.shuffle()
+		refresh_hand_display(false)
+		update_deck_icon(false)
+
+# base1-72 — Devolution Spray: Devolve a pokemon
+func effect_devolution_spray(is_opponent: bool) -> void:
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench = opponent_bench if is_opponent else player_bench
+	var discard = opponent_discard_pile if is_opponent else player_discard_pile
+	
+	# Find all evolved pokemon on the field
+	var evolved_pokemon = []
+	if active != null and active.attached_pre_evolutions.size() > 0:
+		evolved_pokemon.append(active)
+	for bp in bench:
+		if bp.attached_pre_evolutions.size() > 0:
+			evolved_pokemon.append(bp)
+	
+	if evolved_pokemon.size() == 0:
+		await show_message("No evolved Pokemon to devolve!")
+		return
+	
+	if is_opponent:
+		# CPU: only use if it clears a status or enables a better play (scored -100 normally)
+		return
+	else:
+		# Player selects which pokemon to devolve
+		trainer_pokemon_selection_active = true
+		show_enlarged_array_selection_mode(evolved_pokemon)
+		header_label.text = "DEVOLUTION SPRAY"
+		hint_label.text = "Choose an evolved Pokemon to devolve"
+		action_button.text = "DEVOLVE"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = false
+		await trainer_target_selected
+		var target = selected_card_for_action
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+		
+		if target == null:
+			return
+		
+		# Devolve: remove the top evolution card and discard it
+		var pre_evo = target.attached_pre_evolutions.pop_back()
+		if pre_evo == null:
+			return
+		
+		# Save the field position BEFORE discarding
+		var field_location = target.current_location
+		
+		# The current card (evolution) is discarded
+		var evo_card = target
+		evo_card.current_location = "discard"
+		discard.append(evo_card)
+		
+		# The pre-evolution takes its place
+		pre_evo.attached_energies = evo_card.attached_energies.duplicate()
+		evo_card.attached_energies.clear()
+		pre_evo.attached_pre_evolutions = evo_card.attached_pre_evolutions.duplicate()
+		evo_card.attached_pre_evolutions.clear()
+		pre_evo.attached_cards = evo_card.attached_cards.duplicate()
+		evo_card.attached_cards.clear()
+		
+		# Transfer damage, clamping so it has at least 10 HP
+		var max_hp_old = int(evo_card.metadata.get("hp", "0"))
+		var damage_taken = max_hp_old - evo_card.current_hp
+		var new_max_hp = int(pre_evo.metadata.get("hp", "0"))
+		pre_evo.current_hp = max(10, new_max_hp - damage_taken)
+		pre_evo.current_location = field_location
+		
+		# Clear statuses (the devolved pokemon loses all conditions)
+		clear_all_statuses(pre_evo, is_opponent)
+		
+		# Replace in the appropriate slot
+		if evo_card == (opponent_active_pokemon if is_opponent else player_active_pokemon):
+			if is_opponent:
+				opponent_active_pokemon = pre_evo
+			else:
+				player_active_pokemon = pre_evo
+		else:
+			var b = opponent_bench if is_opponent else player_bench
+			var idx = b.find(evo_card)
+			if idx != -1:
+				b[idx] = pre_evo
+		
+		display_pokemon(is_opponent)
+		display_active_pokemon_energies(is_opponent)
+		await show_message(evo_card.metadata.get("name", "") + " devolved into " + pre_evo.metadata.get("name", "") + "!")
+
+# base1-73 — Impostor Professor Oak: Opponent shuffles hand into deck, draws 7
+func effect_impostor_professor_oak(is_opponent: bool) -> void:
+	# Target is the OTHER player
+	var target_hand = player_hand if is_opponent else opponent_hand
+	var target_deck = player_deck if is_opponent else opponent_deck
+	var target_is_opponent = not is_opponent
+	
+	# Shuffle target's hand into their deck
+	for card in target_hand:
+		card.current_location = "deck"
+		target_deck.append(card)
+	target_hand.clear()
+	target_deck.shuffle()
+	
+	# Draw 7 cards
+	for i in range(7):
+		await draw_card_from_deck(target_is_opponent)
+	
+	refresh_hand_display(target_is_opponent)
+	update_deck_icon(target_is_opponent)
+	var target_name = "Your" if is_opponent else "Opponent's"
+	await show_message(target_name + " hand was shuffled into deck and drew 7 cards!")
+
+# base1-74 — Item Finder: Discard 2, retrieve 1 Trainer from discard
+func effect_item_finder(played_card: card_object, is_opponent: bool) -> void:
+	var hand = opponent_hand if is_opponent else player_hand
+	var discard = opponent_discard_pile if is_opponent else player_discard_pile
+	
+	# Find trainer cards in discard pile (exclude the Item Finder just played)
+	var trainers_in_discard = []
+	for card in discard:
+		if is_trainer_card(card) and card != played_card:
+			trainers_in_discard.append(card)
+	
+	if trainers_in_discard.size() == 0:
+		await show_message("No Trainer cards in the discard pile!")
+		return
+	
+	if is_opponent:
+		var to_discard = cpu_get_discard_priority(hand, 2, played_card)
+		for card in to_discard:
+			hand.erase(card)
+			card.current_location = "discard"
+			discard.append(card)
+		
+		# CPU picks highest priority trainer from discard
+		var best_trainer: card_object = null
+		var best_score = -999.0
+		for t in trainers_in_discard:
+			var score = cpu_score_trainer_card(t)
+			if score > best_score:
+				best_score = score
+				best_trainer = t
+		if best_trainer != null:
+			discard.erase(best_trainer)
+			best_trainer.current_location = "hand"
+			hand.append(best_trainer)
+			await show_message("Opponent retrieved " + best_trainer.metadata.get("name", "") + " from discard pile!")
+		refresh_hand_display(true)
+	else:
+		if hand.size() < 2:
+			await show_message("Not enough cards in hand to discard!")
+			return
+		await player_select_cards_to_discard(hand, 2, "ITEM FINDER", "Select 2 cards to discard")
+		for card in trainer_discard_selected:
+			hand.erase(card)
+			card.current_location = "discard"
+			discard.append(card)
+		trainer_discard_selected.clear()
+		refresh_hand_display(false)
+		
+		# Player picks from discard trainers
+		trainer_deck_search_active = true
+		show_enlarged_array_selection_mode(trainers_in_discard)
+		header_label.text = "ITEM FINDER"
+		hint_label.text = "Select a Trainer card from your discard pile"
+		action_button.text = "RETRIEVE"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = false
+		await trainer_target_selected
+		var chosen = selected_card_for_action
+		trainer_deck_search_active = false
+		hide_selection_mode_display_main()
+		
+		if chosen != null:
+			discard.erase(chosen)
+			chosen.current_location = "hand"
+			hand.append(chosen)
+			await show_message("Retrieved " + chosen.metadata.get("name", "") + " from discard pile!")
+		refresh_hand_display(false)
+
+# base1-75 — Lass: Both players shuffle Trainer cards from hand into deck
+func effect_lass(is_opponent: bool) -> void:
+	# Player's hand
+	var p_trainers = []
+	for card in player_hand:
+		if is_trainer_card(card):
+			p_trainers.append(card)
+	for card in p_trainers:
+		player_hand.erase(card)
+		card.current_location = "deck"
+		player_deck.append(card)
+	
+	# Opponent's hand
+	var o_trainers = []
+	for card in opponent_hand:
+		if is_trainer_card(card):
+			o_trainers.append(card)
+	for card in o_trainers:
+		opponent_hand.erase(card)
+		card.current_location = "deck"
+		opponent_deck.append(card)
+	
+	player_deck.shuffle()
+	opponent_deck.shuffle()
+	refresh_hand_display(false)
+	refresh_hand_display(true)
+	update_deck_icon(false)
+	update_deck_icon(true)
+	await show_message("All Trainer cards shuffled back into decks! (You: " + str(p_trainers.size()) + ", Opponent: " + str(o_trainers.size()) + ")")
+
+# base1-76 — Pokemon Breeder: Place Stage 2 directly on matching Basic
+func effect_pokemon_breeder(is_opponent: bool) -> void:
+	var hand = opponent_hand if is_opponent else player_hand
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench = opponent_bench if is_opponent else player_bench
+	
+	# Find Stage 2 cards in hand
+	var stage2_cards = []
+	for card in hand:
+		var subtypes = card.metadata.get("subtypes", [])
+		if "Stage 2" in subtypes:
+			stage2_cards.append(card)
+	
+	if stage2_cards.size() == 0:
+		await show_message("No Stage 2 Pokemon in hand!")
+		return
+	
+	if is_opponent:
+		# CPU: find best Stage 2 + Basic match
+		for s2 in stage2_cards:
+			var evolves_from_s1 = s2.metadata.get("evolvesFrom", "")
+			# Find the Stage 1 this evolves from, then find that Stage 1's basic
+			# For Breeder, we need the Basic that the Stage 2 ultimately comes from
+			# Check all pokemon in play to see if any Basic matches
+			var all_in_play = []
+			if active != null:
+				all_in_play.append(active)
+			all_in_play.append_array(bench)
+			
+			for pokemon in all_in_play:
+				if pokemon.placed_on_field_this_turn:
+					continue
+				if not is_basic_pokemon(pokemon):
+					continue
+				# Check if this Basic eventually leads to the Stage 2
+				if _basic_matches_stage2(pokemon, s2):
+					evolution_card_awaiting_target = s2
+					selected_card_for_action = pokemon
+					perform_evolution(true)
+					await show_message("Opponent used Pokemon Breeder to evolve " + pokemon.metadata.get("name", "") + " into " + s2.metadata.get("name", "") + "!")
+					display_pokemon(true)
+					display_active_pokemon_energies(true)
+					refresh_hand_display(true)
+					evolution_card_awaiting_target = null
+					selected_card_for_action = null
+					return
+	else:
+		# Player: select Stage 2 card, then select matching Basic
+		trainer_pokemon_selection_active = true
+		show_enlarged_array_selection_mode(stage2_cards)
+		header_label.text = "POKEMON BREEDER"
+		hint_label.text = "Select a Stage 2 Pokemon to play"
+		action_button.text = "SELECT"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = false
+		await trainer_target_selected
+		var s2_card = selected_card_for_action
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+		
+		if s2_card == null:
+			return
+		
+		# Find valid basic targets
+		var targets = []
+		if active != null and not active.placed_on_field_this_turn and is_basic_pokemon(active) and _basic_matches_stage2(active, s2_card):
+			targets.append(active)
+		for bp in bench:
+			if not bp.placed_on_field_this_turn and is_basic_pokemon(bp) and _basic_matches_stage2(bp, s2_card):
+				targets.append(bp)
+		
+		if targets.size() == 0:
+			await show_message("No valid Basic Pokemon to evolve!")
+			# Put the Stage 2 back (it wasn't removed from hand yet by this function)
+			return
+		
+		trainer_pokemon_selection_active = true
+		show_enlarged_array_selection_mode(targets)
+		header_label.text = "POKEMON BREEDER"
+		hint_label.text = "Select a Basic Pokemon to evolve into " + s2_card.metadata.get("name", "")
+		action_button.text = "EVOLVE"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = false
+		await trainer_target_selected
+		var target = selected_card_for_action
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+		
+		if target != null:
+			evolution_card_awaiting_target = s2_card
+			selected_card_for_action = target
+			perform_evolution(false)
+			display_pokemon(false)
+			display_active_pokemon_energies(false)
+			refresh_hand_display(false)
+			await play_evolution_effect(s2_card)
+			evolution_card_awaiting_target = null
+			selected_card_for_action = null
+
+# Helper: checks if a Basic pokemon is the correct base for a Stage 2 (via intermediate Stage 1)
+func _basic_matches_stage2(basic: card_object, stage2: card_object) -> bool:
+	var s2_evolves_from = stage2.metadata.get("evolvesFrom", "")
+	if s2_evolves_from == "":
+		return false
+	# The Stage 2 evolves from a Stage 1 name. Check if any Stage 1 with that name evolves from this Basic.
+	# We check the JSON metadata for Stage 1 cards
+	var basic_name = basic.metadata.get("name", "")
+	# Simple check: look through all card sets for a Stage 1 named s2_evolves_from that evolves from basic_name
+	# For efficiency, check the card's set
+	var set_prefix = stage2.uid.split("-")[0]
+	var metadata_path = "res://cardimages/" + set_prefix + "/" + set_prefix + ".json"
+	var file = FileAccess.open(metadata_path, FileAccess.READ)
+	if file == null:
+		return false
+	var json = JSON.new()
+	if json.parse(file.get_as_text()) != OK:
+		return false
+	file.close()
+	for card_data in json.data:
+		if card_data.get("name", "") == s2_evolves_from:
+			if card_data.get("evolvesFrom", "") == basic_name:
+				return true
+	return false
+
+# base1-77 — Pokemon Trader: Trade 1 Pokemon from hand for 1 from deck
+func effect_pokemon_trader(played_card: card_object, is_opponent: bool) -> void:
+	var hand = opponent_hand if is_opponent else player_hand
+	var deck = opponent_deck if is_opponent else player_deck
+	
+	# Find Pokemon in hand
+	var pokemon_in_hand = []
+	for card in hand:
+		if card.metadata.get("supertype", "").to_lower() == "pokémon":
+			pokemon_in_hand.append(card)
+	
+	var pokemon_in_deck = []
+	for card in deck:
+		if card.metadata.get("supertype", "").to_lower() == "pokémon":
+			pokemon_in_deck.append(card)
+	
+	if pokemon_in_hand.size() == 0 or pokemon_in_deck.size() == 0:
+		await show_message("Cannot trade - need Pokemon in both hand and deck!")
+		return
+	
+	if is_opponent:
+		# CPU: trade a duplicate or unneeded pokemon for a needed one
+		var trade_away = cpu_get_discard_priority(pokemon_in_hand, 1, played_card)
+		if trade_away.size() == 0:
+			return
+		var card_to_trade = trade_away[0]
+		var search_card = cpu_search_deck_for_best_pokemon(pokemon_in_deck)
+		if search_card != null:
+			hand.erase(card_to_trade)
+			card_to_trade.current_location = "deck"
+			deck.append(card_to_trade)
+			deck.erase(search_card)
+			search_card.current_location = "hand"
+			hand.append(search_card)
+			deck.shuffle()
+			await show_message("Opponent traded " + card_to_trade.metadata.get("name", "") + " for " + search_card.metadata.get("name", "") + "!")
+			refresh_hand_display(true)
+	else:
+		# Player picks card to trade from hand
+		trainer_pokemon_selection_active = true
+		show_enlarged_array_selection_mode(pokemon_in_hand)
+		header_label.text = "POKEMON TRADER"
+		hint_label.text = "Select a Pokemon from your hand to trade"
+		action_button.text = "TRADE"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = false
+		await trainer_target_selected
+		var card_to_trade = selected_card_for_action
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+		
+		if card_to_trade == null:
+			return
+		
+		# Player picks card from deck
+		trainer_deck_search_active = true
+		show_enlarged_array_selection_mode(pokemon_in_deck)
+		header_label.text = "POKEMON TRADER"
+		hint_label.text = "Select a Pokemon from your deck"
+		action_button.text = "TAKE"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = false
+		await trainer_target_selected
+		var search_card = selected_card_for_action
+		trainer_deck_search_active = false
+		hide_selection_mode_display_main()
+		
+		if search_card != null:
+			hand.erase(card_to_trade)
+			card_to_trade.current_location = "deck"
+			deck.append(card_to_trade)
+			deck.erase(search_card)
+			search_card.current_location = "hand"
+			hand.append(search_card)
+			deck.shuffle()
+			refresh_hand_display(false)
+			update_deck_icon(false)
+
+# base1-78 — Scoop Up: Return Basic card to hand, discard attachments
+func effect_scoop_up(is_opponent: bool) -> void:
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench = opponent_bench if is_opponent else player_bench
+	var hand = opponent_hand if is_opponent else player_hand
+	var discard = opponent_discard_pile if is_opponent else player_discard_pile
+	
+	# Get all pokemon in play
+	var all_in_play = []
+	if active != null:
+		all_in_play.append(active)
+	all_in_play.append_array(bench)
+	
+	if all_in_play.size() == 0:
+		return
+	
+	var target: card_object = null
+	
+	if is_opponent:
+		# CPU: pick the pokemon at lowest HP that is guaranteed KO'd
+		for pokemon in all_in_play:
+			if pokemon.current_hp <= int(pokemon.metadata.get("hp", "0")) / 2:
+				target = pokemon
+				break
+		if target == null:
+			return
+	else:
+		trainer_pokemon_selection_active = true
+		show_enlarged_array_selection_mode(all_in_play)
+		header_label.text = "SCOOP UP"
+		hint_label.text = "Select a Pokemon to return its Basic card to your hand"
+		action_button.text = "SCOOP UP"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = false
+		await trainer_target_selected
+		target = selected_card_for_action
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+	
+	if target == null:
+		return
+	
+	# Find the original Basic card (at the bottom of the pre-evolution chain)
+	var basic_card = target
+	if target.attached_pre_evolutions.size() > 0:
+		basic_card = target.attached_pre_evolutions[0]
+		target.attached_pre_evolutions.erase(basic_card)
+	
+	# Discard all attachments (energies, evolutions, attached cards)
+	for energy in target.attached_energies:
+		energy.current_location = "discard"
+		discard.append(energy)
+	target.attached_energies.clear()
+	for evo in target.attached_pre_evolutions:
+		evo.current_location = "discard"
+		discard.append(evo)
+	target.attached_pre_evolutions.clear()
+	for att in target.attached_cards:
+		att.current_location = "discard"
+		discard.append(att)
+	target.attached_cards.clear()
+	
+	# If the target itself is NOT the basic (it's an evolution), discard it too
+	if target != basic_card:
+		target.current_location = "discard"
+		discard.append(target)
+	
+	# Remove from play
+	if target == (opponent_active_pokemon if is_opponent else player_active_pokemon):
+		if is_opponent:
+			opponent_active_pokemon = null
+		else:
+			player_active_pokemon = null
+	elif target in bench:
+		bench.erase(target)
+	
+	# Return basic card to hand with fresh state
+	basic_card.current_location = "hand"
+	basic_card.current_hp = int(basic_card.metadata.get("hp", "0"))
+	basic_card.pluspower_count = 0
+	basic_card.defender_turns_remaining = -1
+	clear_all_statuses(basic_card, is_opponent)
+	hand.append(basic_card)
+	
+	update_discard_pile_display(is_opponent)
+	refresh_hand_display(is_opponent)
+	display_pokemon(is_opponent)
+	display_active_pokemon_energies(is_opponent)
+	
+	await show_message(basic_card.metadata.get("name", "") + " was scooped up and returned to hand!")
+	
+	# If the active was scooped, need bench replacement (no prize)
+	var current_active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	if current_active == null:
+		if bench.size() == 0:
+			await show_message("No Pokemon remaining!")
+			game_end_logic(not is_opponent)
+			return
+		if is_opponent:
+			var cpu_eval = build_cpu_evaluation()
+			var replacement = pick_best_bench_replacement(bench, player_active_pokemon, cpu_eval)
+			if replacement == null:
+				replacement = bench[0]
+			bench.erase(replacement)
+			replacement.current_location = "active"
+			opponent_active_pokemon = replacement
+			display_pokemon(true)
+			display_active_pokemon_energies(true)
+			await show_message("Opponent sent " + replacement.metadata.get("name", "") + " to the active spot!")
+		else:
+			knockout_bench_selection_active = true
+			show_enlarged_array_selection_mode(player_bench)
+			cancel_button.visible = false
+			header_label.text = "CHOOSE NEW ACTIVE POKEMON"
+			hint_label.text = "Your active was scooped up - select a replacement"
+			action_button.text = "SET ACTIVE"
+			action_button.disabled = true
+			action_button.theme = theme_disabled
+			await knockout_replacement_chosen
+			display_active_pokemon_energies(false)
+
+# base1-79 — Super Energy Removal: Discard 1 own energy, remove up to 2 from opponent
+func effect_super_energy_removal(is_opponent: bool) -> void:
+	var own_active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var own_bench = opponent_bench if is_opponent else player_bench
+	var target_active = player_active_pokemon if is_opponent else opponent_active_pokemon
+	var target_bench = player_bench if is_opponent else opponent_bench
+	var own_discard = opponent_discard_pile if is_opponent else player_discard_pile
+	var target_discard = player_discard_pile if is_opponent else opponent_discard_pile
+	
+	# Find own pokemon with energy
+	var own_with_energy = []
+	if own_active != null and own_active.attached_energies.size() > 0:
+		own_with_energy.append(own_active)
+	for bp in own_bench:
+		if bp.attached_energies.size() > 0:
+			own_with_energy.append(bp)
+	
+	if own_with_energy.size() == 0:
+		await show_message("No energy to discard from your own Pokemon!")
+		return
+	
+	# Find opponent pokemon with energy
+	var target_with_energy = []
+	if target_active != null and target_active.attached_energies.size() > 0:
+		target_with_energy.append(target_active)
+	for bp in target_bench:
+		if bp.attached_energies.size() > 0:
+			target_with_energy.append(bp)
+	
+	if target_with_energy.size() == 0:
+		await show_message("Opponent has no energy to remove!")
+		return
+	
+	if is_opponent:
+		# CPU: discard from pokemon with most excess energy, target player's active
+		var source = own_with_energy[0]
+		for p in own_with_energy:
+			if p.attached_energies.size() > source.attached_energies.size():
+				source = p
+		var energy = source.attached_energies.pop_back()
+		energy.current_location = "discard"
+		own_discard.append(energy)
+		
+		# Remove up to 2 from target (prioritize active)
+		var target = target_active if target_active != null and target_active.attached_energies.size() > 0 else (target_with_energy[0] if target_with_energy.size() > 0 else null)
+		if target != null:
+			var removed = 0
+			while removed < 2 and target.attached_energies.size() > 0:
+				var e = target.attached_energies.pop_back()
+				e.current_location = "discard"
+				target_discard.append(e)
+				removed += 1
+			await show_message("Opponent removed " + str(removed) + " energy from " + target.metadata.get("name", "") + "!")
+		display_active_pokemon_energies(true)
+		display_active_pokemon_energies(false)
+	else:
+		# Player selects own energy to discard, then opponent energy to remove
+		# For simplicity, auto-select the self-discard and let player pick target
+		var source = own_with_energy[0]
+		var energy = source.attached_energies.pop_back()
+		energy.current_location = "discard"
+		own_discard.append(energy)
+		await show_message("Discarded energy from " + source.metadata.get("name", ""))
+		display_active_pokemon_energies(false)
+		
+		# Player picks target opponent pokemon
+		trainer_pokemon_selection_active = true
+		show_enlarged_array_selection_mode(target_with_energy)
+		header_label.text = "SUPER ENERGY REMOVAL"
+		hint_label.text = "Select opponent Pokemon to remove energy from"
+		action_button.text = "REMOVE"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = false
+		await trainer_target_selected
+		var target = selected_card_for_action
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+		
+		if target != null:
+			var removed = 0
+			while removed < 2 and target.attached_energies.size() > 0:
+				var e = target.attached_energies.pop_back()
+				e.current_location = "discard"
+				target_discard.append(e)
+				removed += 1
+			await show_message("Removed " + str(removed) + " energy from " + target.metadata.get("name", "") + "!")
+		display_active_pokemon_energies(true)
+		update_discard_pile_display(false)
+		update_discard_pile_display(true)
+
+# base1-81 — Energy Retrieval: Discard 1, get up to 2 Basic Energy from discard
+func effect_energy_retrieval(played_card: card_object, is_opponent: bool) -> void:
+	var hand = opponent_hand if is_opponent else player_hand
+	var discard = opponent_discard_pile if is_opponent else player_discard_pile
+	
+	# Find basic energy in discard
+	var basic_energies = []
+	for card in discard:
+		if is_basic_energy_card(card):
+			basic_energies.append(card)
+	
+	if basic_energies.size() == 0:
+		await show_message("No Basic Energy cards in discard pile!")
+		return
+	
+	if is_opponent:
+		var to_discard = cpu_get_discard_priority(hand, 1, played_card)
+		if to_discard.size() == 0:
+			return
+		hand.erase(to_discard[0])
+		to_discard[0].current_location = "discard"
+		discard.append(to_discard[0])
+		
+		var retrieved = 0
+		for energy in basic_energies.duplicate():
+			if retrieved >= 2:
+				break
+			discard.erase(energy)
+			energy.current_location = "hand"
+			hand.append(energy)
+			retrieved += 1
+		await show_message("Opponent retrieved " + str(retrieved) + " Basic Energy from discard!")
+		refresh_hand_display(true)
+	else:
+		if hand.size() < 1:
+			await show_message("Not enough cards to discard!")
+			return
+		await player_select_cards_to_discard(hand, 1, "ENERGY RETRIEVAL", "Select 1 card to discard")
+		for card in trainer_discard_selected:
+			hand.erase(card)
+			card.current_location = "discard"
+			discard.append(card)
+		trainer_discard_selected.clear()
+		refresh_hand_display(false)
+		
+		# Player picks up to 2 basic energy from discard
+		# Recalculate basic energies after discard
+		basic_energies.clear()
+		for card in discard:
+			if is_basic_energy_card(card):
+				basic_energies.append(card)
+		
+		var retrieved = 0
+		while retrieved < 2 and basic_energies.size() > 0:
+			trainer_deck_search_active = true
+			show_enlarged_array_selection_mode(basic_energies)
+			header_label.text = "ENERGY RETRIEVAL (" + str(2 - retrieved) + " remaining)"
+			hint_label.text = "Select a Basic Energy to retrieve"
+			action_button.text = "RETRIEVE"
+			action_button.disabled = true
+			action_button.theme = theme_disabled
+			cancel_button.visible = retrieved > 0
+			await trainer_target_selected
+			var chosen = selected_card_for_action
+			trainer_deck_search_active = false
+			hide_selection_mode_display_main()
+			
+			if chosen == null:
+				break
+			discard.erase(chosen)
+			chosen.current_location = "hand"
+			hand.append(chosen)
+			basic_energies.erase(chosen)
+			retrieved += 1
+		
+		refresh_hand_display(false)
+		update_discard_pile_display(false)
+
+# base1-82 — Full Heal: Remove all status conditions from active
+func effect_full_heal(is_opponent: bool) -> void:
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	if active == null:
+		return
+	var had_status = active.special_condition != "" or active.is_poisoned
+	clear_all_statuses(active, is_opponent)
+	if had_status:
+		await show_message(active.metadata.get("name", "") + " was fully healed of all conditions!")
+	else:
+		await show_message(active.metadata.get("name", "") + " had no conditions to heal.")
+
+# base1-83 — Maintenance: Shuffle 2 cards back, draw 1
+func effect_maintenance(played_card: card_object, is_opponent: bool) -> void:
+	var hand = opponent_hand if is_opponent else player_hand
+	var deck = opponent_deck if is_opponent else player_deck
+	
+	if hand.size() < 2:
+		await show_message("Not enough cards in hand!")
+		return
+	
+	if is_opponent:
+		var to_shuffle = cpu_get_discard_priority(hand, 2, played_card)
+		for card in to_shuffle:
+			hand.erase(card)
+			card.current_location = "deck"
+			deck.append(card)
+		deck.shuffle()
+		await draw_card_from_deck(true)
+		refresh_hand_display(true)
+		update_deck_icon(true)
+		await show_message("Opponent shuffled 2 cards into deck and drew 1!")
+	else:
+		await player_select_cards_to_discard(hand, 2, "MAINTENANCE", "Select 2 cards to shuffle into your deck")
+		for card in trainer_discard_selected:
+			hand.erase(card)
+			card.current_location = "deck"
+			deck.append(card)
+		trainer_discard_selected.clear()
+		deck.shuffle()
+		await draw_card_from_deck(false)
+		refresh_hand_display(false)
+		update_deck_icon(false)
+
+# base1-85 — Pokemon Center: Heal all damage, discard energy from healed pokemon
+func effect_pokemon_center(is_opponent: bool) -> void:
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench = opponent_bench if is_opponent else player_bench
+	var discard = opponent_discard_pile if is_opponent else player_discard_pile
+	
+	var all_pokemon = []
+	if active != null:
+		all_pokemon.append(active)
+	all_pokemon.append_array(bench)
+	
+	var healed_any = false
+	for pokemon in all_pokemon:
+		var max_hp = int(pokemon.metadata.get("hp", "0"))
+		var damage = max_hp - pokemon.current_hp
+		if damage <= 0:
+			continue
+		
+		healed_any = true
+		pokemon.current_hp = max_hp
+		
+		# Discard all energy from this pokemon
+		for energy in pokemon.attached_energies:
+			energy.current_location = "discard"
+			discard.append(energy)
+		pokemon.attached_energies.clear()
+		
+		await show_message(pokemon.metadata.get("name", "") + " healed " + str(damage) + " damage! Energy discarded.")
+	
+	if not healed_any:
+		await show_message("No Pokemon with damage to heal!")
+	
+	display_pokemon(is_opponent)
+	display_active_pokemon_energies(is_opponent)
+	display_hp_circles_above_align(active, is_opponent)
+	update_discard_pile_display(is_opponent)
+
+# base1-86 — Pokemon Flute: Put Basic from opponent's discard onto their bench
+func effect_pokemon_flute(is_opponent: bool) -> void:
+	var target_bench = player_bench if is_opponent else opponent_bench
+	var target_discard = player_discard_pile if is_opponent else opponent_discard_pile
+	var target_is_opponent = not is_opponent
+	
+	if target_bench.size() >= 5:
+		await show_message("Opponent's bench is full!")
+		return
+	
+	var basics_in_discard = []
+	for card in target_discard:
+		if is_basic_pokemon(card):
+			basics_in_discard.append(card)
+	
+	if basics_in_discard.size() == 0:
+		await show_message("No Basic Pokemon in opponent's discard pile!")
+		return
+	
+	if is_opponent:
+		# CPU never plays this (scored -100)
+		return
+	else:
+		trainer_deck_search_active = true
+		show_enlarged_array_selection_mode(basics_in_discard)
+		header_label.text = "POKEMON FLUTE"
+		hint_label.text = "Choose a Basic Pokemon to place on opponent's bench"
+		action_button.text = "PLACE"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = false
+		await trainer_target_selected
+		var chosen = selected_card_for_action
+		trainer_deck_search_active = false
+		hide_selection_mode_display_main()
+		
+		if chosen != null:
+			target_discard.erase(chosen)
+			chosen.current_location = "bench"
+			chosen.current_hp = int(chosen.metadata.get("hp", "0"))
+			chosen.placed_on_field_this_turn = true
+			target_bench.append(chosen)
+			display_pokemon(target_is_opponent)
+			await show_message(chosen.metadata.get("name", "") + " was placed on opponent's bench!")
+
+# base1-87 — Pokedex: Look at top 5 cards and rearrange
+func effect_pokedex(is_opponent: bool) -> void:
+	var deck = opponent_deck if is_opponent else player_deck
+	
+	var count = min(5, deck.size())
+	if count == 0:
+		await show_message("Deck is empty!")
+		return
+	
+	var top_cards = []
+	for i in range(count):
+		top_cards.append(deck[i])
+	
+	if is_opponent:
+		# CPU reorder using priority
+		top_cards.sort_custom(func(a, b): return _cpu_pokedex_priority(a) > _cpu_pokedex_priority(b))
+		for i in range(count):
+			deck[i] = top_cards[i]
+		await show_message("Opponent rearranged the top " + str(count) + " cards of their deck!")
+	else:
+		# Player: show cards and allow reordering via selection
+		await show_message("Top " + str(count) + " cards of your deck:")
+		var reordered = []
+		var remaining = top_cards.duplicate()
+		
+		for i in range(count):
+			trainer_deck_search_active = true
+			show_enlarged_array_selection_mode(remaining)
+			header_label.text = "POKEDEX - Position " + str(i + 1) + " of " + str(count)
+			hint_label.text = "Select card for position " + str(i + 1) + " (top of deck)"
+			action_button.text = "PLACE"
+			action_button.disabled = true
+			action_button.theme = theme_disabled
+			cancel_button.visible = false
+			await trainer_target_selected
+			var chosen = selected_card_for_action
+			trainer_deck_search_active = false
+			hide_selection_mode_display_main()
+			
+			if chosen != null:
+				reordered.append(chosen)
+				remaining.erase(chosen)
+			else:
+				reordered.append(remaining.pop_front())
+		
+		# Apply the new order
+		for i in range(reordered.size()):
+			deck[i] = reordered[i]
+
+# CPU Pokedex priority helper
+func _cpu_pokedex_priority(card: card_object) -> float:
+	var score = 0.0
+	var name = card.metadata.get("name", "").to_lower()
+	var supertype = card.metadata.get("supertype", "").to_lower()
+	
+	if name == "bill" or name == "professor oak":
+		score += 100.0
+	elif supertype == "energy":
+		var energy_in_hand = 0
+		for c in opponent_hand:
+			if c.metadata.get("supertype", "").to_lower() == "energy":
+				energy_in_hand += 1
+		if energy_in_hand <= 1:
+			score += 80.0
+		else:
+			score += 40.0
+	elif supertype == "pokémon" and not is_basic_pokemon(card):
+		# Evolution that can be played
+		var evolves_from = card.metadata.get("evolvesFrom", "")
+		var has_base = false
+		if opponent_active_pokemon != null and opponent_active_pokemon.metadata.get("name", "") == evolves_from:
+			has_base = true
+		for bp in opponent_bench:
+			if bp.metadata.get("name", "") == evolves_from:
+				has_base = true
+		score += 70.0 if has_base else 20.0
+	elif supertype == "trainer":
+		score += 50.0
+	elif supertype == "pokémon" and is_basic_pokemon(card):
+		score += 30.0 if opponent_bench.size() < 5 else 10.0
+	
+	return score
+
+# base1-89 — Revive: Put Basic from discard to bench at half HP
+func effect_revive(is_opponent: bool) -> void:
+	var bench = opponent_bench if is_opponent else player_bench
+	var discard = opponent_discard_pile if is_opponent else player_discard_pile
+	
+	if bench.size() >= 5:
+		await show_message("Bench is full!")
+		return
+	
+	var basics_in_discard = []
+	for card in discard:
+		if is_basic_pokemon(card):
+			basics_in_discard.append(card)
+	
+	if basics_in_discard.size() == 0:
+		await show_message("No Basic Pokemon in discard pile!")
+		return
+	
+	if is_opponent:
+		# CPU: pick highest scoring basic
+		var best: card_object = null
+		var best_score = -999.0
+		for card in basics_in_discard:
+			var result = evaluate_opponents_start_setup_pokemon_choices(card, opponent_hand)
+			var score = result.get("total_score", 0)
+			if score > best_score:
+				best_score = score
+				best = card
+		if best != null:
+			discard.erase(best)
+			best.current_location = "bench"
+			var max_hp = int(best.metadata.get("hp", "0"))
+			best.current_hp = max(10, max_hp / 2)
+			best.placed_on_field_this_turn = true
+			bench.append(best)
+			display_pokemon(true)
+			await show_message("Opponent revived " + best.metadata.get("name", "") + " at half HP!")
+	else:
+		trainer_deck_search_active = true
+		show_enlarged_array_selection_mode(basics_in_discard)
+		header_label.text = "REVIVE"
+		hint_label.text = "Select a Basic Pokemon to revive at half HP"
+		action_button.text = "REVIVE"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = false
+		await trainer_target_selected
+		var chosen = selected_card_for_action
+		trainer_deck_search_active = false
+		hide_selection_mode_display_main()
+		
+		if chosen != null:
+			discard.erase(chosen)
+			chosen.current_location = "bench"
+			var max_hp = int(chosen.metadata.get("hp", "0"))
+			chosen.current_hp = max(10, (max_hp / 20) * 10) # Half HP rounded down to nearest 10
+			chosen.placed_on_field_this_turn = true
+			bench.append(chosen)
+			display_pokemon(false)
+			await show_message(chosen.metadata.get("name", "") + " revived at " + str(chosen.current_hp) + " HP!")
+
+# base1-90 — Super Potion: Discard 1 energy from pokemon, remove up to 4 damage counters
+func effect_super_potion(is_opponent: bool) -> void:
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench = opponent_bench if is_opponent else player_bench
+	var discard = opponent_discard_pile if is_opponent else player_discard_pile
+	
+	# Find pokemon with both damage and energy
+	var valid_targets = []
+	if active != null and active.current_hp < int(active.metadata.get("hp", "0")) and active.attached_energies.size() > 0:
+		valid_targets.append(active)
+	for bp in bench:
+		if bp.current_hp < int(bp.metadata.get("hp", "0")) and bp.attached_energies.size() > 0:
+			valid_targets.append(bp)
+	
+	if valid_targets.size() == 0:
+		await show_message("No Pokemon with both damage and energy!")
+		return
+	
+	if is_opponent:
+		# CPU: pick target with most damage
+		var best_target: card_object = null
+		var most_damage = 0
+		for pokemon in valid_targets:
+			var dmg = int(pokemon.metadata.get("hp", "0")) - pokemon.current_hp
+			if dmg > most_damage:
+				most_damage = dmg
+				best_target = pokemon
+		if best_target != null:
+			var energy = best_target.attached_energies.pop_back()
+			energy.current_location = "discard"
+			discard.append(energy)
+			var max_hp = int(best_target.metadata.get("hp", "0"))
+			var heal = min(40, max_hp - best_target.current_hp)
+			best_target.current_hp = min(max_hp, best_target.current_hp + heal)
+			display_active_pokemon_energies(true)
+			display_hp_circles_above_align(opponent_active_pokemon, true)
+			await show_message("Opponent healed " + best_target.metadata.get("name", "") + " for " + str(heal) + " HP!")
+	else:
+		trainer_pokemon_selection_active = true
+		show_enlarged_array_selection_mode(valid_targets)
+		header_label.text = "SUPER POTION"
+		hint_label.text = "Select a Pokemon to heal (will discard 1 energy)"
+		action_button.text = "HEAL"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = false
+		await trainer_target_selected
+		var target = selected_card_for_action
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+		
+		if target != null:
+			# Auto-discard an energy
+			var energy = target.attached_energies.pop_back()
+			energy.current_location = "discard"
+			discard.append(energy)
+			var max_hp = int(target.metadata.get("hp", "0"))
+			var heal = min(40, max_hp - target.current_hp)
+			target.current_hp = min(max_hp, target.current_hp + heal)
+			display_active_pokemon_energies(false)
+			display_hp_circles_above_align(player_active_pokemon, false)
+			await show_message(target.metadata.get("name", "") + " healed " + str(heal) + " HP!")
+
+# base1-92 — Energy Removal: Discard 1 energy from opponent's pokemon
+func effect_energy_removal(is_opponent: bool) -> void:
+	var target_active = player_active_pokemon if is_opponent else opponent_active_pokemon
+	var target_bench = player_bench if is_opponent else opponent_bench
+	var target_discard = player_discard_pile if is_opponent else opponent_discard_pile
+	var target_is_opp = not is_opponent
+	
+	var targets_with_energy = []
+	if target_active != null and target_active.attached_energies.size() > 0:
+		targets_with_energy.append(target_active)
+	for bp in target_bench:
+		if bp.attached_energies.size() > 0:
+			targets_with_energy.append(bp)
+	
+	if targets_with_energy.size() == 0:
+		await show_message("Opponent has no energy to remove!")
+		return
+	
+	if is_opponent:
+		# CPU: target player's active, remove most threatening energy type
+		var target = target_active if target_active != null and target_active.attached_energies.size() > 0 else targets_with_energy[0]
+		var energy = target.attached_energies.pop_back()
+		energy.current_location = "discard"
+		target_discard.append(energy)
+		display_active_pokemon_energies(false)
+		await show_message("Opponent removed energy from " + target.metadata.get("name", "") + "!")
+	else:
+		trainer_pokemon_selection_active = true
+		show_enlarged_array_selection_mode(targets_with_energy)
+		header_label.text = "ENERGY REMOVAL"
+		hint_label.text = "Select opponent's Pokemon to remove energy from"
+		action_button.text = "REMOVE"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = false
+		await trainer_target_selected
+		var target = selected_card_for_action
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+		
+		if target != null and target.attached_energies.size() > 0:
+			# Let player pick which energy
+			defender_energy_discard_active = true
+			show_enlarged_array_selection_mode(target.attached_energies)
+			cancel_button.visible = false
+			header_label.text = "CHOOSE ENERGY TO REMOVE"
+			hint_label.text = "Select an energy card to discard"
+			action_button.text = "DISCARD"
+			action_button.disabled = true
+			action_button.theme = theme_disabled
+			await defender_energy_chosen
+			var energy = selected_card_for_action
+			defender_energy_discard_active = false
+			hide_selection_mode_display_main()
+			
+			if energy != null:
+				target.attached_energies.erase(energy)
+				energy.current_location = "discard"
+				target_discard.append(energy)
+				display_active_pokemon_energies(true)
+				update_discard_pile_display(true)
+				await show_message("Removed energy from " + target.metadata.get("name", "") + "!")
+
+# base1-93 — Gust of Wind: Switch opponent's active with a bench pokemon
+func effect_gust_of_wind(is_opponent: bool) -> void:
+	var target_bench = player_bench if is_opponent else opponent_bench
+	var target_is_opp = not is_opponent
+	
+	if target_bench.size() == 0:
+		await show_message("Opponent has no bench Pokemon!")
+		return
+	
+	var new_active: card_object = null
+	
+	if is_opponent:
+		# CPU: pull in easiest to KO target
+		var best: card_object = null
+		var best_score = -999.0
+		for bp in target_bench:
+			var score = 0.0
+			# Low HP = easy KO
+			score += (200.0 - bp.current_hp)
+			# No energy = can't fight back
+			if bp.attached_energies.size() == 0:
+				score += 100.0
+			if score > best_score:
+				best_score = score
+				best = bp
+		new_active = best
+	else:
+		trainer_pokemon_selection_active = true
+		show_enlarged_array_selection_mode(target_bench)
+		header_label.text = "GUST OF WIND"
+		hint_label.text = "Select opponent's bench Pokemon to pull forward"
+		action_button.text = "SWITCH"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = false
+		await trainer_target_selected
+		new_active = selected_card_for_action
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+	
+	if new_active != null:
+		var old_active = player_active_pokemon if is_opponent else opponent_active_pokemon
+		var bench = target_bench
+		
+		bench.erase(new_active)
+		bench.append(old_active)
+		old_active.current_location = "bench"
+		new_active.current_location = "active"
+		
+		if is_opponent:
+			player_active_pokemon = new_active
+		else:
+			opponent_active_pokemon = new_active
+		
+		clear_all_statuses(old_active, target_is_opp)
+		display_pokemon(target_is_opp)
+		display_active_pokemon_energies(target_is_opp)
+		await show_message(new_active.metadata.get("name", "") + " was pulled to the active spot!")
+
+# base1-94 — Potion: Remove up to 2 damage counters from 1 pokemon
+func effect_potion(is_opponent: bool) -> void:
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench = opponent_bench if is_opponent else player_bench
+	
+	var damaged = []
+	if active != null and active.current_hp < int(active.metadata.get("hp", "0")):
+		damaged.append(active)
+	for bp in bench:
+		if bp.current_hp < int(bp.metadata.get("hp", "0")):
+			damaged.append(bp)
+	
+	if damaged.size() == 0:
+		await show_message("No Pokemon with damage!")
+		return
+	
+	if is_opponent:
+		# CPU: heal active if damaged, else best bench target
+		var target = damaged[0]
+		var max_hp = int(target.metadata.get("hp", "0"))
+		var heal = min(20, max_hp - target.current_hp)
+		target.current_hp = min(max_hp, target.current_hp + heal)
+		display_hp_circles_above_align(opponent_active_pokemon, true)
+		await show_message("Opponent healed " + target.metadata.get("name", "") + " for " + str(heal) + " HP!")
+	else:
+		trainer_pokemon_selection_active = true
+		show_enlarged_array_selection_mode(damaged)
+		header_label.text = "POTION"
+		hint_label.text = "Select a Pokemon to heal (up to 20 HP)"
+		action_button.text = "HEAL"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = false
+		await trainer_target_selected
+		var target = selected_card_for_action
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+		
+		if target != null:
+			var max_hp = int(target.metadata.get("hp", "0"))
+			var heal = min(20, max_hp - target.current_hp)
+			target.current_hp = min(max_hp, target.current_hp + heal)
+			display_hp_circles_above_align(player_active_pokemon, false)
+			display_pokemon(false)
+			await show_message(target.metadata.get("name", "") + " healed " + str(heal) + " HP!")
+
+# base1-95 — Switch: Free retreat (swap active with bench)
+func effect_switch(is_opponent: bool) -> void:
+	var bench = opponent_bench if is_opponent else player_bench
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	
+	if bench.size() == 0:
+		await show_message("No bench Pokemon to switch with!")
+		return
+	
+	if active == null:
+		return
+	
+	if is_opponent:
+		var cpu_eval = build_cpu_evaluation()
+		var replacement = pick_best_bench_replacement(bench, player_active_pokemon, cpu_eval)
+		if replacement == null:
+			replacement = bench[0]
+		
+		bench.erase(replacement)
+		bench.append(active)
+		active.current_location = "bench"
+		replacement.current_location = "active"
+		opponent_active_pokemon = replacement
+		clear_all_statuses(active, true)
+		display_pokemon(true)
+		display_active_pokemon_energies(true)
+		await show_message("Opponent switched to " + replacement.metadata.get("name", "") + "!")
+	else:
+		trainer_pokemon_selection_active = true
+		show_enlarged_array_selection_mode(bench)
+		header_label.text = "SWITCH"
+		hint_label.text = "Select a bench Pokemon to switch with your active"
+		action_button.text = "SWITCH"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = false
+		await trainer_target_selected
+		var replacement = selected_card_for_action
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+		
+		if replacement != null:
+			bench.erase(replacement)
+			bench.append(active)
+			active.current_location = "bench"
+			replacement.current_location = "active"
+			player_active_pokemon = replacement
+			clear_all_statuses(active, false)
+			display_pokemon(false)
+			display_active_pokemon_energies(false)
+			await show_message("Switched to " + replacement.metadata.get("name", "") + "!")
+
+############################################### Section E: PLAYER TRAINER UI HELPERS ################################################################
+
+# Shows hand cards for player to select N cards to discard
+func player_select_cards_to_discard(hand: Array, count: int, title: String, hint: String) -> void:
+	trainer_discard_selected.clear()
+	trainer_discard_cards_needed = count
+	trainer_discard_selection_active = true
+	
+	show_enlarged_array_selection_mode(hand)
+	header_label.text = title
+	hint_label.text = hint + " (0/" + str(count) + " selected)"
+	action_button.text = str(count) + " MORE"
+	action_button.disabled = true
+	action_button.theme = theme_disabled
+	cancel_button.visible = false
+	
+	await trainer_discard_selection_done
+	trainer_discard_selection_active = false
+	hide_selection_mode_display_main()
+
+############################################### Section F: CPU TRAINER SCORING & PLAY PHASES ########################################################
+
+# Master scoring function: returns the CPU priority score for a trainer card
+func cpu_score_trainer_card(card: card_object) -> float:
+	var card_id = card.uid.to_lower()
+	
+	match card_id:
+		"base1-91": return 100.0 # Bill: always play
+		"base1-88": return _cpu_score_professor_oak(card)
+		"base1-71": return _cpu_score_computer_search(card)
+		"base1-72": return _cpu_score_devolution_spray()
+		"base1-73": return _cpu_score_impostor_prof_oak()
+		"base1-74": return _cpu_score_item_finder()
+		"base1-75": return _cpu_score_lass()
+		"base1-76": return _cpu_score_pokemon_breeder()
+		"base1-77": return _cpu_score_pokemon_trader()
+		"base1-78": return _cpu_score_scoop_up()
+		"base1-79": return _cpu_score_super_energy_removal()
+		"base1-80": return _cpu_score_defender()
+		"base1-81": return _cpu_score_energy_retrieval()
+		"base1-82": return _cpu_score_full_heal()
+		"base1-83": return _cpu_score_maintenance()
+		"base1-84": return _cpu_score_pluspower()
+		"base1-85": return _cpu_score_pokemon_center()
+		"base1-86": return -100.0 # Pokemon Flute: CPU never plays
+		"base1-87": return 60.0 # Pokedex
+		"base1-89": return _cpu_score_revive()
+		"base1-90": return _cpu_score_super_potion()
+		"base1-92": return _cpu_score_energy_removal()
+		"base1-93": return _cpu_score_gust_of_wind()
+		"base1-94": return _cpu_score_potion()
+		"base1-95": return _cpu_score_switch()
+		"base1-70": return _cpu_score_clefairy_doll()
+	return 0.0
+
+func _cpu_score_professor_oak(card: card_object) -> float:
+	var hand = opponent_hand
+	if hand.size() > 5: return -50.0
+	# Check for playable evolutions
+	for c in hand:
+		if c == card: continue
+		var subtypes = c.metadata.get("subtypes", [])
+		if "Stage 2" in subtypes: return -50.0
+		if "Stage 1" in subtypes:
+			var targets = get_valid_evolution_targets(c, true)
+			if targets.size() > 0: return -50.0 + (-20.0)
+	if hand.size() <= 1: return 90.0
+	if hand.size() <= 3: return 70.0
+	if hand.size() <= 4: return 40.0
+	return -50.0
+
+func _cpu_score_computer_search(card: card_object) -> float:
+	if opponent_hand.size() < 3: return 0.0
+	return 60.0
+
+func _cpu_score_devolution_spray() -> float:
+	return -100.0
+
+func _cpu_score_impostor_prof_oak() -> float:
+	if player_hand.size() >= 7:
+		return 50.0 + (player_hand.size() - 7) * 10.0
+	return 0.0
+
+func _cpu_score_item_finder() -> float:
+	if opponent_hand.size() < 3: return 0.0
+	var trainers_in_discard = []
+	for c in opponent_discard_pile:
+		if is_trainer_card(c):
+			trainers_in_discard.append(c)
+	if trainers_in_discard.size() == 0: return 0.0
+	var best = 0.0
+	for t in trainers_in_discard:
+		best = max(best, cpu_score_trainer_card(t))
+	return best if best >= 50.0 else 0.0
+
+func _cpu_score_lass() -> float:
+	var score = 0.0
+	# Add 30 if CPU has no playable trainers
+	var has_playable = false
+	for c in opponent_hand:
+		if is_trainer_card(c) and cpu_score_trainer_card(c) > 30:
+			has_playable = true
+	if not has_playable: score += 30.0
+	# Add based on player hand size
+	if player_hand.size() > 4:
+		score += 5.0 * (player_hand.size() - 4)
+	# Subtract for own playable trainers lost
+	for c in opponent_hand:
+		if is_trainer_card(c) and cpu_score_trainer_card(c) > 30:
+			score -= 15.0
+	return score
+
+func _cpu_score_pokemon_breeder() -> float:
+	for card in opponent_hand:
+		var subtypes = card.metadata.get("subtypes", [])
+		if "Stage 2" in subtypes:
+			var all_pokemon = []
+			if opponent_active_pokemon != null: all_pokemon.append(opponent_active_pokemon)
+			all_pokemon.append_array(opponent_bench)
+			for p in all_pokemon:
+				if not p.placed_on_field_this_turn and is_basic_pokemon(p) and _basic_matches_stage2(p, card):
+					return 100.0
+	return -100.0
+
+func _cpu_score_pokemon_trader() -> float:
+	for card in opponent_hand:
+		if card.metadata.get("supertype", "").to_lower() != "pokémon": continue
+		if is_basic_pokemon(card):
+			var name = card.metadata.get("name", "")
+			var already_in_play = false
+			if opponent_active_pokemon != null and opponent_active_pokemon.metadata.get("name", "") == name:
+				already_in_play = true
+			for bp in opponent_bench:
+				if bp.metadata.get("name", "") == name: already_in_play = true
+			if already_in_play: return 70.0
+	return 0.0
+
+func _cpu_score_scoop_up() -> float:
+	var all_pokemon = []
+	if opponent_active_pokemon != null: all_pokemon.append(opponent_active_pokemon)
+	all_pokemon.append_array(opponent_bench)
+	for p in all_pokemon:
+		var max_hp = int(p.metadata.get("hp", "0"))
+		if p.current_hp <= max_hp / 2 and opponent_bench.size() > 0:
+			return 80.0
+	return 0.0
+
+func _cpu_score_super_energy_removal() -> float:
+	if player_active_pokemon == null: return 0.0
+	var p_energy = player_active_pokemon.attached_energies.size()
+	# Check own energy available
+	var own_energy = false
+	if opponent_active_pokemon != null and opponent_active_pokemon.attached_energies.size() > 0:
+		own_energy = true
+	for bp in opponent_bench:
+		if bp.attached_energies.size() > 0: own_energy = true
+	if not own_energy: return 0.0
+	if p_energy >= 3: return 90.0
+	if p_energy >= 2: return 60.0
+	return 0.0
+
+func _cpu_score_defender() -> float:
+	if opponent_active_pokemon == null or player_active_pokemon == null: return 0.0
+	var ko_threats = evaluate_ko_threats()
+	if ko_threats.get("cpu_active_guaranteed_ko", false): return 60.0
+	return 0.0
+
+func _cpu_score_energy_retrieval() -> float:
+	var energy_in_hand = 0
+	for c in opponent_hand:
+		if c.metadata.get("supertype", "").to_lower() == "energy":
+			energy_in_hand += 1
+	var basic_in_discard = 0
+	for c in opponent_discard_pile:
+		if is_basic_energy_card(c): basic_in_discard += 1
+	if energy_in_hand <= 1 and basic_in_discard >= 2: return 70.0
+	if energy_in_hand <= 1 and basic_in_discard >= 1: return 40.0
+	return 0.0
+
+func _cpu_score_full_heal() -> float:
+	if opponent_active_pokemon == null: return 0.0
+	match opponent_active_pokemon.special_condition:
+		"Paralyzed": return 100.0
+		"Confused": return 80.0
+		"Asleep": return 60.0
+	if opponent_active_pokemon.is_poisoned: return 40.0
+	return 0.0
+
+func _cpu_score_maintenance() -> float:
+	if opponent_hand.size() < 4: return 0.0
+	return 30.0
+
+func _cpu_score_pluspower() -> float:
+	if opponent_active_pokemon == null or player_active_pokemon == null: return 0.0
+	var pp_bonus = (opponent_active_pokemon.pluspower_count + 1) * 10
+	# Check if this KOs
+	for attack in opponent_active_pokemon.metadata.get("attacks", []):
+		if get_unmet_energy_count(attack, opponent_active_pokemon) > 0: continue
+		var dmg_range = get_attack_damage_range(attack, opponent_active_pokemon, player_active_pokemon)
+		var types = opponent_active_pokemon.metadata.get("types", ["Colorless"])
+		var result_without = calculate_final_damage(dmg_range["min"], types, player_active_pokemon)
+		if result_without["damage"] < player_active_pokemon.current_hp:
+			var result_with = result_without["damage"] + pp_bonus
+			if result_with >= player_active_pokemon.current_hp:
+				return 90.0
+	return 30.0
+
+func _cpu_score_pokemon_center() -> float:
+	var total_damage = 0
+	var total_max_hp = 0
+	var energy_lost = 0
+	var all_pokemon = []
+	if opponent_active_pokemon != null: all_pokemon.append(opponent_active_pokemon)
+	all_pokemon.append_array(opponent_bench)
+	for p in all_pokemon:
+		var max_hp = int(p.metadata.get("hp", "0"))
+		var dmg = max_hp - p.current_hp
+		if dmg > 0:
+			total_damage += dmg
+			total_max_hp += max_hp
+			energy_lost += p.attached_energies.size()
+	if total_max_hp == 0: return 0.0
+	if float(total_damage) / float(total_max_hp) > 0.5:
+		return max(0.0, 80.0 - energy_lost * 10.0)
+	return 0.0
+
+func _cpu_score_revive() -> float:
+	if opponent_bench.size() >= 5: return 0.0
+	for c in opponent_discard_pile:
+		if is_basic_pokemon(c):
+			var result = evaluate_opponents_start_setup_pokemon_choices(c, opponent_hand)
+			if result.get("total_score", 0) >= 250:
+				return 70.0
+	return 0.0
+
+func _cpu_score_super_potion() -> float:
+	if opponent_active_pokemon == null: return 0.0
+	var max_hp = int(opponent_active_pokemon.metadata.get("hp", "0"))
+	var dmg = max_hp - opponent_active_pokemon.current_hp
+	var ko_threats = evaluate_ko_threats()
+	if ko_threats.get("cpu_active_guaranteed_ko", false) and dmg >= 40 and opponent_active_pokemon.attached_energies.size() > 0:
+		return 90.0
+	return 0.0
+
+func _cpu_score_energy_removal() -> float:
+	if player_active_pokemon == null: return 0.0
+	var e = player_active_pokemon.attached_energies.size()
+	if e >= 2: return 60.0
+	if e == 1: return 30.0
+	return 0.0
+
+func _cpu_score_gust_of_wind() -> float:
+	if player_bench.size() == 0: return 0.0
+	for bp in player_bench:
+		if opponent_active_pokemon != null:
+			var types = opponent_active_pokemon.metadata.get("types", ["Colorless"])
+			for attack in opponent_active_pokemon.metadata.get("attacks", []):
+				if get_unmet_energy_count(attack, opponent_active_pokemon) > 0: continue
+				var dmg_range = get_attack_damage_range(attack, opponent_active_pokemon, bp)
+				var result = calculate_final_damage(dmg_range["min"], types, bp)
+				if result["damage"] >= bp.current_hp:
+					return 85.0
+	return 0.0
+
+func _cpu_score_potion() -> float:
+	if opponent_active_pokemon == null: return 0.0
+	var ko_threats = evaluate_ko_threats()
+	if ko_threats.get("cpu_active_guaranteed_ko", false):
+		var max_hp = int(opponent_active_pokemon.metadata.get("hp", "0"))
+		if opponent_active_pokemon.current_hp + 20 > max_hp * 0.5:
+			return 60.0
+	return 0.0
+
+func _cpu_score_switch() -> float:
+	if opponent_bench.size() == 0: return 0.0
+	var cpu_eval = build_cpu_evaluation()
+	if evaluate_retreat_reasons(cpu_eval):
+		return 70.0
+	return 0.0
+
+func _cpu_score_clefairy_doll() -> float:
+	if opponent_bench.size() < 3: return 20.0
+	return -100.0
+
+# CPU plays highest-priority trainer cards (Bill first)
+func cpu_phase_play_trainer_cards_priority() -> void:
+	var played = true
+	while played:
+		played = false
+		var best_card: card_object = null
+		var best_score = 29.9 # Threshold: play cards scoring >= 30
+		
+		for card in opponent_hand:
+			if not is_trainer_card(card): continue
+			var score = cpu_score_trainer_card(card)
+			if score > best_score:
+				best_score = score
+				best_card = card
+		
+		if best_card != null:
+			await play_trainer_card(best_card, true)
+			played = true
+
+# CPU re-evaluates and plays remaining trainer cards
+func cpu_phase_play_trainer_cards_remaining() -> void:
+	var played = true
+	while played:
+		played = false
+		var best_card: card_object = null
+		var best_score = 29.9 # Threshold: play cards scoring >= 30
+		
+		for card in opponent_hand:
+			if not is_trainer_card(card): continue
+			var score = cpu_score_trainer_card(card)
+			if score > best_score:
+				best_score = score
+				best_card = card
+		
+		if best_card != null:
+			await play_trainer_card(best_card, true)
+			played = true
+
+# CPU search deck helpers
+func cpu_search_deck_for_best_card(deck: Array) -> card_object:
+	# Priority: draw trainers > evolution cards > energy > basic pokemon
+	var best: card_object = null
+	var best_score = -1.0
+	for card in deck:
+		var score = 0.0
+		var name = card.metadata.get("name", "").to_lower()
+		if name == "bill": score = 100.0
+		elif name == "professor oak" and opponent_hand.size() <= 3: score = 90.0
+		elif card.metadata.get("supertype", "").to_lower() == "pokémon" and not is_basic_pokemon(card):
+			var targets = get_valid_evolution_targets(card, true)
+			if targets.size() > 0: score = 80.0
+		elif card.metadata.get("supertype", "").to_lower() == "energy": score = 50.0
+		elif is_basic_pokemon(card) and opponent_bench.size() < 3: score = 40.0
+		if score > best_score:
+			best_score = score
+			best = card
+	return best
+
+func cpu_search_deck_for_best_pokemon(pokemon_list: Array) -> card_object:
+	var best: card_object = null
+	var best_score = -1.0
+	for card in pokemon_list:
+		var score = 0.0
+		if not is_basic_pokemon(card):
+			var targets = get_valid_evolution_targets(card, true)
+			if targets.size() > 0: score = 80.0
+			else: score = 20.0
+		else:
+			var result = evaluate_opponents_start_setup_pokemon_choices(card, opponent_hand)
+			score = result.get("total_score", 0) / 10.0
+		if score > best_score:
+			best_score = score
+			best = card
+	return best
+
+############################################### Section G: POKEMON POWER SYSTEM ######################################################################
+
+# Opens the Pokemon Power selection menu
+func open_power_menu() -> void:
+	if opponents_turn_active:
+		return
+	
+	# Scan for available powers
+	var available_powers = []
+	var all_pokemon = []
+	if player_active_pokemon != null:
+		all_pokemon.append(player_active_pokemon)
+	all_pokemon.append_array(player_bench)
+	
+	for pokemon in all_pokemon:
+		var abilities = pokemon.metadata.get("abilities", [])
+		for ability in abilities:
+			var ability_type = ability.get("type", "")
+			if ability_type != "Pokémon Power" and ability_type != "Pokemon Power":
+				continue
+			var ability_name = ability.get("name", "")
+			# Skip passive powers (they don't go in menu)
+			if ability_name in ["Strikes Back", "Energy Burn"]:
+				continue
+			# Check if usable
+			if ability_name != "Buzzap" and is_power_blocked_by_status(pokemon):
+				continue
+			available_powers.append({"pokemon": pokemon, "ability": ability})
+	
+	if available_powers.size() == 0:
+		# Also check for bench tokens with voluntary discard (their ability is in rules text, not abilities field)
+		for bp in player_bench:
+			if bp.is_bench_token:
+				available_powers.append({"pokemon": bp, "ability": {"name": "Discard", "type": "Pokémon Power", "text": "Discard this card from your bench."}})
+	else:
+		# Add bench token discards if they weren't already found via abilities
+		for bp in player_bench:
+			if bp.is_bench_token:
+				var already_added = false
+				for p in available_powers:
+					if p["pokemon"] == bp:
+						already_added = true
+						break
+				if not already_added:
+					available_powers.append({"pokemon": bp, "ability": {"name": "Discard", "type": "Pokémon Power", "text": "Discard this card from your bench."}})
+	
+	if available_powers.size() == 0:
+		await show_message("No Pokemon Powers available!")
+		return
+	
+	# Create power buttons
+	main_buttons_container.visible = false
+	attack_buttons_container.visible = true
+	
+	for power_info in available_powers:
+		var pokemon = power_info["pokemon"]
+		var ability = power_info["ability"]
+		var btn = Button.new()
+		btn.text = pokemon.metadata.get("name", "") + " - " + ability.get("name", "")
+		btn.custom_minimum_size = Vector2(450, 50)
+		btn.theme = theme_blue
+		attack_buttons_container.add_child(btn)
+		btn.pressed.connect(activate_power.bind(pokemon, ability))
+
+# Activates a specific Pokemon Power
+func activate_power(pokemon: card_object, ability: Dictionary) -> void:
+	hide_attack_buttons()
+	var ability_name = ability.get("name", "")
+	
+	match ability_name:
+		"Damage Swap": await power_damage_swap(pokemon)
+		"Rain Dance": await power_rain_dance(pokemon)
+		"Energy Trans": await power_energy_trans(pokemon)
+		"Buzzap": await power_buzzap(pokemon)
+		"Discard": await power_bench_token_discard(pokemon)
+		_: await show_message("Power not implemented: " + ability_name)
+
+# Damage Swap (Alakazam): Move 1 damage counter between your pokemon
+func power_damage_swap(alakazam: card_object) -> void:
+	var all_pokemon = []
+	if player_active_pokemon != null:
+		all_pokemon.append(player_active_pokemon)
+	all_pokemon.append_array(player_bench)
+	
+	await show_message("DAMAGE SWAP: Move damage counters between your Pokemon")
+	
+	var keep_swapping = true
+	while keep_swapping:
+		# Select source (pokemon with damage)
+		var sources = []
+		for p in all_pokemon:
+			if p.current_hp < int(p.metadata.get("hp", "0")):
+				sources.append(p)
+		if sources.size() == 0:
+			await show_message("No Pokemon with damage!")
+			break
+		
+		trainer_pokemon_selection_active = true
+		show_enlarged_array_selection_mode(sources)
+		header_label.text = "DAMAGE SWAP - SOURCE"
+		hint_label.text = "Select a Pokemon to take damage FROM (or cancel to stop)"
+		action_button.text = "SELECT"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = true
+		await trainer_target_selected
+		var source = selected_card_for_action
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+		
+		if source == null:
+			break
+		
+		# Select destination (pokemon that can take 1 more without KO)
+		var destinations = []
+		for p in all_pokemon:
+			if p == source: continue
+			if p.current_hp > 10: # Can take 10 damage without KO
+				destinations.append(p)
+		
+		if destinations.size() == 0:
+			await show_message("No Pokemon can receive the damage counter!")
+			break
+		
+		trainer_pokemon_selection_active = true
+		show_enlarged_array_selection_mode(destinations)
+		header_label.text = "DAMAGE SWAP - DESTINATION"
+		hint_label.text = "Select a Pokemon to move damage TO"
+		action_button.text = "MOVE"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = true
+		await trainer_target_selected
+		var dest = selected_card_for_action
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+		
+		if dest == null:
+			break
+		
+		# Move 1 damage counter
+		source.current_hp += 10
+		dest.current_hp -= 10
+		display_hp_circles_above_align(player_active_pokemon, false)
+		display_pokemon(false)
+		await show_message("Moved 1 damage counter from " + source.metadata.get("name", "") + " to " + dest.metadata.get("name", "") + "!")
+
+# Rain Dance (Blastoise): Attach Water Energy from hand to Water Pokemon
+func power_rain_dance(blastoise: card_object) -> void:
+	await show_message("RAIN DANCE: Attach Water Energy to Water Pokemon!")
+	
+	var keep_going = true
+	while keep_going:
+		# Find Water Energy in hand
+		var water_energies = []
+		for card in player_hand:
+			if card.metadata.get("supertype", "").to_lower() == "energy":
+				if "Water" in card.metadata.get("name", ""):
+					water_energies.append(card)
+		
+		if water_energies.size() == 0:
+			await show_message("No Water Energy in hand!")
+			break
+		
+		# Find Water Pokemon
+		var water_pokemon = []
+		if player_active_pokemon != null and "Water" in player_active_pokemon.metadata.get("types", []):
+			water_pokemon.append(player_active_pokemon)
+		for bp in player_bench:
+			if "Water" in bp.metadata.get("types", []):
+				water_pokemon.append(bp)
+		
+		if water_pokemon.size() == 0:
+			await show_message("No Water Pokemon in play!")
+			break
+		
+		# Select target
+		trainer_pokemon_selection_active = true
+		show_enlarged_array_selection_mode(water_pokemon)
+		header_label.text = "RAIN DANCE"
+		hint_label.text = "Select a Water Pokemon to attach energy to (cancel to stop)"
+		action_button.text = "ATTACH"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = true
+		await trainer_target_selected
+		var target = selected_card_for_action
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+		
+		if target == null:
+			break
+		
+		# Attach the first water energy
+		var energy = water_energies[0]
+		player_hand.erase(energy)
+		target.attached_energies.append(energy)
+		refresh_hand_display(false)
+		display_active_pokemon_energies(false)
+		await show_message("Attached Water Energy to " + target.metadata.get("name", "") + "!")
+
+# Energy Trans (Venusaur): Move Grass Energy between your Pokemon
+func power_energy_trans(venusaur: card_object) -> void:
+	await show_message("ENERGY TRANS: Move Grass Energy between your Pokemon!")
+	
+	var keep_going = true
+	while keep_going:
+		# Find pokemon with Grass Energy attached
+		var all_pokemon = []
+		if player_active_pokemon != null: all_pokemon.append(player_active_pokemon)
+		all_pokemon.append_array(player_bench)
+		
+		var sources = []
+		for p in all_pokemon:
+			for e in p.attached_energies:
+				if "Grass" in get_energy_provided_by_card(e):
+					if p not in sources:
+						sources.append(p)
+		
+		if sources.size() == 0:
+			await show_message("No Pokemon with Grass Energy!")
+			break
+		
+		trainer_pokemon_selection_active = true
+		show_enlarged_array_selection_mode(sources)
+		header_label.text = "ENERGY TRANS - SOURCE"
+		hint_label.text = "Select Pokemon to take Grass Energy from (cancel to stop)"
+		action_button.text = "SELECT"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = true
+		await trainer_target_selected
+		var source = selected_card_for_action
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+		
+		if source == null:
+			break
+		
+		# Find the grass energy to move
+		var grass_energy: card_object = null
+		for e in source.attached_energies:
+			if "Grass" in get_energy_provided_by_card(e):
+				grass_energy = e
+				break
+		if grass_energy == null:
+			break
+		
+		# Select destination
+		var destinations = all_pokemon.filter(func(p): return p != source)
+		if destinations.size() == 0:
+			break
+		
+		trainer_pokemon_selection_active = true
+		show_enlarged_array_selection_mode(destinations)
+		header_label.text = "ENERGY TRANS - DESTINATION"
+		hint_label.text = "Select Pokemon to move Grass Energy to"
+		action_button.text = "MOVE"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = true
+		await trainer_target_selected
+		var dest = selected_card_for_action
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+		
+		if dest == null:
+			break
+		
+		source.attached_energies.erase(grass_energy)
+		dest.attached_energies.append(grass_energy)
+		display_active_pokemon_energies(false)
+		await show_message("Moved Grass Energy from " + source.metadata.get("name", "") + " to " + dest.metadata.get("name", "") + "!")
+
+# Buzzap (Electrode): KO Electrode, attach as energy to another pokemon
+func power_buzzap(electrode: card_object) -> void:
+	# Cannot use if Electrode is the last pokemon
+	var total_pokemon = (1 if player_active_pokemon != null else 0) + player_bench.size()
+	if total_pokemon <= 1:
+		await show_message("Cannot use Buzzap - Electrode is your last Pokemon!")
+		return
+	
+	await show_message("BUZZAP: Electrode will be Knocked Out and become Energy!")
+	
+	# Select energy type
+	var energy_types = ["Fire", "Water", "Grass", "Lightning", "Psychic", "Fighting", "Colorless"]
+	# Use simple message-based selection for type
+	# For simplicity, create a selection of fake energy cards
+	var type_options = []
+	for etype in energy_types:
+		# Create a temporary card_object to represent each type
+		var temp = card_object.new("base1-96", {"name": etype + " Energy", "supertype": "Energy"})
+		type_options.append(temp)
+	
+	energy_type_selection_active = true
+	show_enlarged_array_selection_mode(type_options)
+	header_label.text = "BUZZAP - CHOOSE ENERGY TYPE"
+	hint_label.text = "Select what type of Energy Electrode will become"
+	action_button.text = "SELECT TYPE"
+	action_button.disabled = true
+	action_button.theme = theme_disabled
+	cancel_button.visible = true
+	await energy_type_selected
+	var chosen_type = ""
+	if selected_card_for_action != null:
+		chosen_type = selected_card_for_action.metadata.get("name", "").replace(" Energy", "")
+	energy_type_selection_active = false
+	hide_selection_mode_display_main()
+	
+	# Temp type_options are RefCounted and will be freed automatically when out of scope
+	
+	if chosen_type == "":
+		return
+	
+	# Select target pokemon
+	var targets = player_bench.duplicate()
+	if player_active_pokemon != null and player_active_pokemon != electrode:
+		targets.append(player_active_pokemon)
+	targets.erase(electrode)
+	
+	if targets.size() == 0:
+		return
+	
+	trainer_pokemon_selection_active = true
+	show_enlarged_array_selection_mode(targets)
+	header_label.text = "BUZZAP - ATTACH TO"
+	hint_label.text = "Select a Pokemon to attach Electrode-Energy to"
+	action_button.text = "ATTACH"
+	action_button.disabled = true
+	action_button.theme = theme_disabled
+	cancel_button.visible = false
+	await trainer_target_selected
+	var target = selected_card_for_action
+	trainer_pokemon_selection_active = false
+	hide_selection_mode_display_main()
+	
+	if target == null:
+		return
+	
+	# KO Electrode (prize will be awarded via normal knockout flow)
+	electrode.current_hp = 0
+	
+	# Create the electrode-as-energy token
+	var electrode_energy = card_object.new(electrode.uid, electrode.metadata)
+	electrode_energy.is_electrode_energy = true
+	electrode_energy.electrode_energy_type = chosen_type
+	target.attached_energies.append(electrode_energy)
+	
+	display_active_pokemon_energies(false)
+	await show_message("Electrode became " + chosen_type + " Energy!")
+	
+	# Process the knockout
+	await check_all_knockouts()
+
+# Discard bench token (Clefairy Doll voluntary discard)
+func power_bench_token_discard(token: card_object) -> void:
+	player_bench.erase(token)
+	send_card_to_discard(token, false)
+	display_pokemon(false)
+	await show_message(token.metadata.get("name", "") + " was voluntarily discarded!")
+
+############################################### Section H: CPU POWER ACTIVATION ######################################################################
+
+# CPU activates beneficial powers at start of turn
+func cpu_phase_activate_powers() -> void:
+	# Rain Dance: attach all Water Energy to Water Pokemon
+	var blastoise = _find_cpu_pokemon_with_power("Rain Dance")
+	if blastoise != null and not is_power_blocked_by_status(blastoise):
+		var keep_going = true
+		while keep_going:
+			keep_going = false
+			var water_energy: card_object = null
+			for card in opponent_hand:
+				if card.metadata.get("supertype", "").to_lower() == "energy" and "Water" in card.metadata.get("name", ""):
+					water_energy = card
+					break
+			if water_energy == null:
+				break
+			# Find best Water Pokemon target
+			var best_target: card_object = null
+			var best_unmet = 999
+			var all_pokemon = get_all_cpu_field_pokemon()
+			for p in all_pokemon:
+				if "Water" not in p.metadata.get("types", []):
+					continue
+				for attack in p.metadata.get("attacks", []):
+					var unmet = get_unmet_energy_count(attack, p)
+					if unmet > 0 and unmet < best_unmet:
+						best_unmet = unmet
+						best_target = p
+			if best_target == null:
+				break
+			opponent_hand.erase(water_energy)
+			best_target.attached_energies.append(water_energy)
+			await show_message("Rain Dance: Attached Water Energy to " + best_target.metadata.get("name", "") + "!")
+			refresh_hand_display(true)
+			display_active_pokemon_energies(true)
+			keep_going = true
+	
+	# Energy Trans: consolidate Grass Energy to the pokemon that needs it most
+	var venusaur = _find_cpu_pokemon_with_power("Energy Trans")
+	if venusaur != null and not is_power_blocked_by_status(venusaur):
+		# Find pokemon that needs Grass Energy most
+		var all_pokemon = get_all_cpu_field_pokemon()
+		var best_target: card_object = null
+		var best_unmet = 999
+		for p in all_pokemon:
+			for attack in p.metadata.get("attacks", []):
+				var unmet = get_unmet_energy_count(attack, p)
+				if unmet > 0 and unmet < best_unmet:
+					for req in attack.get("cost", []):
+						if req == "Grass":
+							best_unmet = unmet
+							best_target = p
+							break
+		if best_target != null:
+			# Find a source with spare Grass Energy
+			for p in all_pokemon:
+				if p == best_target:
+					continue
+				for e in p.attached_energies.duplicate():
+					if "Grass" in get_energy_provided_by_card(e):
+						p.attached_energies.erase(e)
+						best_target.attached_energies.append(e)
+						await show_message("Energy Trans: Moved Grass Energy to " + best_target.metadata.get("name", "") + "!")
+						display_active_pokemon_energies(true)
+						break
+	
+	# Damage Swap: move damage off active to bench with most buffer
+	var alakazam = _find_cpu_pokemon_with_power("Damage Swap")
+	if alakazam != null and not is_power_blocked_by_status(alakazam):
+		var active = opponent_active_pokemon
+		if active != null:
+			var active_damage = int(active.metadata.get("hp", "0")) - active.current_hp
+			while active_damage >= 10:
+				# Find bench pokemon with most HP buffer
+				var best_buffer: card_object = null
+				var best_hp = 0
+				for bp in opponent_bench:
+					var buffer = bp.current_hp - 10
+					if buffer > best_hp:
+						best_hp = buffer
+						best_buffer = bp
+				if best_buffer == null or best_hp <= 0:
+					break
+				active.current_hp += 10
+				best_buffer.current_hp -= 10
+				active_damage -= 10
+			display_hp_circles_above_align(opponent_active_pokemon, true)
+
+# Helper to find a CPU pokemon with a specific power name
+func _find_cpu_pokemon_with_power(power_name: String) -> card_object:
+	var all_pokemon = get_all_cpu_field_pokemon()
+	for p in all_pokemon:
+		for ability in p.metadata.get("abilities", []):
+			if ability.get("name", "") == power_name:
+				return p
+	return null
+
+############################################### Section I: MACHAMP STRIKES BACK HOOK #################################################################
+
+# Called after damage is applied to a pokemon - checks for Machamp's Strikes Back
+func check_strikes_back(damaged_pokemon: card_object, attacker: card_object, is_damaged_opponent: bool) -> void:
+	if damaged_pokemon == null or attacker == null:
+		return
+	var abilities = damaged_pokemon.metadata.get("abilities", [])
+	for ability in abilities:
+		if ability.get("name", "") != "Strikes Back":
+			continue
+		if is_power_blocked_by_status(damaged_pokemon):
+			print("STRIKES BACK: Blocked by status on ", damaged_pokemon.metadata.get("name", ""))
+			return
+		# Deal 10 damage to the attacker, ignoring weakness/resistance
+		attacker.current_hp = max(0, attacker.current_hp - 10)
+		var attacker_is_opp = not is_damaged_opponent
+		display_hp_circles_above_align(attacker, attacker_is_opp)
+		await show_message(damaged_pokemon.metadata.get("name", "") + "'s STRIKES BACK dealt 10 damage to " + attacker.metadata.get("name", "") + "!")
+		print("STRIKES BACK: 10 damage to ", attacker.metadata.get("name", ""))
+
+############################################### Section J: DOUBLE COLORLESS ENERGY HANDLING ##########################################################
+
+# Check if a card is Double Colorless Energy (Special Energy)
+func is_double_colorless_energy(card: card_object) -> bool:
+	return card.metadata.get("name", "") == "Double Colorless Energy"
+
+############################################# END TRAINER CARD & POKEMON POWER FUNCTIONS ############################################################
+######################################################################################################################################################
+
+
 #           ########  ####    ##  #######  ##   ##  ########
 #              ##     ## ##   ##  ##    ## ##   ##     ##
 #              ##     ##  ##  ##  #######  ##   ##     ##
@@ -6502,6 +9281,30 @@ func action_button_pressed_perform_action() -> void:
 	
 	if prize_card_selection_active:
 		await handle_action_prize_card()
+		return
+	
+	# Trainer card selection modes
+	if trainer_pokemon_selection_active or trainer_deck_search_active:
+		if selected_card_for_action != null:
+			trainer_target_selected.emit()
+		return
+	
+	if trainer_discard_selection_active:
+		# Toggle card in/out of discard selection
+		if selected_card_for_action != null:
+			if selected_card_for_action in trainer_discard_selected:
+				trainer_discard_selected.erase(selected_card_for_action)
+			else:
+				trainer_discard_selected.append(selected_card_for_action)
+			
+			hint_label.text = str(trainer_discard_selected.size()) + "/" + str(trainer_discard_cards_needed) + " selected"
+			
+			if trainer_discard_selected.size() >= trainer_discard_cards_needed:
+				trainer_discard_selection_done.emit()
+			else:
+				action_button.text = str(trainer_discard_cards_needed - trainer_discard_selected.size()) + " MORE"
+				action_button.disabled = true
+				action_button.theme = theme_disabled
 		return
 	
 	# Forced switch: player selects bench pokemon to switch in
@@ -6691,8 +9494,9 @@ func handle_action_normal_card() -> void:
 					display_pokemon(false)
 		
 		"PLAY_TRAINER":
-			print("Trainer card play not yet implemented")
-			# We'll add this later
+			var trainer_to_play = selected_card_for_action
+			hide_selection_mode_display_main()
+			await play_trainer_card(trainer_to_play, false)
 		
 		"ATTACH_ENERGY":
 			start_energy_attachment()
@@ -6741,6 +9545,31 @@ func cancel_button_pressed_hide_selection_mode() -> void:
 		retreat_energies_selected.clear()
 		retreat_cost_remaining = 0
 		hide_selection_mode_display_main()
+		return
+	
+	# Trainer/Power selection cancel: emit signal with null so awaiting functions can continue
+	elif trainer_pokemon_selection_active:
+		print("Trainer pokemon selection cancelled")
+		selected_card_for_action = null
+		trainer_pokemon_selection_active = false
+		hide_selection_mode_display_main()
+		trainer_target_selected.emit()
+		return
+	
+	elif trainer_deck_search_active:
+		print("Trainer deck search cancelled")
+		selected_card_for_action = null
+		trainer_deck_search_active = false
+		hide_selection_mode_display_main()
+		trainer_target_selected.emit()
+		return
+	
+	elif trainer_discard_selection_active:
+		print("Trainer discard selection cancelled")
+		trainer_discard_selected.clear()
+		trainer_discard_selection_active = false
+		hide_selection_mode_display_main()
+		trainer_discard_selection_done.emit()
 		return
 	
 	# If we were in bench setup phase, end it and draw prize cards
@@ -6867,6 +9696,26 @@ func this_card_clicked(clicked_card: card_object) -> void:
 			action_button.theme = theme_blue
 			return
 		
+		# TRAINER POKEMON SELECTION MODE
+		elif trainer_pokemon_selection_active or trainer_deck_search_active:
+			select_card_in_ui(clicked_card)
+			action_button.disabled = false
+			action_button.theme = theme_green
+			return
+		
+		# TRAINER DISCARD SELECTION MODE
+		elif trainer_discard_selection_active:
+			select_card_in_ui(clicked_card)
+			if clicked_card in trainer_discard_selected:
+				action_button.text = "CONFIRM"
+				action_button.disabled = false
+				action_button.theme = theme_green
+			else:
+				action_button.text = "SELECT"
+				action_button.disabled = false
+				action_button.theme = theme_green
+			return
+		
 		# Normal card selection mode (not in attach mode)
 		select_card_in_ui(clicked_card)
 		
@@ -6958,7 +9807,7 @@ func _ready() -> void:
 	main_buttons_container.get_node("button_main_attack").pressed.connect(show_attack_buttons)
 	attack_buttons_container.visible = false
 	
-	main_buttons_container.get_node("button_main_power").pressed.connect(flip_coin)
+	main_buttons_container.get_node("button_main_power").pressed.connect(open_power_menu)
 	
 	main_buttons_container.get_node("button_main_retreat").pressed.connect(start_retreat)
 	
@@ -6987,4 +9836,94 @@ func _ready() -> void:
 
 ######################################################################################################################################################			
 ################################################################# END OF FUNCTIONS ###################################################################
+######################################################################################################################################################
+
+######################################################################################################################################################
+########################################### SECTION 10: FUTURE-PROOFING NOTES FOR BASE SET 2 & 3 ####################################################
+######################################################################################################################################################
+#
+# BASE SET 2 CARDS REQUIRING ARCHITECTURAL CONSIDERATION:
+#
+# - base2-6/22 Mr. Mime (Invisible Wall): Already handled by shielded_damage_threshold system.
+#   Just needs effect text to set threshold to 30 when Mr. Mime enters play (passive power).
+#
+# - base2-11/27 Snorlax (Thick Skinned): New power type — permanent status immunity.
+#   Needs a "status_immune" flag on card_object checked in apply_status_effect().
+#   Also needs a check that prevents retreat (Snorlax rule), adding a "cannot_retreat_override" flag.
+#
+# - base2-13/29 Venomoth (Shift): Once-per-turn type change. Needs a "temporary_type" field
+#   on card_object (already have temporary_weakness/resistance, add temporary_types).
+#   power_used_this_turn flag already supports once-per-turn restriction.
+#
+# - base2-15/31 Vileplume (Heal): Once-per-turn coin flip heal. Standard active power with
+#   power_used_this_turn flag. No architectural changes needed.
+#
+# - base2-34 Dodrio (Retreat Aid): Passive bench power that reduces active's retreat cost.
+#   Needs a hook in get_retreat_cost() to check bench for Retreat Aid powers.
+#   Add a "retreat_cost_modifier" check scanning bench pokemon abilities.
+#
+# - base2-55 Mankey (Peek): Once-per-turn peek at hidden cards. Standard active power.
+#   Needs UI to display a single card temporarily. No structural changes.
+#
+# - base2-64 Poke Ball: Standard trainer (flip coin, search deck if heads). No changes needed.
+#
+# BASE SET 3 CARDS REQUIRING ARCHITECTURAL CONSIDERATION:
+#
+# - base3-1/16 Aerodactyl (Prehistoric Power): GLOBAL power that prevents ALL evolution plays.
+#   Needs a global check in get_valid_evolution_targets() and perform_evolution() that scans
+#   ALL pokemon in play (both sides) for this power before allowing evolution.
+#   This is a NEW power trigger type: "global continuous effect".
+#
+# - base3-3/18 Ditto (Transform): MAJOR architectural consideration. Ditto copies the defending
+#   pokemon's entire card (type, HP, attacks, weakness, resistance). Needs a system to
+#   dynamically override a card's metadata while it's active. Add a "transform_source" field
+#   that, when set, redirects all metadata reads to the source pokemon's metadata.
+#
+# - base3-4/19 Dragonite (Step In): Once-per-turn bench-to-active swap. Standard active power
+#   with bench location requirement. power_used_this_turn handles the once-per-turn limit.
+#
+# - base3-5/20 Gengar (Curse): Move 1 damage counter between OPPONENT'S pokemon. Similar to
+#   Damage Swap but targets opponent. Uses same UI flow. No structural changes needed.
+#
+# - base3-6/21 Haunter (Transparency): Coin flip to prevent ALL attack effects. New trigger:
+#   "before damage application". Needs a hook at the start of damage resolution that checks
+#   for Transparency and potentially blocks the entire attack. Similar to is_invincible but
+#   coin-flip based and fires before damage calc, not after.
+#
+# - base3-13/28 Muk (Toxic Gas): CRITICAL — disables ALL other Pokemon Powers globally.
+#   Needs a global "powers_disabled" check at the start of EVERY power activation and every
+#   passive power check. Scan all pokemon for Toxic Gas before allowing any power.
+#   Must be checked in: is_power_blocked_by_status(), open_power_menu(), 
+#   cpu_phase_activate_powers(), is_energy_burn_active(), check_strikes_back(), and
+#   every other power-related function.
+#
+# - base3-43 Slowbro (Strange Behavior): Move damage TO Slowbro from your other pokemon.
+#   Inverse of Damage Swap. Same UI flow, different direction restriction. No structural changes.
+#
+# - base3-50 Kabuto (Kabuto Armor): Halve incoming damage. New passive trigger in damage calc.
+#   Add a hook in calculate_final_damage() for "halve_damage" powers.
+#
+# - base3-52 Omanyte (Clairvoyance): See opponent's hand. Needs to override hide_hidden_cards
+#   for opponent's hand specifically while Omanyte is in play. Add a "can_see_opponent_hand"
+#   check in display_hand_cards_array().
+#
+# - base3-56 Tentacool (Cowardice): Return to hand voluntarily (like Scoop Up but for self).
+#   Standard active power. No structural changes needed.
+#
+# - base3-58 Mr. Fuji: Shuffle pokemon and attachments into deck. Similar to Scoop Up but
+#   goes to deck. No structural changes needed.
+#
+# - base3-60 Gambler: Coin flip draw. Standard trainer. No changes needed.
+# - base3-61 Recycle: Coin flip retrieve from discard to deck. Standard trainer.
+# - base3-62 Mysterious Fossil: Bench token — ALREADY HANDLED by bench token system.
+#   no_prize_on_ko and is_bench_token flags will be set automatically.
+#
+# SUMMARY OF REQUIRED ARCHITECTURAL ADDITIONS FOR FUTURE SETS:
+# 1. Global power disable check (for Muk's Toxic Gas) - scan field for "disable_all_powers" ability
+# 2. Global evolution block check (for Aerodactyl) - scan field for "block_evolution" ability  
+# 3. Transform/copy system (for Ditto) - metadata redirection on card_object
+# 4. Retreat cost modifier system (for Dodrio) - scan bench for retreat aid powers
+# 5. Pre-damage-application hook (for Haunter) - coin flip before any damage resolves
+# 6. Half-damage modifier (for Kabuto) - new damage calculation hook
+# 7. Hand visibility override (for Omanyte) - conditional face-up display
 ######################################################################################################################################################

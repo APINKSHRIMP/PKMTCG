@@ -41,6 +41,21 @@ var shielded_damage_threshold: int = 0
 var temporary_weakness: String = ""   # Overrides weakness type if set
 var temporary_resistance: String = "" # Overrides resistance type if set
 
+# Bench token trainer flags (Clefairy Doll, Mysterious Fossil, etc.)
+var no_prize_on_ko: bool = false       # If true, opponent does NOT take a prize card when this is KO'd
+var is_bench_token: bool = false       # If true, this card is a bench token trainer (cannot retreat, no status)
+
+# Pokemon Power tracking
+var power_used_this_turn: bool = false # For once-per-turn power restrictions
+
+# Attached Trainer card tracking (PlusPower, Defender)
+var defender_turns_remaining: int = -1 # Countdown for Defender discard (-1 = not active)
+var pluspower_count: int = 0           # Number of PlusPower cards attached (stacking)
+
+# Electrode Buzzap: track if this card is an Electrode-as-Energy token
+var is_electrode_energy: bool = false
+var electrode_energy_type: String = "" # The chosen energy type for Buzzap
+
 # Utility: get damage counters (each counter = 10 damage)
 func get_damage_counters() -> int:
 	var max_hp = int(metadata.get("hp", "0"))
