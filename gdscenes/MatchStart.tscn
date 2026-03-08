@@ -1,6 +1,6 @@
 [gd_scene load_steps=12 format=3 uid="uid://dqwekyllekveg"]
 
-[ext_resource type="Script" uid="uid://bqnkhd3jkoq7q" path="res://gdscripts/main_match_script.gd" id="1_c6k6o"]
+[ext_resource type="Script" uid="uid://bopl7ijkcutp5" path="res://gdscripts/main_match_script.gd" id="1_c6k6o"]
 [ext_resource type="Shader" uid="uid://ccm481fk14lc8" path="res://gdscenes/backgroundscroll.gdshader" id="2_0kjtx"]
 [ext_resource type="Texture2D" uid="uid://cpbbo8tyee1n4" path="res://backgrounds/background2.png" id="2_1cpm0"]
 [ext_resource type="Theme" uid="uid://mbsg4xqnedxi" path="res://uiresources/kenneyUI-red.tres" id="2_6pfim"]
@@ -457,10 +457,10 @@ offset_bottom = 392.0
 
 [node name="player_active_pokemon_attached_cards" type="Control" parent="ACTIVE_POKEMON/PLAYER"]
 anchors_preset = 0
-offset_left = 411.0
-offset_top = 364.0
-offset_right = 454.0
-offset_bottom = 392.0
+offset_left = 80.0
+offset_top = 370.0
+offset_right = 123.0
+offset_bottom = 398.0
 
 [node name="player_active_pokemon_hp_container" type="GridContainer" parent="ACTIVE_POKEMON/PLAYER"]
 layout_mode = 0
@@ -593,16 +593,16 @@ color = Color(1, 1, 1, 0)
 [node name="trainer_block_screen_container" type="ColorRect" parent="."]
 visible = false
 layout_mode = 0
-offset_top = 168.0
+offset_top = 166.0
 offset_right = 1920.0
 offset_bottom = 922.0
 
 [node name="played_trainer_card_container" type="Control" parent="trainer_block_screen_container"]
 anchors_preset = 0
-offset_left = 750.0
-offset_top = 157.0
-offset_right = 790.0
-offset_bottom = 197.0
+offset_left = 760.0
+offset_top = 69.0
+offset_right = 800.0
+offset_bottom = 109.0
 
 [node name="messagebox_container" type="ColorRect" parent="."]
 visible = false
