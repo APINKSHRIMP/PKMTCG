@@ -4,3 +4,5 @@ res://uiresources/kenneyUI-green.tres
 res://uiresources/kenneyUI-blue.tres
 res://uiresources/kenneyUI-red.tres
 res://gdscenes/backgroundscroll.gdshader
+res://gdscripts/main_match_script.gd
+res://playerdata/Trainers.json

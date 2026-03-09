@@ -7,7 +7,7 @@ extends Control
 # GLOBAL VARIABLES FOR FULL MATCH VARIABLES AND CHANGABLES. MOST ARE SELF EXPLANATORY BY NAME
 
 # TESTING VARIABLES
-var amount_of_cards_to_draw = 15	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
+var amount_of_cards_to_draw = 25	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
 var hide_hidden_cards = true      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
 var opponent_deck_name = "TestingWeedleOnly"
 var player_deck_name = "Trainers"
@@ -19,7 +19,7 @@ var confusion_rules: String = "base_set_confusion_rules" # "base_set_confusion_r
 
 # Customisable in game textures
 # Load coin textures
-var tex_heads = load("res://gameimageassets/coins/coin_groudon_red.png")
+var tex_heads = load("res://gameimageassets/coins/coin_blastoise_blue_2.png")
 var tex_tails = load("res://gameimageassets/coins/coin_back_basic.png")
 
 # Game Variables
@@ -145,6 +145,11 @@ signal power_action_done
 # is fully built. This avoids repeated get_node() calls every time we reference these paths with $.
 @onready var action_button = $BUTTONS/SELECTION_BUTTONS/card_action_button
 @onready var cancel_button = $cancel_selection_mode_view_button
+var action_button_default_offset_left: float = 0.0
+var action_button_default_offset_right: float = 0.0
+var action_button_paired_offset_left: float = 0.0
+var action_button_paired_offset_right: float = 0.0
+var action_button_positions_stored: bool = false
 @onready var header_label = $SCREEN_LABELS/MAIN_LABELS/large_header_text_label
 @onready var hint_label = $SCREEN_LABELS/MAIN_LABELS/small_hint_info_text_label
 @onready var player_active_container = $ACTIVE_POKEMON/PLAYER/player_active_pokemon_container
@@ -324,12 +329,26 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 	if trainer_pokemon_selection_active or trainer_deck_search_active or trainer_discard_selection_active or trainer_reorder_active:
 		action_button.visible = true
 		
+	# Store both positions on first use so we can swap between centered and paired layout
+	if not action_button_positions_stored:
+		action_button_default_offset_left = action_button.offset_left
+		action_button_default_offset_right = action_button.offset_right
+		# Paired position: shift left by 210 to make room for cancel button
+		action_button_paired_offset_left = action_button.offset_left - 210.0
+		action_button_paired_offset_right = action_button.offset_right - 210.0
+		action_button_positions_stored = true
+
 	if action_button.visible:
 		if cancel_button.visible:
-			# Cancel button sits to the right of the action button
+			# Shift action button left and place cancel to the right
+			action_button.offset_left = action_button_paired_offset_left
+			action_button.offset_right = action_button_paired_offset_right
 			cancel_button.offset_left = 35.0
 			cancel_button.offset_right = 473.0
-		# Action button stays at its default position (already centered by scene layout)
+		else:
+			# No cancel button: restore action button to centered default
+			action_button.offset_left = action_button_default_offset_left
+			action_button.offset_right = action_button_default_offset_right
 	else:
 		# Only cancel visible - center it
 		cancel_button.offset_left = -219.0
@@ -1978,7 +1997,8 @@ func take_prize_card(card: card_object, is_opponent: bool) -> void:
 	var hand_container = opponent_hand_container if is_opponent else player_hand_container
 	
 	var card_ui = find_card_ui_for_object(card)
-	var card_texture = get_card_texture(card)
+	# For opponent, always show card back during animation to hide the card
+	var card_texture = card_back_texture if is_opponent else get_card_texture(card)
 	
 	prizes.erase(card)
 	card.current_location = "hand"
@@ -1993,7 +2013,6 @@ func take_prize_card(card: card_object, is_opponent: bool) -> void:
 # Opens selection mode to choose a prize card and return that as the object to put into hand
 func player_pick_prize_card() -> void:
 	prize_card_selection_active = true
-	action_button.position.x += 210
 	show_enlarged_array_selection_mode(player_prize_cards)
 	header_label.text = "TAKE A PRIZE CARD"
 	hint_label.text = "Select a prize card to add to your hand"
@@ -3184,7 +3203,7 @@ func process_status_between_turns(pokemon: card_object, is_opponent: bool) -> vo
 		pokemon.current_hp = max(0, pokemon.current_hp - pokemon.poison_damage)
 		var label = "TOXIC" if pokemon.poison_damage == 20 else "POISON"
 		await show_message(pokemon_name.to_upper() + " TAKES " + str(pokemon.poison_damage) + " " + label + " DAMAGE!")
-		show_floating_label("-" + str(pokemon.poison_damage) + "HP", Vector2(530 if !is_opponent else 1030, 300), is_opponent)
+		show_floating_label("-" + str(pokemon.poison_damage) + "HP", Vector2(530 if !is_opponent else 1030, 300), true)
 		display_hp_circles_above_align(pokemon, is_opponent)
 		print("BETWEEN TURNS: ", pokemon_name, " took ", pokemon.poison_damage, " poison damage. HP: ", pokemon.current_hp)
 
@@ -6721,11 +6740,16 @@ func discard_pluspower_from_pokemon(pokemon: card_object, is_opponent: bool) -> 
 	for card in pokemon.attached_cards:
 		if card.metadata.get("name", "").to_lower() == "pluspower":
 			to_remove.append(card)
+	var attached_node = opponent_attached_cards_container if is_opponent else player_attached_cards_container
+	var discard_node = opponent_discard_icon if is_opponent else player_discard_icon
 	for card in to_remove:
 		pokemon.attached_cards.erase(card)
 		card.current_location = "discard"
 		var discard = opponent_discard_pile if is_opponent else player_discard_pile
 		discard.append(card)
+		# Animate PlusPower from attached cards container to discard pile
+		var card_texture = get_card_texture(card)
+		await animate_card_a_to_b(attached_node, discard_node, 0.2, card_texture, card_scales[10])
 	pokemon.pluspower_count = 0
 	update_discard_pile_display(is_opponent)
 	display_attached_trainer_cards(is_opponent)
@@ -6751,11 +6775,16 @@ func tick_defender_counters(is_opponent: bool) -> void:
 			for card in pokemon.attached_cards:
 				if card.metadata.get("name", "").to_lower() == "defender":
 					to_remove.append(card)
+			var attached_node = opponent_attached_cards_container if is_opponent else player_attached_cards_container
+			var discard_node = opponent_discard_icon if is_opponent else player_discard_icon
 			for card in to_remove:
 				pokemon.attached_cards.erase(card)
 				card.current_location = "discard"
 				var discard = opponent_discard_pile if is_opponent else player_discard_pile
 				discard.append(card)
+				# Animate Defender from attached cards container to discard pile
+				var card_texture = get_card_texture(card)
+				await animate_card_a_to_b(attached_node, discard_node, 0.2, card_texture, card_scales[10])
 			update_discard_pile_display(is_opponent)
 			display_attached_trainer_cards(is_opponent)
 			print("DEFENDER EXPIRED on ", pokemon.metadata.get("name", ""))
@@ -6792,11 +6821,19 @@ func play_heal_animation(pokemon: card_object, heal_amount: int, is_opponent: bo
 	if not loc.is_empty():
 		show_floating_label("+" + str(heal_amount) + " HP", loc["position"] + Vector2(0, -20), true)
 	
-	# Animate HP circles restoring one by one
+	# Animate HP circles restoring one by one with delay
 	var circles_to_restore = heal_amount / 10
-	for _i in range(circles_to_restore):
-		await get_tree().create_timer(0.15).timeout
-	display_hp_circles_above_align(pokemon if pokemon == (opponent_active_pokemon if is_opponent else player_active_pokemon) else (opponent_active_pokemon if is_opponent else player_active_pokemon), is_opponent)
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var display_pokemon_ref = pokemon if pokemon == active else active
+	for i in range(circles_to_restore):
+		# Temporarily set HP partway through the heal for incremental circle display
+		var partial_hp = (pokemon.current_hp - heal_amount) + ((i + 1) * 10)
+		var saved_hp = pokemon.current_hp
+		pokemon.current_hp = min(partial_hp, saved_hp)
+		display_hp_circles_above_align(display_pokemon_ref if display_pokemon_ref != null else pokemon, is_opponent)
+		pokemon.current_hp = saved_hp
+		await get_tree().create_timer(0.2).timeout
+	display_hp_circles_above_align(display_pokemon_ref if display_pokemon_ref != null else pokemon, is_opponent)
 	display_pokemon(is_opponent)
 
 # Builds a combined array of bench + active pokemon with active last (for enlarged display with spacer)
@@ -6901,6 +6938,209 @@ func _score_card_for_discard(card: card_object) -> float:
 	return score
 
 ############################################### Section C: TRAINER CARD PLAY ANIMATION ##############################################################
+
+# Validates whether a trainer card can be played based on current game state
+# Returns empty string if playable, or an error message if conditions aren't met
+func validate_trainer_can_be_played(card: card_object, is_opponent: bool) -> String:
+	var card_id = card.uid.to_lower()
+	var active = opponent_active_pokemon if is_opponent else player_active_pokemon
+	var bench = opponent_bench if is_opponent else player_bench
+	var hand = opponent_hand if is_opponent else player_hand
+	var deck = opponent_deck if is_opponent else player_deck
+	var discard = opponent_discard_pile if is_opponent else player_discard_pile
+	var opp_active = player_active_pokemon if is_opponent else opponent_active_pokemon
+	var opp_bench = player_bench if is_opponent else opponent_bench
+	
+	match card_id:
+		"base1-76": # Pokemon Breeder
+			# Check for Stage 2 in hand AND a matching Basic in play
+			var stage2_cards = []
+			for c in hand:
+				if c == card:
+					continue
+				var subtypes = c.metadata.get("subtypes", [])
+				if "Stage 2" in subtypes:
+					stage2_cards.append(c)
+			if stage2_cards.size() == 0:
+				return "No Stage 2 Pokemon in hand to play!"
+			# Check if any Stage 2 has a matching Basic on field
+			var has_valid_target = false
+			var all_in_play = []
+			if active != null:
+				all_in_play.append(active)
+			all_in_play.append_array(bench)
+			for s2 in stage2_cards:
+				for pokemon in all_in_play:
+					if pokemon.placed_on_field_this_turn:
+						continue
+					if not is_basic_pokemon(pokemon):
+						continue
+					if _basic_matches_stage2(pokemon, s2):
+						has_valid_target = true
+						break
+				if has_valid_target:
+					break
+			if not has_valid_target:
+				return "No valid Basic Pokemon to evolve with Breeder!"
+		
+		"base1-72": # Devolution Spray
+			var has_evolved = false
+			if active != null and active.attached_pre_evolutions.size() > 0:
+				has_evolved = true
+			for bp in bench:
+				if bp.attached_pre_evolutions.size() > 0:
+					has_evolved = true
+					break
+			if not has_evolved:
+				return "No evolved Pokemon to devolve!"
+		
+		"base1-94": # Potion
+			var damaged = build_field_pokemon_array(is_opponent).filter(func(p): return p.current_hp < int(p.metadata.get("hp", "0")))
+			if damaged.size() == 0:
+				return "No Pokemon with damage to heal!"
+		
+		"base1-90": # Super Potion
+			var valid_targets = []
+			var all_pokemon = build_field_pokemon_array(is_opponent)
+			for p in all_pokemon:
+				if p.current_hp < int(p.metadata.get("hp", "0")) and p.attached_energies.size() > 0:
+					valid_targets.append(p)
+			if valid_targets.size() == 0:
+				return "No Pokemon with both damage and energy for Super Potion!"
+		
+		"base1-92": # Energy Removal
+			var opp_all = build_field_pokemon_array(not is_opponent)
+			var has_energy = false
+			for p in opp_all:
+				if p.attached_energies.size() > 0:
+					has_energy = true
+					break
+			if not has_energy:
+				return "Opponent has no energy to remove!"
+		
+		"base1-79": # Super Energy Removal
+			# Check own pokemon have energy
+			var own_all = build_field_pokemon_array(is_opponent)
+			var own_has_energy = false
+			for p in own_all:
+				if p.attached_energies.size() > 0:
+					own_has_energy = true
+					break
+			if not own_has_energy:
+				return "You have no energy to discard for Super Energy Removal!"
+			# Check opponent pokemon have energy
+			var target_all = build_field_pokemon_array(not is_opponent)
+			var target_has_energy = false
+			for p in target_all:
+				if p.attached_energies.size() > 0:
+					target_has_energy = true
+					break
+			if not target_has_energy:
+				return "Opponent has no energy to remove!"
+		
+		"base1-70": # Clefairy Doll
+			if bench.size() >= 5:
+				return "Bench is full! Cannot place Clefairy Doll!"
+		
+		"base1-71": # Computer Search
+			if hand.size() < 3: # Need at least 2 cards to discard + the computer search itself is already removed
+				# hand still contains the card at this point for player validation
+				var cards_available = 0
+				for c in hand:
+					if c != card:
+						cards_available += 1
+				if cards_available < 2:
+					return "Need at least 2 other cards in hand to discard!"
+		
+		"base1-74": # Item Finder
+			var cards_available = 0
+			for c in hand:
+				if c != card:
+					cards_available += 1
+			if cards_available < 2:
+				return "Need at least 2 other cards in hand to discard!"
+			var trainers_in_discard = []
+			for c in discard:
+				if is_trainer_card(c):
+					trainers_in_discard.append(c)
+			if trainers_in_discard.size() == 0:
+				return "No Trainer cards in the discard pile!"
+		
+		"base1-81": # Energy Retrieval
+			var basic_energies_in_discard = []
+			for c in discard:
+				if is_basic_energy_card(c):
+					basic_energies_in_discard.append(c)
+			if basic_energies_in_discard.size() == 0:
+				return "No Basic Energy in discard pile!"
+			var cards_available_er = 0
+			for c in hand:
+				if c != card:
+					cards_available_er += 1
+			if cards_available_er < 1:
+				return "Need at least 1 other card in hand to discard!"
+		
+		"base1-83": # Maintenance
+			var cards_available_m = 0
+			for c in hand:
+				if c != card:
+					cards_available_m += 1
+			if cards_available_m < 2:
+				return "Need at least 2 other cards in hand!"
+		
+		"base1-89": # Revive
+			if bench.size() >= 5:
+				return "Bench is full!"
+			var basics_in_discard = []
+			for c in discard:
+				if is_basic_pokemon(c):
+					basics_in_discard.append(c)
+			if basics_in_discard.size() == 0:
+				return "No Basic Pokemon in discard pile!"
+		
+		"base1-93": # Gust of Wind
+			var opp_bench_gust = player_bench if is_opponent else opponent_bench
+			if opp_bench_gust.size() == 0:
+				return "Opponent has no bench Pokemon!"
+		
+		"base1-95": # Switch
+			if bench.size() == 0:
+				return "No bench Pokemon to switch with!"
+		
+		"base1-86": # Pokemon Flute
+			var target_bench_flute = player_bench if is_opponent else opponent_bench
+			if target_bench_flute.size() >= 5:
+				return "Opponent's bench is full!"
+			var target_discard_flute = player_discard_pile if is_opponent else opponent_discard_pile
+			var has_basic = false
+			for c in target_discard_flute:
+				if is_basic_pokemon(c):
+					has_basic = true
+					break
+			if not has_basic:
+				return "No Basic Pokemon in opponent's discard pile!"
+		
+		"base1-82": # Full Heal
+			if active == null:
+				return "No active Pokemon!"
+			if active.special_condition == "" and not active.is_poisoned and not active.is_burned:
+				return "Active Pokemon has no conditions to heal!"
+		
+		"base1-77": # Pokemon Trader
+			var pokemon_in_hand = []
+			for c in hand:
+				if c != card and c.metadata.get("supertype", "").to_lower() == "pokémon":
+					pokemon_in_hand.append(c)
+			if pokemon_in_hand.size() == 0:
+				return "No Pokemon in hand to trade!"
+			var pokemon_in_deck = []
+			for c in deck:
+				if c.metadata.get("supertype", "").to_lower() == "pokémon":
+					pokemon_in_deck.append(c)
+			if pokemon_in_deck.size() == 0:
+				return "No Pokemon in deck to trade for!"
+	
+	return ""
 
 # Main entry point for playing a trainer card (handles animation, routing, and discard)
 func play_trainer_card(card: card_object, is_opponent: bool) -> void:
@@ -7210,6 +7450,9 @@ func effect_computer_search(played_card: card_object, is_opponent: bool) -> void
 				deck.erase(chosen)
 				chosen.current_location = "hand"
 				hand.append(chosen)
+				# Animate card from deck to hand
+				var card_texture = get_card_texture(chosen)
+				await animate_card_a_to_b(player_deck_icon, player_hand_container, 0.3, card_texture, card_scales[10])
 		
 		deck.shuffle()
 		refresh_hand_display(false)
@@ -7433,6 +7676,9 @@ func effect_item_finder(played_card: card_object, is_opponent: bool) -> void:
 			discard.erase(chosen)
 			chosen.current_location = "hand"
 			hand.append(chosen)
+			# Animate trainer from discard to hand
+			var trainer_texture = get_card_texture(chosen)
+			await animate_card_a_to_b(player_discard_icon, player_hand_container, 0.3, trainer_texture, card_scales[10])
 			await show_message("Retrieved " + chosen.metadata.get("name", "") + " from discard pile!")
 		refresh_hand_display(false)
 
@@ -7702,6 +7948,12 @@ func effect_pokemon_trader(played_card: card_object, is_opponent: bool) -> void:
 			search_card.current_location = "hand"
 			hand.append(search_card)
 			deck.shuffle()
+			# Animate traded card to deck and searched card to hand
+			var trade_texture = get_card_texture(card_to_trade)
+			animate_card_a_to_b(player_hand_container, player_deck_icon, 0.2, trade_texture, card_scales[10])
+			await get_tree().create_timer(0.2).timeout
+			var search_texture = get_card_texture(search_card)
+			await animate_card_a_to_b(player_deck_icon, player_hand_container, 0.3, search_texture, card_scales[10])
 			refresh_hand_display(false)
 			update_deck_icon(false)
 
@@ -7925,9 +8177,11 @@ func effect_super_energy_removal(is_opponent: bool) -> void:
 		if target == null:
 			return
 		
-		# Step 4: Remove up to 2 energy - if 2 or fewer just take them all, otherwise let player choose
+		# Step 4: Remove up to 2 energy using multi-select
+		var max_remove = min(2, target.attached_energies.size())
 		var removed = 0
-		if target.attached_energies.size() <= 2:
+		if max_remove <= 2 and target.attached_energies.size() <= 2:
+			# 2 or fewer - just take them all
 			while target.attached_energies.size() > 0 and removed < 2:
 				var e = target.attached_energies.pop_back()
 				e.current_location = "discard"
@@ -7939,32 +8193,34 @@ func effect_super_energy_removal(is_opponent: bool) -> void:
 				await animate_card_a_to_b(from_node, opponent_discard_icon, 0.2, e_tex, card_scales[10])
 				removed += 1
 		else:
-			# Player selects which 2 energies using retreat-style multi-select
-			for pick in range(2):
-				if target.attached_energies.size() == 0:
-					break
-				defender_energy_discard_active = true
-				show_enlarged_array_selection_mode(target.attached_energies)
-				cancel_button.visible = false
-				header_label.text = "REMOVE ENERGY (" + str(pick + 1) + "/2)"
-				hint_label.text = "Select energy to remove"
-				action_button.text = "DISCARD"
-				action_button.disabled = true
-				action_button.theme = theme_disabled
-				await defender_energy_chosen
-				var e = selected_card_for_action
-				defender_energy_discard_active = false
-				hide_selection_mode_display_main()
-				if e != null:
-					target.attached_energies.erase(e)
-					e.current_location = "discard"
-					target_discard.append(e)
-					var from_node = find_card_ui_for_object(target)
-					if from_node == null:
-						from_node = opponent_active_container if target == opponent_active_pokemon else opponent_bench_container
-					var e_tex = get_card_texture(e)
-					await animate_card_a_to_b(from_node, opponent_discard_icon, 0.2, e_tex, card_scales[10])
-					removed += 1
+			# Player selects which 2 energies using multi-select mode
+			trainer_discard_selected.clear()
+			trainer_discard_cards_needed = 2
+			trainer_discard_selection_active = true
+			
+			show_enlarged_array_selection_mode(target.attached_energies)
+			cancel_button.visible = false
+			header_label.text = "REMOVE ENERGY (SELECT 2)"
+			hint_label.text = "Select 2 energies to remove (0/2 selected)"
+			action_button.text = "2 MORE"
+			action_button.disabled = true
+			action_button.theme = theme_disabled
+			
+			await trainer_discard_selection_done
+			trainer_discard_selection_active = false
+			hide_selection_mode_display_main()
+			
+			for e in trainer_discard_selected:
+				target.attached_energies.erase(e)
+				e.current_location = "discard"
+				target_discard.append(e)
+				var from_node = find_card_ui_for_object(target)
+				if from_node == null:
+					from_node = opponent_active_container if target == opponent_active_pokemon else opponent_bench_container
+				var e_tex = get_card_texture(e)
+				await animate_card_a_to_b(from_node, opponent_discard_icon, 0.2, e_tex, card_scales[10])
+			removed = trainer_discard_selected.size()
+			trainer_discard_selected.clear()
 		
 		display_active_pokemon_energies(true)
 		update_discard_pile_display(true)
@@ -8016,35 +8272,40 @@ func effect_energy_retrieval(played_card: card_object, is_opponent: bool) -> voi
 		trainer_discard_selected.clear()
 		refresh_hand_display(false)
 		
-		# Player picks up to 2 basic energy from discard
+		# Player picks up to 2 basic energy from discard using multi-select
 		# Recalculate basic energies after discard
 		basic_energies.clear()
 		for card in discard:
 			if is_basic_energy_card(card):
 				basic_energies.append(card)
 		
-		var retrieved = 0
-		while retrieved < 2 and basic_energies.size() > 0:
-			trainer_deck_search_active = true
+		if basic_energies.size() > 0:
+			var max_retrieve = min(2, basic_energies.size())
+			trainer_discard_selected.clear()
+			trainer_discard_cards_needed = max_retrieve
+			trainer_discard_selection_active = true
+			
 			show_enlarged_array_selection_mode(basic_energies)
-			header_label.text = "ENERGY RETRIEVAL (" + str(2 - retrieved) + " remaining)"
-			hint_label.text = "Select a Basic Energy to retrieve"
-			action_button.text = "RETRIEVE"
+			header_label.text = "ENERGY RETRIEVAL"
+			hint_label.text = "Select up to " + str(max_retrieve) + " Basic Energy to retrieve (0/" + str(max_retrieve) + " selected)"
+			action_button.text = str(max_retrieve) + " MORE"
 			action_button.disabled = true
 			action_button.theme = theme_disabled
-			cancel_button.visible = retrieved > 0
-			await trainer_target_selected
-			var chosen = selected_card_for_action
-			trainer_deck_search_active = false
+			cancel_button.visible = false
+			
+			await trainer_discard_selection_done
+			trainer_discard_selection_active = false
 			hide_selection_mode_display_main()
 			
-			if chosen == null:
-				break
-			discard.erase(chosen)
-			chosen.current_location = "hand"
-			hand.append(chosen)
-			basic_energies.erase(chosen)
-			retrieved += 1
+			for card in trainer_discard_selected:
+				discard.erase(card)
+				card.current_location = "hand"
+				hand.append(card)
+				# Animate each retrieved energy from discard to hand
+				var discard_node = player_discard_icon
+				var energy_texture = get_card_texture(card)
+				await animate_card_a_to_b(discard_node, player_hand_container, 0.3, energy_texture, card_scales[10])
+			trainer_discard_selected.clear()
 		
 		refresh_hand_display(false)
 		update_discard_pile_display(false)
@@ -8910,6 +9171,14 @@ func cpu_phase_play_trainer_cards_priority() -> void:
 				best_card = card
 		
 		if best_card != null:
+			# Validate the card can actually be played before committing
+			var validation_error = validate_trainer_can_be_played(best_card, true)
+			if validation_error != "":
+				# Skip this card and continue looking
+				# Mark it so we don't try it again this loop
+				opponent_hand.erase(best_card)
+				opponent_hand.append(best_card)  # Move to end
+				break
 			await play_trainer_card(best_card, true)
 			played = true
 
@@ -8929,6 +9198,10 @@ func cpu_phase_play_trainer_cards_remaining() -> void:
 				best_card = card
 		
 		if best_card != null:
+			# Validate the card can actually be played before committing
+			var validation_error = validate_trainer_can_be_played(best_card, true)
+			if validation_error != "":
+				break
 			await play_trainer_card(best_card, true)
 			played = true
 
@@ -9003,6 +9276,9 @@ func open_power_menu() -> void:
 		for bp in player_bench:
 			if bp.is_bench_token:
 				available_powers.append({"pokemon": bp, "ability": {"name": "Discard", "type": "Pokémon Power", "text": "Discard this card from your bench."}})
+		# Check active pokemon too
+		if player_active_pokemon != null and player_active_pokemon.is_bench_token:
+			available_powers.append({"pokemon": player_active_pokemon, "ability": {"name": "Discard", "type": "Pokémon Power", "text": "Discard this card."}})
 	else:
 		# Add bench token discards if they weren't already found via abilities
 		for bp in player_bench:
@@ -9014,6 +9290,15 @@ func open_power_menu() -> void:
 						break
 				if not already_added:
 					available_powers.append({"pokemon": bp, "ability": {"name": "Discard", "type": "Pokémon Power", "text": "Discard this card from your bench."}})
+		# Check active too
+		if player_active_pokemon != null and player_active_pokemon.is_bench_token:
+			var already_added = false
+			for p in available_powers:
+				if p["pokemon"] == player_active_pokemon:
+					already_added = true
+					break
+			if not already_added:
+				available_powers.append({"pokemon": player_active_pokemon, "ability": {"name": "Discard", "type": "Pokémon Power", "text": "Discard this card."}})
 	
 	if available_powers.size() == 0:
 		await show_message("No Pokemon Powers available!")
@@ -9325,10 +9610,35 @@ func power_buzzap(electrode: card_object) -> void:
 
 # Discard bench token (Clefairy Doll voluntary discard)
 func power_bench_token_discard(token: card_object) -> void:
-	player_bench.erase(token)
+	var was_active = (token == player_active_pokemon)
+	
+	if was_active:
+		# Remove from active slot
+		player_active_pokemon = null
+	else:
+		player_bench.erase(token)
+	
 	send_card_to_discard(token, false)
 	display_pokemon(false)
+	display_active_pokemon_energies(false)
 	await show_message(token.metadata.get("name", "") + " was voluntarily discarded!")
+	
+	# If it was active, force a bench replacement (no prize awarded)
+	if was_active:
+		if player_bench.size() == 0:
+			await show_message("No Pokemon remaining!")
+			game_end_logic(true)  # true = player loses
+			return
+		knockout_bench_selection_active = true
+		show_enlarged_array_selection_mode(player_bench)
+		cancel_button.visible = false
+		header_label.text = "CHOOSE NEW ACTIVE POKEMON"
+		hint_label.text = "Your active was discarded - select a replacement"
+		action_button.text = "SET ACTIVE"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		await knockout_replacement_chosen
+		display_active_pokemon_energies(false)
 
 ############################################### Section H: CPU POWER ACTIVATION ######################################################################
 
@@ -9445,6 +9755,9 @@ func check_strikes_back(damaged_pokemon: card_object, attacker: card_object, is_
 		attacker.current_hp = max(0, attacker.current_hp - 10)
 		var attacker_is_opp = not is_damaged_opponent
 		display_hp_circles_above_align(attacker, attacker_is_opp)
+		# Show floating label for the -10HP on the attacker
+		var attacker_label_pos = Vector2(1030, 300) if attacker_is_opp else Vector2(530, 300)
+		show_floating_label("-10HP", attacker_label_pos, true)
 		await show_message(damaged_pokemon.metadata.get("name", "") + "'s STRIKES BACK dealt 10 damage to " + attacker.metadata.get("name", "") + "!")
 		print("STRIKES BACK: 10 damage to ", attacker.metadata.get("name", ""))
 
@@ -9508,6 +9821,12 @@ func action_button_pressed_perform_action() -> void:
 		# Confirm the selection (cards already toggled via click handler)
 		if trainer_discard_selected.size() >= trainer_discard_cards_needed:
 			trainer_discard_selection_done.emit()
+		return
+	
+	# Pokedex reorder: confirm the chosen order
+	if trainer_reorder_active:
+		if pokedex_reorder_result.size() >= pokedex_cards.size():
+			trainer_reorder_done.emit()
 		return
 	
 	# Forced switch: player selects bench pokemon to switch in
@@ -9645,7 +9964,6 @@ func handle_action_prize_card() -> void:
 	prize_card_selection_active = false
 	selected_card_for_action = null
 	
-	action_button.position.x -= 210
 	hide_selection_mode_display_main()
 	await take_prize_card(prize_card, false)
 	prize_card_taken.emit()
@@ -9675,7 +9993,6 @@ func handle_action_normal_card() -> void:
 				display_pokemon(false)  # false = player
 				refresh_hand_display(false)
 				match_just_started_basic_pokemon_required = false
-				action_button.position.x -= 210 
 				
 				# After active pokemon is set, start the bench setup phase
 				start_bench_setup_phase()
@@ -9698,6 +10015,11 @@ func handle_action_normal_card() -> void:
 		
 		"PLAY_TRAINER":
 			var trainer_to_play = selected_card_for_action
+			# Pre-validate that the trainer card can actually have an effect before playing it
+			var validation_error = validate_trainer_can_be_played(trainer_to_play, false)
+			if validation_error != "":
+				await show_message(validation_error)
+				return
 			hide_selection_mode_display_main()
 			await play_trainer_card(trainer_to_play, false)
 		
@@ -9899,10 +10221,48 @@ func this_card_clicked(clicked_card: card_object) -> void:
 			action_button.theme = theme_blue
 			return
 		
-		# POKEDEX REORDER MODE - click cards to assign position numbers
+		# POKEDEX REORDER MODE - click cards to assign position numbers (with deselection support)
 		elif trainer_reorder_active:
 			if clicked_card in pokedex_reorder_result:
-				return  # Already numbered, ignore
+				# DESELECT: remove this card and shift remaining numbers
+				var removed_index = pokedex_reorder_result.find(clicked_card)
+				pokedex_reorder_result.erase(clicked_card)
+				
+				# Clear all number labels and rebuild them
+				for card in pokedex_cards:
+					var c_ui = find_card_ui_for_object(card)
+					if c_ui:
+						# Remove any child labels
+						for child in c_ui.get_children():
+							if child is Label:
+								child.queue_free()
+						if card in pokedex_reorder_result:
+							var new_pos = pokedex_reorder_result.find(card) + 1
+							c_ui.modulate = Color(0.6, 0.6, 0.6, 1.0)
+							var num_label = Label.new()
+							num_label.text = str(new_pos)
+							num_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+							num_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+							num_label.theme = theme_disabled
+							num_label.add_theme_font_size_override("font_size", 72)
+							num_label.add_theme_color_override("font_color", Color.WHITE)
+							num_label.add_theme_color_override("font_outline_color", Color.BLACK)
+							num_label.add_theme_constant_override("outline_size", 12)
+							num_label.custom_minimum_size = c_ui.size
+							num_label.size = c_ui.size
+							num_label.mouse_filter = MOUSE_FILTER_IGNORE
+							c_ui.add_child(num_label)
+						else:
+							c_ui.modulate = Color(1.0, 1.0, 1.0, 1.0)
+				
+				var position_num = pokedex_reorder_result.size()
+				hint_label.text = str(position_num) + "/" + str(pokedex_cards.size()) + " cards ordered"
+				action_button.text = str(position_num) + "/" + str(pokedex_cards.size()) + " SELECTED"
+				action_button.disabled = true
+				action_button.theme = theme_disabled
+				return
+			
+			# SELECT: add card to order
 			pokedex_reorder_result.append(clicked_card)
 			var position_num = pokedex_reorder_result.size()
 			
@@ -9926,11 +10286,16 @@ func this_card_clicked(clicked_card: card_object) -> void:
 				card_ui.modulate = Color(0.6, 0.6, 0.6, 1.0)
 			
 			hint_label.text = str(position_num) + "/" + str(pokedex_cards.size()) + " cards ordered"
-			action_button.text = str(position_num) + "/" + str(pokedex_cards.size()) + " SELECTED"
 			
 			if pokedex_reorder_result.size() >= pokedex_cards.size():
-				# All cards numbered - auto-confirm
-				trainer_reorder_done.emit()
+				# All cards numbered - enable confirm button
+				action_button.text = "CONFIRM ORDER"
+				action_button.disabled = false
+				action_button.theme = theme_green
+			else:
+				action_button.text = str(position_num) + "/" + str(pokedex_cards.size()) + " SELECTED"
+				action_button.disabled = true
+				action_button.theme = theme_disabled
 			return
 		
 		# TRAINER DISCARD SELECTION MODE - click to toggle cards like retreat energy
@@ -10047,6 +10412,11 @@ func _input(event: InputEvent) -> void:
 		
 		# If no card was clicked, clear selection
 		if not clicked_on_card:
+			
+			# During multi-card selection modes (trainer discard, pokedex reorder), 
+			# do NOT clear the selection or reset the action button
+			if trainer_discard_selection_active or trainer_reorder_active:
+				return
 
 			if selected_card_for_action != null:
 				var card_ui = find_card_ui_for_object(selected_card_for_action)
