@@ -305,7 +305,7 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 	action_button.visible = true
 	
 	# A specific clause for the start of the game, a basic pokemon HAS to be chosen so we cannot allow cancelling out.
-	if match_just_started_basic_pokemon_required == true or knockout_bench_selection_active == true or forced_switch_selection_active == true or defender_energy_discard_active == true or energy_type_selection_active == true or trainer_discard_selection_active == true or trainer_pokemon_selection_active == true or trainer_deck_search_active == true:
+	if match_just_started_basic_pokemon_required == true or knockout_bench_selection_active == true or forced_switch_selection_active == true or defender_energy_discard_active == true or energy_type_selection_active == true or trainer_discard_selection_active == true or trainer_pokemon_selection_active == true or trainer_deck_search_active == true or trainer_reorder_active == true:
 		cancel_button.visible = false
 	else:
 		cancel_button.visible = true
@@ -321,18 +321,17 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 		action_button.visible = true
 	
 	# Force action button visible in trainer/power selection modes even for normally view-only arrays
-	if trainer_pokemon_selection_active or trainer_deck_search_active or trainer_discard_selection_active:
+	if trainer_pokemon_selection_active or trainer_deck_search_active or trainer_discard_selection_active or trainer_reorder_active:
 		action_button.visible = true
 		
 	if action_button.visible:
 		if cancel_button.visible:
+			# Cancel button sits to the right of the action button
 			cancel_button.offset_left = 35.0
 			cancel_button.offset_right = 473.0
-		else:
-			# Center the action button when cancel is hidden
-			action_button.offset_left = -219.0
-			action_button.offset_right = 219.0
+		# Action button stays at its default position (already centered by scene layout)
 	else:
+		# Only cancel visible - center it
 		cancel_button.offset_left = -219.0
 		cancel_button.offset_right = 219.0
 		
@@ -3414,9 +3413,6 @@ func apply_energy_discard_defender(effect: Dictionary, defender: card_object, is
 		action_button.text = "DISCARD"
 		action_button.disabled = true
 		action_button.theme = theme_disabled
-		# Centralise action button
-		action_button.offset_left = -219.0
-		action_button.offset_right = 219.0
 		await defender_energy_chosen
 		energy_to_discard = selected_card_for_action
 		defender_energy_discard_active = false
@@ -3431,8 +3427,6 @@ func apply_energy_discard_defender(effect: Dictionary, defender: card_object, is
 		action_button.text = "DISCARD"
 		action_button.disabled = true
 		action_button.theme = theme_disabled
-		action_button.offset_left = -219.0
-		action_button.offset_right = 219.0
 		await defender_energy_chosen
 		energy_to_discard = selected_card_for_action
 		defender_energy_discard_active = false
@@ -3918,9 +3912,6 @@ func execute_conversion(attacker: card_object, defender: card_object, is_opponen
 			action_button.text = "SELECT TYPE"
 			action_button.disabled = true
 			action_button.theme = theme_disabled
-			# Centralise action button
-			action_button.offset_left = -219.0
-			action_button.offset_right = 219.0
 			await energy_type_selected
 			chosen_type = selected_card_for_action.metadata.get("name", "").replace(" Energy", "").strip_edges() if selected_card_for_action else ""
 			energy_type_selection_active = false
@@ -6793,11 +6784,6 @@ func display_attached_trainer_cards(is_opponent: bool) -> void:
 
 ############################################### Section B: SHARED CPU DISCARD PRIORITY #############################################################
 
-# Centres the action button when the cancel button is hidden
-func center_action_button() -> void:
-	action_button.offset_left = -219.0
-	action_button.offset_right = 219.0
-
 # Plays a healing animation: restores red HP circles to green with delay, shows floating +HP label
 func play_heal_animation(pokemon: card_object, heal_amount: int, is_opponent: bool) -> void:
 	if heal_amount <= 0:
@@ -7113,7 +7099,6 @@ func resolve_attached_trainer(card: card_object, is_opponent: bool) -> void:
 			action_button.disabled = true
 			action_button.theme = theme_disabled
 			cancel_button.visible = false
-			center_action_button()
 			await trainer_target_selected
 			var target = selected_card_for_action
 			trainer_pokemon_selection_active = false
@@ -7249,15 +7234,14 @@ func effect_devolution_spray(is_opponent: bool) -> void:
 		return
 	
 	if is_opponent:
-		# CPU: only use if it clears a status or enables a better play (scored -100 normally)
 		return
 	else:
-		# Player selects which pokemon to devolve
+		# Step 1: Player selects which pokemon to devolve
 		trainer_pokemon_selection_active = true
 		show_enlarged_array_selection_mode(evolved_pokemon)
 		header_label.text = "DEVOLUTION SPRAY"
 		hint_label.text = "Choose an evolved Pokemon to devolve"
-		action_button.text = "DEVOLVE"
+		action_button.text = "SELECT"
 		action_button.disabled = true
 		action_button.theme = theme_disabled
 		cancel_button.visible = false
@@ -7269,52 +7253,88 @@ func effect_devolution_spray(is_opponent: bool) -> void:
 		if target == null:
 			return
 		
-		# Devolve: remove the top evolution card and discard it
-		var pre_evo = target.attached_pre_evolutions.pop_back()
-		if pre_evo == null:
+		# Step 2: If multiple pre-evolutions exist (Stage 2), let player choose which to devolve to
+		var devolve_to: card_object = null
+		if target.attached_pre_evolutions.size() == 1:
+			# Only one option (Stage 1 → Basic)
+			devolve_to = target.attached_pre_evolutions[0]
+		else:
+			# Multiple options (Stage 2 → show Basic and Stage 1)
+			trainer_pokemon_selection_active = true
+			show_enlarged_array_selection_mode(target.attached_pre_evolutions)
+			header_label.text = "DEVOLVE TO WHICH STAGE?"
+			hint_label.text = "Select which card to devolve " + target.metadata.get("name", "") + " into"
+			action_button.text = "DEVOLVE"
+			action_button.disabled = true
+			action_button.theme = theme_disabled
+			cancel_button.visible = false
+			await trainer_target_selected
+			devolve_to = selected_card_for_action
+			trainer_pokemon_selection_active = false
+			hide_selection_mode_display_main()
+		
+		if devolve_to == null:
 			return
 		
 		# Save the field position BEFORE discarding
 		var field_location = target.current_location
 		
-		# The current card (evolution) is discarded
+		# Find the index of the chosen card in the pre-evolution chain
+		var devolve_index = target.attached_pre_evolutions.find(devolve_to)
+		
+		# Discard the current top card (the evolved form) to the discard pile
 		var evo_card = target
 		evo_card.current_location = "discard"
 		discard.append(evo_card)
 		
-		# The pre-evolution takes its place
-		pre_evo.attached_energies = evo_card.attached_energies.duplicate()
+		# Discard all pre-evolutions ABOVE the chosen devolve target
+		# Pre-evolutions are stored [Basic, Stage1] - discard everything after devolve_index
+		var cards_to_discard_from_chain = []
+		for i in range(devolve_index + 1, target.attached_pre_evolutions.size()):
+			cards_to_discard_from_chain.append(target.attached_pre_evolutions[i])
+		for card in cards_to_discard_from_chain:
+			card.current_location = "discard"
+			discard.append(card)
+			target.attached_pre_evolutions.erase(card)
+		
+		# Remove the devolve_to card from the chain (it becomes the new pokemon)
+		target.attached_pre_evolutions.erase(devolve_to)
+		
+		# Transfer attachments from the old top card to the new form
+		devolve_to.attached_energies = evo_card.attached_energies.duplicate()
 		evo_card.attached_energies.clear()
-		pre_evo.attached_pre_evolutions = evo_card.attached_pre_evolutions.duplicate()
-		evo_card.attached_pre_evolutions.clear()
-		pre_evo.attached_cards = evo_card.attached_cards.duplicate()
+		# Keep only pre-evolutions below the devolve target
+		devolve_to.attached_pre_evolutions = target.attached_pre_evolutions.duplicate()
+		target.attached_pre_evolutions.clear()
+		devolve_to.attached_cards = evo_card.attached_cards.duplicate()
 		evo_card.attached_cards.clear()
 		
 		# Transfer damage, clamping so it has at least 10 HP
 		var max_hp_old = int(evo_card.metadata.get("hp", "0"))
 		var damage_taken = max_hp_old - evo_card.current_hp
-		var new_max_hp = int(pre_evo.metadata.get("hp", "0"))
-		pre_evo.current_hp = max(10, new_max_hp - damage_taken)
-		pre_evo.current_location = field_location
+		var new_max_hp = int(devolve_to.metadata.get("hp", "0"))
+		devolve_to.current_hp = max(10, new_max_hp - damage_taken)
+		devolve_to.current_location = field_location
 		
-		# Clear statuses (the devolved pokemon loses all conditions)
-		clear_all_statuses(pre_evo, is_opponent)
+		# Clear statuses
+		clear_all_statuses(devolve_to, is_opponent)
 		
 		# Replace in the appropriate slot
 		if evo_card == (opponent_active_pokemon if is_opponent else player_active_pokemon):
 			if is_opponent:
-				opponent_active_pokemon = pre_evo
+				opponent_active_pokemon = devolve_to
 			else:
-				player_active_pokemon = pre_evo
+				player_active_pokemon = devolve_to
 		else:
 			var b = opponent_bench if is_opponent else player_bench
 			var idx = b.find(evo_card)
 			if idx != -1:
-				b[idx] = pre_evo
+				b[idx] = devolve_to
 		
 		display_pokemon(is_opponent)
 		display_active_pokemon_energies(is_opponent)
-		await show_message(evo_card.metadata.get("name", "") + " devolved into " + pre_evo.metadata.get("name", "") + "!")
+		update_discard_pile_display(is_opponent)
+		await show_message(evo_card.metadata.get("name", "") + " devolved into " + devolve_to.metadata.get("name", "") + "!")
 
 # base1-73 — Impostor Professor Oak: Opponent shuffles hand into deck, draws 7
 func effect_impostor_professor_oak(is_opponent: bool) -> void:
@@ -7430,7 +7450,8 @@ func effect_lass(is_opponent: bool) -> void:
 	
 	# Show opponent's hand face-up to the player
 	if opponent_hand.size() > 0:
-		card_selection_mode_enabled = true
+		# Use trainer_pokemon_selection mode so the cancel/Done button triggers trainer_target_selected
+		trainer_pokemon_selection_active = true
 		show_enlarged_array_selection_mode(opponent_hand)
 		# Force face-up display by redrawing without hiding
 		var display_container = large_selection_container if opponent_hand.size() > 7 else small_selection_container
@@ -7442,10 +7463,10 @@ func effect_lass(is_opponent: bool) -> void:
 		cancel_button.visible = true
 		cancel_button.text = "DONE"
 		cancel_button.theme = theme_green
-		center_action_button()
 		cancel_button.offset_left = -219.0
 		cancel_button.offset_right = 219.0
-		await message_acknowledged
+		await trainer_target_selected
+		trainer_pokemon_selection_active = false
 		cancel_button.text = "Cancel"
 		cancel_button.theme = theme_red
 		hide_selection_mode_display_main()
@@ -7534,7 +7555,6 @@ func effect_pokemon_breeder(is_opponent: bool) -> void:
 		action_button.disabled = true
 		action_button.theme = theme_disabled
 		cancel_button.visible = false
-		center_action_button()
 		await trainer_target_selected
 		var s2_card = selected_card_for_action
 		trainer_pokemon_selection_active = false
@@ -7858,7 +7878,6 @@ func effect_super_energy_removal(is_opponent: bool) -> void:
 		action_button.disabled = true
 		action_button.theme = theme_disabled
 		cancel_button.visible = false
-		center_action_button()
 		await trainer_target_selected
 		var source = selected_card_for_action
 		trainer_pokemon_selection_active = false
@@ -7876,7 +7895,6 @@ func effect_super_energy_removal(is_opponent: bool) -> void:
 		action_button.text = "DISCARD"
 		action_button.disabled = true
 		action_button.theme = theme_disabled
-		center_action_button()
 		await defender_energy_chosen
 		var own_energy = selected_card_for_action
 		defender_energy_discard_active = false
@@ -7899,7 +7917,6 @@ func effect_super_energy_removal(is_opponent: bool) -> void:
 		action_button.disabled = true
 		action_button.theme = theme_disabled
 		cancel_button.visible = false
-		center_action_button()
 		await trainer_target_selected
 		var target = selected_card_for_action
 		trainer_pokemon_selection_active = false
@@ -7934,7 +7951,6 @@ func effect_super_energy_removal(is_opponent: bool) -> void:
 				action_button.text = "DISCARD"
 				action_button.disabled = true
 				action_button.theme = theme_disabled
-				center_action_button()
 				await defender_energy_chosen
 				var e = selected_card_for_action
 				defender_energy_discard_active = false
@@ -8193,34 +8209,28 @@ func effect_pokedex(is_opponent: bool) -> void:
 			deck[i] = top_cards[i]
 		await show_message("Opponent rearranged the top " + str(count) + " cards of their deck!")
 	else:
-		# Player: show cards and allow reordering via selection
-		await show_message("Top " + str(count) + " cards of your deck:")
-		var reordered = []
-		var remaining = top_cards.duplicate()
+		# Player: show all cards at once, click in order to assign position numbers
+		pokedex_cards = top_cards.duplicate()
+		pokedex_reorder_result.clear()
+		trainer_reorder_active = true
 		
-		for i in range(count):
-			trainer_deck_search_active = true
-			show_enlarged_array_selection_mode(remaining)
-			header_label.text = "POKEDEX - Position " + str(i + 1) + " of " + str(count)
-			hint_label.text = "Select card for position " + str(i + 1) + " (top of deck)"
-			action_button.text = "PLACE"
-			action_button.disabled = true
-			action_button.theme = theme_disabled
-			cancel_button.visible = false
-			await trainer_target_selected
-			var chosen = selected_card_for_action
-			trainer_deck_search_active = false
-			hide_selection_mode_display_main()
-			
-			if chosen != null:
-				reordered.append(chosen)
-				remaining.erase(chosen)
-			else:
-				reordered.append(remaining.pop_front())
+		show_enlarged_array_selection_mode(pokedex_cards)
+		header_label.text = "POKEDEX - CLICK CARDS IN ORDER"
+		hint_label.text = "Click cards in the order you want them (top of deck first)"
+		action_button.text = "0/" + str(count) + " SELECTED"
+		action_button.disabled = true
+		action_button.theme = theme_disabled
+		cancel_button.visible = false
+		
+		await trainer_reorder_done
+		trainer_reorder_active = false
+		hide_selection_mode_display_main()
 		
 		# Apply the new order
-		for i in range(reordered.size()):
-			deck[i] = reordered[i]
+		for i in range(pokedex_reorder_result.size()):
+			deck[i] = pokedex_reorder_result[i]
+		pokedex_cards.clear()
+		pokedex_reorder_result.clear()
 
 # CPU Pokedex priority helper
 func _cpu_pokedex_priority(card: card_object) -> float:
@@ -8361,7 +8371,6 @@ func effect_super_potion(is_opponent: bool) -> void:
 		action_button.disabled = true
 		action_button.theme = theme_disabled
 		cancel_button.visible = false
-		center_action_button()
 		await trainer_target_selected
 		var target = selected_card_for_action
 		trainer_pokemon_selection_active = false
@@ -8420,7 +8429,6 @@ func effect_energy_removal(is_opponent: bool) -> void:
 		action_button.disabled = true
 		action_button.theme = theme_disabled
 		cancel_button.visible = false
-		center_action_button()
 		await trainer_target_selected
 		var target = selected_card_for_action
 		trainer_pokemon_selection_active = false
@@ -8435,7 +8443,6 @@ func effect_energy_removal(is_opponent: bool) -> void:
 			action_button.text = "DISCARD"
 			action_button.disabled = true
 			action_button.theme = theme_disabled
-			center_action_button()
 			await defender_energy_chosen
 			var energy = selected_card_for_action
 			defender_energy_discard_active = false
@@ -8539,7 +8546,6 @@ func effect_potion(is_opponent: bool) -> void:
 		action_button.disabled = true
 		action_button.theme = theme_disabled
 		cancel_button.visible = false
-		center_action_button()
 		await trainer_target_selected
 		var target = selected_card_for_action
 		trainer_pokemon_selection_active = false
@@ -8588,7 +8594,6 @@ func effect_switch(is_opponent: bool) -> void:
 		action_button.disabled = true
 		action_button.theme = theme_disabled
 		cancel_button.visible = false
-		center_action_button()
 		await trainer_target_selected
 		var replacement = selected_card_for_action
 		trainer_pokemon_selection_active = false
@@ -9892,6 +9897,40 @@ func this_card_clicked(clicked_card: card_object) -> void:
 			action_button.text = "SELECT TYPE"
 			action_button.disabled = false
 			action_button.theme = theme_blue
+			return
+		
+		# POKEDEX REORDER MODE - click cards to assign position numbers
+		elif trainer_reorder_active:
+			if clicked_card in pokedex_reorder_result:
+				return  # Already numbered, ignore
+			pokedex_reorder_result.append(clicked_card)
+			var position_num = pokedex_reorder_result.size()
+			
+			# Add a number label on top of the card
+			var card_ui = find_card_ui_for_object(clicked_card)
+			if card_ui:
+				var num_label = Label.new()
+				num_label.text = str(position_num)
+				num_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				num_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+				num_label.theme = theme_disabled
+				num_label.add_theme_font_size_override("font_size", 72)
+				num_label.add_theme_color_override("font_color", Color.WHITE)
+				num_label.add_theme_color_override("font_outline_color", Color.BLACK)
+				num_label.add_theme_constant_override("outline_size", 12)
+				num_label.custom_minimum_size = card_ui.size
+				num_label.size = card_ui.size
+				num_label.mouse_filter = MOUSE_FILTER_IGNORE
+				card_ui.add_child(num_label)
+				# Dim the card to show it's been selected
+				card_ui.modulate = Color(0.6, 0.6, 0.6, 1.0)
+			
+			hint_label.text = str(position_num) + "/" + str(pokedex_cards.size()) + " cards ordered"
+			action_button.text = str(position_num) + "/" + str(pokedex_cards.size()) + " SELECTED"
+			
+			if pokedex_reorder_result.size() >= pokedex_cards.size():
+				# All cards numbered - auto-confirm
+				trainer_reorder_done.emit()
 			return
 		
 		# TRAINER DISCARD SELECTION MODE - click to toggle cards like retreat energy
