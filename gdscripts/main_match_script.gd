@@ -479,44 +479,54 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2, f
 		else:
 			hand_container.add_theme_constant_override("separation", 3)
 	
+	# Determine if we are in a pokemon selection mode.
+	# In these modes the array contains bench pokemon (and optionally the active pokemon as the last entry).
+	# We show energy stacks and HP labels on every pokemon card in these modes.
+	var is_pokemon_selection_mode = (card_attach_mode_active or evolution_mode_active or retreat_mode_active or trainer_pokemon_selection_active or forced_switch_selection_active or knockout_bench_selection_active or damage_swap_mode_active or rain_dance_mode_active or energy_trans_mode_active or buzzap_mode_active or trainer_bench_token_discard_active)
+	
 	# Draw all cards in the hand
 	for index in range(hand.size()):
 		var this_card_in_hand = hand[index]
-		var hand_card_to_display = TextureRect.new()
 		
-		# Attach the loading of the card image script to the newly generated card
-		hand_card_to_display.set_script(card_display_script)
+		# Detect if this card is a pokemon in selection mode that should show energy/HP.
+		# Conditions: selection mode is active, card is not face-down, card has HP metadata.
+		var is_displayed_pokemon = is_pokemon_selection_mode and not face_down and this_card_in_hand.metadata.has("hp")
 		
-		# Add the newly generated card to the hand container
-		hand_container.add_child(hand_card_to_display)
+		# Detect if this is the active pokemon slot (last entry, location == "active").
+		var is_active_slot = is_pokemon_selection_mode and index == hand.size() - 1 and this_card_in_hand.current_location == "active"
 		
-		# Load the card image with pixel sizes for hand cards
-		hand_card_to_display.load_card_image(this_card_in_hand.uid, card_size, this_card_in_hand, face_down)
-		
-		# Connect this card's signal to the main script's handler
-		hand_card_to_display.card_clicked.connect(this_card_clicked)
-		
-		# If this is the active Pokemon (last card in attach mode), add visual distinction
-		if (card_attach_mode_active or evolution_mode_active or retreat_mode_active or trainer_pokemon_selection_active) and index == hand.size() - 1 and this_card_in_hand.current_location == "active":
-			# Add large spacer BEFORE the active Pokemon to separate it from bench
-			var spacer = Control.new()
-			spacer.custom_minimum_size = Vector2(25, 0)
-			spacer.mouse_filter = MOUSE_FILTER_IGNORE
-			hand_container.add_child(spacer)
-			hand_container.move_child(spacer, hand_container.get_child_count() - 2)  # Move to second-to-last position
+		if is_displayed_pokemon:
+			# Use the larger size for the active pokemon card itself (1.2x), bench stays at card_size.
+			var display_size = Vector2(card_size.x * 1.2, card_size.y * 1.2) if is_active_slot else card_size
 			
-			# Make the active Pokemon noticeably larger by reloading with bigger card_size
-			var larger_size = Vector2(card_size.x * 1.2, card_size.y * 1.2)
-			hand_card_to_display.load_card_image(this_card_in_hand.uid, larger_size, this_card_in_hand)
+			# build_pokemon_slot_with_energies_and_hp returns a VBoxContainer with:
+			#   - a Control (free-layout) containing energy TextureRects stacked behind the pokemon TextureRect
+			#   - optional "(Active)" label
+			#   - HP label
+			# Font size 48 for selection mode readability.
+			var slot = build_pokemon_slot_with_energies_and_hp(this_card_in_hand, display_size, 48, is_active_slot)
+			slot.size_flags_vertical = Control.SIZE_SHRINK_END
 			
-			# Align active pokemon to bottom
-			hand_card_to_display.size_flags_vertical = Control.SIZE_SHRINK_END
-			
-			# Also align all bench cards to bottom so they line up with the active pokemon
-			for child_idx in range(hand_container.get_child_count() - 2):  # Skip spacer and active
-				var child_node = hand_container.get_child(child_idx)
-				if child_node is TextureRect:
+			if is_active_slot:
+				# Insert a spacer before the active pokemon slot to visually separate it from the bench.
+				var spacer = Control.new()
+				spacer.custom_minimum_size = Vector2(25, 0)
+				spacer.mouse_filter = MOUSE_FILTER_IGNORE
+				hand_container.add_child(spacer)
+				
+				# Also align all previously added bench slots to the bottom.
+				for child_idx in range(hand_container.get_child_count() - 1):
+					var child_node = hand_container.get_child(child_idx)
 					child_node.size_flags_vertical = Control.SIZE_SHRINK_END
+			
+			hand_container.add_child(slot)
+		else:
+			# Standard card display (hand cards, prize cards, discard, etc.)
+			var hand_card_to_display = TextureRect.new()
+			hand_card_to_display.set_script(card_display_script)
+			hand_container.add_child(hand_card_to_display)
+			hand_card_to_display.load_card_image(this_card_in_hand.uid, card_size, this_card_in_hand, face_down)
+			hand_card_to_display.card_clicked.connect(this_card_clicked)
 						
 # Refreshes the hand display for either player or opponent using standard sizes and containers
 func refresh_hand_display(is_opponent: bool) -> void:
@@ -550,14 +560,14 @@ func display_pokemon(is_opponent: bool) -> void:
 		child.queue_free()
 	
 	# Display bench pokemon
+	# Each bench pokemon is wrapped in a VBoxContainer slot containing:
+	#   - a Control card_area (free-layout) with energy cards stacked behind the pokemon card
+	#   - a Label showing current/max HP
+	# bench_container is an HBoxContainer so slots are laid out horizontally.
 	if bench_pokemon_array.size() > 0:
-		
 		for bench_pokemon in bench_pokemon_array:
-			var bench_card_display = TextureRect.new()
-			bench_card_display.set_script(card_display_script)
-			bench_container.add_child(bench_card_display)
-			bench_card_display.load_card_image(bench_pokemon.uid, card_scales[11], bench_pokemon)
-			bench_card_display.card_clicked.connect(this_card_clicked)
+			var slot = build_pokemon_slot_with_energies_and_hp(bench_pokemon, card_scales[11], 18)
+			bench_container.add_child(slot)
 			
 	# Display HP circles for active Pokemon
 	display_hp_circles_above_align(active_pokemon, is_opponent)
@@ -767,6 +777,84 @@ func display_active_pokemon_energies(is_opponent: bool = false) -> void:
 		energy_display.load_card_image(attached_energy.uid, energy_card_size, attached_energy)
 		energy_display.position.x = overlap_offset * i if is_opponent else -(i * overlap_offset)
 		
+# Builds a VBoxContainer wrapping a card with stacked energy behind it and an HP label below.
+# card_obj: the pokemon card_object
+# card_size: Vector2 pixel size for both the pokemon card and each energy card
+# label_font_size: font size for the HP label
+# is_active: if true, adds an "(Active)" line above the HP label
+# Returns the VBoxContainer ready to add to any parent container.
+func build_pokemon_slot_with_energies_and_hp(card_obj: card_object, card_size: Vector2, label_font_size: int, is_active: bool = false) -> VBoxContainer:
+	
+	# VBoxContainer stacks children vertically: [card_area, hp_label]
+	# In Godot, VBoxContainer automatically sizes itself to fit its children top-to-bottom.
+	var slot = VBoxContainer.new()
+	slot.alignment = BoxContainer.ALIGNMENT_CENTER
+	
+	# Energy cards offset upward by 13% of card height.
+	# 13% is the strip of each energy card visible above the pokemon card.
+	var energy_offset = card_size.y * 0.13
+	
+	# Count energies to know how far the stack extends upward.
+	var energy_count = card_obj.attached_energies.size()
+	
+	# The card_area Control is a fixed-size free-layout container.
+	# Control nodes do NOT auto-layout children — positions are set manually.
+	# This lets us place energy cards and the pokemon card at exact pixel offsets.
+	var card_area = Control.new()
+	# Total height = card height + (energy_count * energy_offset) to accommodate the upward stack.
+	var area_height = card_size.y + (energy_count * energy_offset)
+	card_area.custom_minimum_size = Vector2(card_size.x, area_height)
+	# MOUSE_FILTER_PASS lets click events pass through to child nodes.
+	card_area.mouse_filter = MOUSE_FILTER_PASS
+	slot.add_child(card_area)
+	
+	# Add energy cards from bottom of stack upward.
+	# Energy[0] is directly behind the pokemon card (offset -energy_offset).
+	# Energy[1] is behind Energy[0] (offset -2*energy_offset), etc.
+	# We add them in REVERSE order so earlier energies render on top (Godot draws children in order).
+	for i in range(energy_count - 1, -1, -1):
+		var energy_obj = card_obj.attached_energies[i]
+		var energy_display = TextureRect.new()
+		energy_display.set_script(card_display_script)
+		card_area.add_child(energy_display)
+		energy_display.load_card_image(energy_obj.uid, card_size, energy_obj)
+		# Position: y starts at the bottom of the area minus card height, offset upward per energy.
+		# The pokemon card sits at y = energy_count * energy_offset inside the area.
+		# Each energy is offset upward by (i+1) * energy_offset from the pokemon card's y.
+		energy_display.position = Vector2(0, (energy_count - 1 - i) * energy_offset)
+		energy_display.mouse_filter = MOUSE_FILTER_IGNORE
+	
+	# Add the pokemon card on top of all energies.
+	var card_display = TextureRect.new()
+	card_display.set_script(card_display_script)
+	card_area.add_child(card_display)
+	card_display.load_card_image(card_obj.uid, card_size, card_obj)
+	# Pokemon card sits at the bottom of the area, above all energies.
+	card_display.position = Vector2(0, energy_count * energy_offset)
+	card_display.card_clicked.connect(this_card_clicked)
+	
+	# Add "(Active)" label above HP if this is the active pokemon slot.
+	if is_active:
+		var active_label = Label.new()
+		active_label.text = "(Active)"
+		active_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		active_label.add_theme_font_size_override("font_size", label_font_size)
+		active_label.theme = theme_disabled
+		slot.add_child(active_label)
+	
+	# HP label showing "current/maxhp" format.
+	if card_obj.metadata.has("hp"):
+		var max_hp = int(card_obj.metadata["hp"])
+		var current_hp = card_obj.current_hp
+		var hp_label = Label.new()
+		hp_label.text = str(current_hp) + "/" + str(max_hp) + "hp"
+		hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hp_label.add_theme_font_size_override("font_size", label_font_size)
+		hp_label.theme = theme_disabled
+		slot.add_child(hp_label)
+	
+	return slot
+
 # Displays HP circles above the active pokemon, colouring red from damage taken
 func display_hp_circles_above_align(active_pokemon: card_object, is_opponent: bool) -> void:
 	var hp_grid_container = opponent_hp_container if is_opponent else player_hp_container
