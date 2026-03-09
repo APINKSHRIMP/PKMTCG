@@ -1,6 +1,6 @@
 [gd_scene load_steps=12 format=3 uid="uid://dqwekyllekveg"]
 
-[ext_resource type="Script" uid="uid://bopl7ijkcutp5" path="res://gdscripts/main_match_script.gd" id="1_c6k6o"]
+[ext_resource type="Script" uid="uid://ck4b11f6acowv" path="res://gdscripts/main_match_script.gd" id="1_c6k6o"]
 [ext_resource type="Shader" uid="uid://ccm481fk14lc8" path="res://gdscenes/backgroundscroll.gdshader" id="2_0kjtx"]
 [ext_resource type="Texture2D" uid="uid://cpbbo8tyee1n4" path="res://backgrounds/background2.png" id="2_1cpm0"]
 [ext_resource type="Theme" uid="uid://mbsg4xqnedxi" path="res://uiresources/kenneyUI-red.tres" id="2_6pfim"]
@@ -36,7 +36,6 @@ texture = ExtResource("2_1cpm0")
 stretch_mode = 1
 
 [node name="cancel_selection_mode_view_button" type="Button" parent="."]
-visible = false
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -44,9 +43,9 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = 35.0
-offset_top = -124.0
+offset_top = -97.0
 offset_right = 473.0
-offset_bottom = -44.0
+offset_bottom = -17.0
 grow_horizontal = 2
 grow_vertical = 0
 size_flags_vertical = 8
@@ -63,10 +62,11 @@ offset_bottom = 1033.0
 [node name="main_screen_buttons_container" type="HBoxContainer" parent="BUTTONS"]
 custom_minimum_size = Vector2(280, 0)
 layout_mode = 0
-offset_left = -1800.0
-offset_right = 100.0
-offset_bottom = 72.0
-theme_override_constants/separation = 100
+offset_left = -1843.0
+offset_top = 25.0
+offset_right = 57.0
+offset_bottom = 97.0
+theme_override_constants/separation = 131
 
 [node name="button_main_attack" type="Button" parent="BUTTONS/main_screen_buttons_container"]
 custom_minimum_size = Vector2(350, 50)
@@ -99,9 +99,10 @@ text = "END TURN"
 [node name="main_screen_attack_buttons_container" type="HBoxContainer" parent="BUTTONS"]
 custom_minimum_size = Vector2(280, 0)
 layout_mode = 0
-offset_left = -1800.0
-offset_right = 100.0
-offset_bottom = 72.0
+offset_left = -1843.0
+offset_top = 25.0
+offset_right = 57.0
+offset_bottom = 97.0
 theme_override_constants/separation = 100
 
 [node name="cancel_attack_mode_button" type="Button" parent="BUTTONS/main_screen_attack_buttons_container"]
@@ -113,11 +114,11 @@ text = "CANCEL"
 
 [node name="SELECTION_BUTTONS" type="Control" parent="BUTTONS"]
 anchors_preset = 0
+offset_top = 26.0
 offset_right = 40.0
-offset_bottom = 40.0
+offset_bottom = 66.0
 
 [node name="card_action_button" type="Button" parent="BUTTONS/SELECTION_BUTTONS"]
-visible = false
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -159,17 +160,17 @@ alignment = 1
 [node name="player_bench_container" type="HBoxContainer" parent="CARD_COLLECTIONS/PLAYER"]
 layout_mode = 0
 offset_left = 9.0
-offset_top = 611.0
+offset_top = 640.0
 offset_right = 49.0
-offset_bottom = 749.0
+offset_bottom = 778.0
 theme_override_constants/separation = 2
 
 [node name="player_prize_cards_container" type="HBoxContainer" parent="CARD_COLLECTIONS/PLAYER"]
 layout_mode = 0
-offset_left = 8.0
-offset_top = 799.0
-offset_right = 503.0
-offset_bottom = 909.0
+offset_left = 89.0
+offset_top = 852.0
+offset_right = 584.0
+offset_bottom = 962.0
 theme_override_constants/separation = 2
 
 [node name="player_deck_icon" type="TextureRect" parent="CARD_COLLECTIONS/PLAYER"]
@@ -233,27 +234,27 @@ layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = 1487.0
+offset_left = 1475.0
 offset_top = 174.0
-offset_right = 1900.0
+offset_right = 1888.0
 offset_bottom = 275.0
 grow_horizontal = 0
 theme_override_constants/separation = 50
 
 [node name="opponent_bench_container" type="HBoxContainer" parent="CARD_COLLECTIONS/OPPONENT"]
 layout_mode = 0
-offset_left = 1411.0
-offset_top = 611.0
-offset_right = 1901.0
-offset_bottom = 752.0
+offset_left = 1397.0
+offset_top = 639.0
+offset_right = 1887.0
+offset_bottom = 780.0
 theme_override_constants/separation = 4
 
 [node name="opponent_prize_cards_container" type="HBoxContainer" parent="CARD_COLLECTIONS/OPPONENT"]
 layout_mode = 0
-offset_left = 1401.0
-offset_top = 799.0
-offset_right = 1891.0
-offset_bottom = 908.0
+offset_left = 1342.0
+offset_top = 852.0
+offset_right = 1832.0
+offset_bottom = 961.0
 theme_override_constants/separation = 2
 alignment = 2
 
@@ -356,10 +357,10 @@ offset_bottom = 40.0
 
 [node name="player_bench_cards_label" type="Label" parent="SCREEN_LABELS/PLAYER"]
 layout_mode = 0
-offset_left = 142.0
-offset_top = 573.0
-offset_right = 363.0
-offset_bottom = 606.0
+offset_left = 135.0
+offset_top = 817.0
+offset_right = 356.0
+offset_bottom = 850.0
 theme = ExtResource("5_1cpm0")
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_colors/font_shadow_color = Color(0.434353, 0.7908705, 1.523, 1)
@@ -374,10 +375,10 @@ vertical_alignment = 1
 
 [node name="player_prize_cards_label" type="Label" parent="SCREEN_LABELS/PLAYER"]
 layout_mode = 0
-offset_left = 145.0
-offset_top = 762.0
-offset_right = 366.0
-offset_bottom = 795.0
+offset_left = 135.0
+offset_top = 929.0
+offset_right = 356.0
+offset_bottom = 962.0
 theme = ExtResource("5_1cpm0")
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_colors/font_shadow_color = Color(0.434353, 0.7908705, 1.523, 1)
@@ -397,10 +398,10 @@ offset_bottom = 40.0
 
 [node name="opponent_bench_cards_label" type="Label" parent="SCREEN_LABELS/OPPONENT"]
 layout_mode = 0
-offset_left = 1569.0
-offset_top = 573.0
-offset_right = 1790.0
-offset_bottom = 606.0
+offset_left = 1573.0
+offset_top = 814.0
+offset_right = 1794.0
+offset_bottom = 847.0
 theme = ExtResource("5_1cpm0")
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_colors/font_shadow_color = Color(0.434353, 0.7908705, 1.523, 1)
@@ -416,9 +417,9 @@ vertical_alignment = 1
 [node name="opponent_prize_cards_label" type="Label" parent="SCREEN_LABELS/OPPONENT"]
 layout_mode = 0
 offset_left = 1571.0
-offset_top = 762.0
+offset_top = 929.0
 offset_right = 1792.0
-offset_bottom = 795.0
+offset_bottom = 962.0
 theme = ExtResource("5_1cpm0")
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_colors/font_shadow_color = Color(0.434353, 0.7908705, 1.523, 1)
@@ -450,17 +451,17 @@ offset_bottom = 780.0
 
 [node name="player_active_pokemon_energies" type="Control" parent="ACTIVE_POKEMON/PLAYER"]
 anchors_preset = 0
-offset_left = 411.0
-offset_top = 364.0
-offset_right = 454.0
-offset_bottom = 392.0
+offset_left = 408.0
+offset_top = 261.0
+offset_right = 451.0
+offset_bottom = 289.0
 
 [node name="player_active_pokemon_attached_cards" type="Control" parent="ACTIVE_POKEMON/PLAYER"]
 anchors_preset = 0
-offset_left = 80.0
-offset_top = 370.0
-offset_right = 123.0
-offset_bottom = 398.0
+offset_left = 407.0
+offset_top = 413.0
+offset_right = 450.0
+offset_bottom = 441.0
 
 [node name="player_active_pokemon_hp_container" type="GridContainer" parent="ACTIVE_POKEMON/PLAYER"]
 layout_mode = 0
@@ -472,10 +473,10 @@ columns = 12
 
 [node name="player_active_pokemon_status_container" type="VBoxContainer" parent="ACTIVE_POKEMON/PLAYER"]
 layout_mode = 0
-offset_left = 418.0
-offset_top = 269.0
-offset_right = 458.0
-offset_bottom = 309.0
+offset_left = 525.0
+offset_top = 823.0
+offset_right = 565.0
+offset_bottom = 863.0
 
 [node name="OPPONENT" type="Control" parent="ACTIVE_POKEMON"]
 anchors_preset = 0
@@ -491,10 +492,10 @@ offset_bottom = 837.0
 
 [node name="opponent_active_pokemon_energies" type="Control" parent="ACTIVE_POKEMON/OPPONENT"]
 anchors_preset = 0
-offset_left = 1400.0
-offset_top = 366.0
-offset_right = 1934.0
-offset_bottom = 537.0
+offset_left = 1398.0
+offset_top = 261.0
+offset_right = 1932.0
+offset_bottom = 432.0
 
 [node name="opponent_active_pokemon_attached_cards" type="Control" parent="ACTIVE_POKEMON/OPPONENT"]
 anchors_preset = 0
@@ -513,10 +514,10 @@ columns = 12
 
 [node name="opponent_active_pokemon_status_container" type="VBoxContainer" parent="ACTIVE_POKEMON/OPPONENT"]
 layout_mode = 0
-offset_left = 1396.0
-offset_top = 263.0
-offset_right = 1436.0
-offset_bottom = 303.0
+offset_left = 1065.0
+offset_top = 808.0
+offset_right = 1105.0
+offset_bottom = 848.0
 
 [node name="SELECTION_MODE" type="Control" parent="."]
 anchors_preset = 0
