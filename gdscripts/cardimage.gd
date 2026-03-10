@@ -135,13 +135,18 @@ func _input(event: InputEvent) -> void:
 			card_clicked.emit(card_ref)
 			
 			# Get reference to the main script to check if we're in selection mode
-			var main_script = get_tree().root.get_child(0)
-			if main_script.get_node("messagebox_container").visible:
+			var main_node = get_tree().root.get_child(0)
+			if main_node == null:
+				print("Error: Could not find main script node")
+				return
+
+			var messagebox = main_node.get_node_or_null("messagebox_container")
+			if messagebox and messagebox.visible:
 				return
 				
 			# If in selection mode, consume the input so it doesn't propagate to other cards
-			if main_script.card_selection_mode_enabled:
-				get_tree().get_root().set_input_as_handled()		
+			if main_node.has_method("card_selection_mode_enabled") and main_node.card_selection_mode_enabled:
+				get_tree().get_root().set_input_as_handled()
 
 # On card load...
 func _ready() -> void:

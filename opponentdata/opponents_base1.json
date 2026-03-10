@@ -6,6 +6,41 @@
       "battle_sprite": "Fisherman",
       "music": "normal_battle",
       "deck": "Fisherman1"
+    },
+    {
+      "name": "Bug_Catcher_Alex",
+      "overworld_sprite": "bugcatcher",
+      "battle_sprite": "bugcatcher",
+      "music": "chilled_battle",
+      "deck": "I_love_bugs!"
+    },
+    {
+      "name": "Fisherman John",
+      "overworld_sprite": "Fisherman",
+      "battle_sprite": "Fisherman",
+      "music": "normal_battle",
+      "deck": "Fisherman1"
+    },
+    {
+      "name": "Fisherman John",
+      "overworld_sprite": "Fisherman",
+      "battle_sprite": "Fisherman",
+      "music": "normal_battle",
+      "deck": "Fisherman1"
+    },
+    {
+      "name": "Fisherman John",
+      "overworld_sprite": "Fisherman",
+      "battle_sprite": "Fisherman",
+      "music": "normal_battle",
+      "deck": "Fisherman1"
+    },
+    {
+      "name": "Fisherman John",
+      "overworld_sprite": "Fisherman",
+      "battle_sprite": "Fisherman",
+      "music": "normal_battle",
+      "deck": "Fisherman1"
     }
   ]
 }

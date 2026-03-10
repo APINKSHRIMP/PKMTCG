@@ -15,6 +15,10 @@ run/main_scene="uid://d0bvtkrvu07k3"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="uid://xujrd2j28w2v"
 
+[autoload]
+
+GameDataManager="*res://gdscripts/game_data_manager.gd"
+
 [display]
 
 window/size/viewport_width=1920
@@ -24,3 +28,4 @@ window/stretch/mode="canvas_items"
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
+environment/defaults/default_clear_color=Color(0, 0, 0, 1)

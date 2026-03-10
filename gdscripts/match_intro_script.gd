@@ -3,7 +3,9 @@ extends Control
 # Variables to store data
 var opponent_data: Dictionary
 var player_data: Dictionary
-var animation_duration: float = 6.0
+var animation_duration: float = 5
+var main_match_scene: PackedScene
+var main_match_instance: Node
 
 # References to nodes (these get populated when the scene loads)
 @onready var background = $match_intro_background
@@ -18,8 +20,11 @@ var animation_duration: float = 6.0
 # Called when the scene enters the scene tree
 func _ready() -> void:
 	# Step 1: Load opponent and player data
-	load_opponent_data("Fisherman1")
+	load_opponent_data("Bug_Catcher_Alex")
 	load_player_data()
+	
+	main_match_scene = load("res://gdscenes/MatchStart.tscn")
+	main_match_instance = main_match_scene.instantiate()  # Create it now
 	
 	# Step 2: Update UI with loaded data
 	update_ui_with_data()
@@ -27,11 +32,21 @@ func _ready() -> void:
 	# Step 3: Load and play sound effect
 	play_battle_start_sound()
 	
-	# Step 4: Run animations for 6 seconds
+	# Step 4: Preload the main match scene in the background
+	main_match_scene = load("res://gdscenes/MatchStart.tscn")
+	
+	# Step 5: Run animations for 6 seconds
 	animate_intro()
 
+func _input(event: InputEvent) -> void:
+	
+	# Press the escape key to quit the game
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		get_tree().quit()
+	
+
 # Step 1: Load opponent data from JSON
-func load_opponent_data(deck_name: String) -> void:
+func load_opponent_data(trainer_name: String) -> void:
 	var file = FileAccess.open("res://opponentdata/opponents_base1.json", FileAccess.READ)
 	if file == null:
 		print("Error loading opponent file")
@@ -45,11 +60,12 @@ func load_opponent_data(deck_name: String) -> void:
 	
 	var opponents = json.data["opponents"]
 	for opponent in opponents:
-		if opponent.get("deck") == deck_name:
+		if opponent.get("name") == trainer_name:
 			opponent_data = opponent
+			GameDataManager.opponent_data = opponent_data
 			return
 	
-	print("Opponent with deck ", deck_name, " not found")
+	print("Opponent with deck ", trainer_name, " not found")
 
 # Step 1b: Load player data from JSON
 func load_player_data() -> void:
@@ -66,14 +82,17 @@ func load_player_data() -> void:
 	
 	# JSON data is a single object at the root level
 	player_data = json.data
+	GameDataManager.player_data = player_data
 
 # Step 2: Update UI labels and sprites with loaded data
 func update_ui_with_data() -> void:
 	# Update opponent data
 	if opponent_data.has("name"):
-		opponent_name_label.text = opponent_data["name"]
+		var opponent_name_no_underscores = opponent_data["name"].replace("_"," ")
+		opponent_name_label.text = opponent_name_no_underscores
 	if opponent_data.has("deck"):
-		opponent_deck_label.text = opponent_data["deck"]
+		var opponent_deck_no_underscores = opponent_data["deck"].replace("_"," ")
+		opponent_deck_label.text = opponent_deck_no_underscores
 	
 	# Load opponent sprite from file path
 	if opponent_data.has("battle_sprite"):
@@ -86,9 +105,11 @@ func update_ui_with_data() -> void:
 	
 	# Update player data
 	if player_data.has("name"):
-		player_name_label.text = player_data["name"]
+		var player_name_no_underscores = player_data["name"].replace("_"," ")
+		player_name_label.text = player_name_no_underscores
 	if player_data.has("deck"):
-		player_deck_label.text = player_data["deck"]
+		var player_deck_no_underscores = player_data["deck"].replace("_"," ")
+		player_deck_label.text = player_deck_no_underscores
 	
 	# Load player sprite from file path
 	if player_data.has("battle_sprite"):
@@ -96,6 +117,7 @@ func update_ui_with_data() -> void:
 		var player_texture = load(player_sprite_path)
 		if player_texture:
 			player_sprite.texture = player_texture
+			player_sprite.flip_h = true
 		else:
 			print("Could not load player sprite: ", player_sprite_path)
 
@@ -142,8 +164,15 @@ func animate_intro() -> void:
 	await tween.finished
 	transition_to_main_match()
 
-# Transition to main match scene after animation completes
 func transition_to_main_match() -> void:
-	# This will load your main match scene
-	# Replace "res://gdscenes/MatchStart.tscn" with your actual main match scene path
-	get_tree().change_scene_to_file("res://gdscenes/MatchStart.tscn")
+	# Fade out the intro
+	var tween = create_tween()
+	tween.tween_property(self, "modulate:a", 0.0, 0.5)
+	await tween.finished
+	
+	# Add the main match instance to the scene tree
+	get_tree().root.add_child(main_match_instance)
+	get_tree().set_current_scene(main_match_instance)
+	
+	# Hide and remove the intro
+	queue_free()

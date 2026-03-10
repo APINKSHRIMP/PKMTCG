@@ -7,10 +7,10 @@ extends Control
 # GLOBAL VARIABLES FOR FULL MATCH VARIABLES AND CHANGABLES. MOST ARE SELF EXPLANATORY BY NAME
 
 # TESTING VARIABLES
-var amount_of_cards_to_draw = 12	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
-var hide_hidden_cards = true      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
-var opponent_deck_name = "Fisherman1"
-var player_deck_name = "Grass"
+var amount_of_cards_to_draw = 7	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
+var hide_hidden_cards = false      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
+var opponent_deck_name = GameDataManager.opponent_data["deck"]
+var player_deck_name = GameDataManager.player_data["deck"]
 
 # TESTING - There are different rulesets for burn and confusion depending on what generation/set is being played.
 # Additionally I personally felt base set confusion retreat rule is horrendous, so I have created a personal rule that doesn't give free retreat but doesn't force discard then coin flip
@@ -10663,10 +10663,15 @@ func _input(event: InputEvent) -> void:
 			
 			selected_card_for_action = null
 			update_action_button()
-			
+
+
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-		
+	
+	modulate.a = 0.0
+	var tween = create_tween()
+	tween.tween_property(self, "modulate:a", 1.0, 0.5)
+	
 	# Connect all the signals so that when parts of the UI are clicked by mouse they can perform actions
 	player_bench_container.gui_input.connect(array_container_clicked.bind(player_bench))
 	opponent_bench_container.gui_input.connect(array_container_clicked.bind(opponent_bench))

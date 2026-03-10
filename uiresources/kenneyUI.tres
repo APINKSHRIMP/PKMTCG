@@ -66,6 +66,26 @@ cache/0/27/0/descent = 0.0
 cache/0/27/0/underline_position = 0.0
 cache/0/27/0/underline_thickness = 0.0
 cache/0/27/0/scale = 1.0
+cache/0/51/0/ascent = 0.0
+cache/0/51/0/descent = 0.0
+cache/0/51/0/underline_position = 0.0
+cache/0/51/0/underline_thickness = 0.0
+cache/0/51/0/scale = 1.0
+cache/0/86/0/ascent = 0.0
+cache/0/86/0/descent = 0.0
+cache/0/86/0/underline_position = 0.0
+cache/0/86/0/underline_thickness = 0.0
+cache/0/86/0/scale = 1.0
+cache/0/40/0/ascent = 0.0
+cache/0/40/0/descent = 0.0
+cache/0/40/0/underline_position = 0.0
+cache/0/40/0/underline_thickness = 0.0
+cache/0/40/0/scale = 1.0
+cache/0/72/0/ascent = 0.0
+cache/0/72/0/descent = 0.0
+cache/0/72/0/underline_position = 0.0
+cache/0/72/0/underline_thickness = 0.0
+cache/0/72/0/scale = 1.0
 
 [sub_resource type="StyleBoxTexture" id="1"]
 texture = ExtResource("1")

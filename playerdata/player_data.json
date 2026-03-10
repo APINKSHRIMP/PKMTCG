@@ -1,6 +1,6 @@
 {
   "name": "APINKSHRIMP",
-  "overworld_sprite": "frlg_red",
-  "battle_sprite": "frlg_red",
-  "deck": "Grass"
+  "overworld_sprite": "dawnplatinum",
+  "battle_sprite": "dawnplatinum",
+  "deck": "Shrimps_Deck"
 }
