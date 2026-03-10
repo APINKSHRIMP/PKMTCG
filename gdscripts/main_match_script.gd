@@ -7,10 +7,10 @@ extends Control
 # GLOBAL VARIABLES FOR FULL MATCH VARIABLES AND CHANGABLES. MOST ARE SELF EXPLANATORY BY NAME
 
 # TESTING VARIABLES
-var amount_of_cards_to_draw = 25	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
+var amount_of_cards_to_draw = 12	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
 var hide_hidden_cards = true      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
 var opponent_deck_name = "TestingWeedleOnly"
-var player_deck_name = "Trainers"
+var player_deck_name = "Grass"
 
 # TESTING - There are different rulesets for burn and confusion depending on what generation/set is being played.
 # Additionally I personally felt base set confusion retreat rule is horrendous, so I have created a personal rule that doesn't give free retreat but doesn't force discard then coin flip
@@ -249,56 +249,38 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 	if attack_buttons_container.visible:
 		hide_attack_buttons()
 	
-	# If we are showing an enlarged display then card selection mode is enabled.
 	card_selection_mode_enabled = true
-	
-	# If we're showing more than 7 cards we want a scrollable container so count total cards in this array
 	var amount_of_cards_to_show = card_array.size()
 	
-	# In enlarged selection mode, we want to hide everything on the main screen and only show the enlarged array and buttons
+	# Hide all main screen elements
 	player_hand_container.visible = false
 	opponent_hand_container.visible = false
-	
 	player_active_container.visible = false
 	opponent_active_container.visible = false
-	
 	player_active_container.mouse_filter = MOUSE_FILTER_IGNORE
 	opponent_active_container.mouse_filter = MOUSE_FILTER_IGNORE
-	
 	player_energy_container.visible = false
 	opponent_energy_container.visible = false
-	
 	player_hp_container.visible = false
 	opponent_hp_container.visible = false
-	
 	player_status_container.visible = false
 	opponent_status_container.visible = false
-	
 	player_bench_container.visible = false
 	opponent_bench_container.visible = false
-	
 	$SCREEN_LABELS/OPPONENT/opponent_bench_cards_label.visible = false
 	$SCREEN_LABELS/PLAYER/player_bench_cards_label.visible = false
-	
 	$SCREEN_LABELS/OPPONENT/opponent_prize_cards_label.visible = false
 	$SCREEN_LABELS/PLAYER/player_prize_cards_label.visible = false
-	
 	opponent_prize_container.visible = false
 	player_prize_container.visible = false
-	
 	player_deck_icon.visible = false
 	opponent_deck_icon.visible = false
-	
 	player_discard_icon.visible = false
 	opponent_discard_icon.visible = false
-	
 	player_attached_cards_container.visible = false
 	opponent_attached_cards_container.visible = false
-	
-	# We do however want to show the header and hint labels
 	hint_label.visible = true
 	header_label.visible = true
-	
 	main_buttons_container.visible = false
 	
 	for card in player_active_container.get_children():
@@ -306,16 +288,13 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 	for card in opponent_active_container.get_children():
 		card.mouse_filter = MOUSE_FILTER_IGNORE
 	
-	# Show the buttons
 	action_button.visible = true
 	
-	# A specific clause for the start of the game, a basic pokemon HAS to be chosen so we cannot allow cancelling out.
 	if match_just_started_basic_pokemon_required == true or knockout_bench_selection_active == true or forced_switch_selection_active == true or defender_energy_discard_active == true or energy_type_selection_active == true or trainer_discard_selection_active == true or trainer_pokemon_selection_active == true or trainer_deck_search_active == true or trainer_reorder_active == true:
 		cancel_button.visible = false
 	else:
 		cancel_button.visible = true
 	
-	# Hide action button for view-only arrays (prize cards are only actionable during prize selection)
 	var is_view_only_array = card_array in [opponent_hand, opponent_bench, player_discard_pile, opponent_discard_pile]
 	if not prize_card_selection_active:
 		is_view_only_array = is_view_only_array or card_array in [player_prize_cards, opponent_prize_cards]
@@ -325,57 +304,147 @@ func show_enlarged_array_selection_mode(card_array: Array) -> void:
 	else:
 		action_button.visible = true
 	
-	# Force action button visible in trainer/power selection modes even for normally view-only arrays
 	if trainer_pokemon_selection_active or trainer_deck_search_active or trainer_discard_selection_active or trainer_reorder_active:
 		action_button.visible = true
 		
-	# Store both positions on first use so we can swap between centered and paired layout
 	if not action_button_positions_stored:
 		action_button_default_offset_left = action_button.offset_left
 		action_button_default_offset_right = action_button.offset_right
-		# Paired position: shift left by 210 to make room for cancel button
 		action_button_paired_offset_left = action_button.offset_left - 210.0
 		action_button_paired_offset_right = action_button.offset_right - 210.0
 		action_button_positions_stored = true
 
 	if action_button.visible:
 		if cancel_button.visible:
-			# Shift action button left and place cancel to the right
 			action_button.offset_left = action_button_paired_offset_left
 			action_button.offset_right = action_button_paired_offset_right
 			cancel_button.offset_left = 35.0
 			cancel_button.offset_right = 473.0
 		else:
-			# No cancel button: restore action button to centered default
 			action_button.offset_left = action_button_default_offset_left
 			action_button.offset_right = action_button_default_offset_right
 	else:
-		# Only cancel visible - center it
 		cancel_button.offset_left = -219.0
 		cancel_button.offset_right = 219.0
 		
 	update_selection_mode_labels(card_array, match_just_started_basic_pokemon_required)
 	
-	# Hide opponents hand but show player's
 	var should_hide = hide_hidden_cards and (card_array == opponent_hand or card_array == player_prize_cards or card_array == opponent_prize_cards)
 	
-	# If the card array is OVER 7 then use the scroller box. If it's UNDER 7 then just use a box central aligned
+	# --- UNIFIED SIZING SYSTEM ---
+	# The white zone is the usable display area between the hint label bottom and the action buttons.
+	# Screen height = 816. Hint label bottom ≈ 165. Button top ≈ 771. Padding = 20px each side.
+	# This gives a usable content height of ~586px and a center at y ≈ 468.
+	const WHITE_ZONE_TOP: float = 165.0
+	const WHITE_ZONE_BOTTOM: float = 771.0
+	const WHITE_ZONE_CENTER_Y: float = (WHITE_ZONE_TOP + WHITE_ZONE_BOTTOM) / 2.0  # ≈ 468
+	const WHITE_ZONE_HEIGHT: float = WHITE_ZONE_BOTTOM - WHITE_ZONE_TOP            # = 606
+	const ZONE_PADDING: float = 20.0
+	const USABLE_HEIGHT: float = WHITE_ZONE_HEIGHT - (ZONE_PADDING * 2.0)          # = 566
+	
 	if amount_of_cards_to_show > 7:
-		# If OVER 7 cards then use a scrolling box container
+		# Large scroller: use fixed card_scales[5] as before — scroller handles overflow.
 		selection_scroller.visible = true
 		large_selection_container.visible = true
-		
-		# Now display the passed through card array to the selection mode container in large pixel format
 		display_hand_cards_array(card_array, large_selection_container, card_scales[5], should_hide)
-		
-		# If UNDER 8 cards (small array)	
 	else:
-		# DON'T use the scrolling box container
 		small_selection_container.visible = true
 		small_selection_container.custom_minimum_size = Vector2(0, 0)
 		
-		# Now display the passed through card array to the selection mode container in large pixel format
-		display_hand_cards_array(card_array, small_selection_container, card_scales[amount_of_cards_to_show], should_hide)
+		# Determine whether this array can have energies/HP (pokemon selection modes).
+		var is_bench_view = (card_array == player_bench or card_array == opponent_bench)
+		var is_pokemon_mode = is_bench_view or (card_attach_mode_active or evolution_mode_active or retreat_mode_active or trainer_pokemon_selection_active or forced_switch_selection_active or knockout_bench_selection_active or damage_swap_mode_active or rain_dance_mode_active or energy_trans_mode_active or buzzap_mode_active or trainer_bench_token_discard_active)
+		
+		# Find the max energy count on any in-play pokemon in this array.
+		var max_energies = 0
+		if is_pokemon_mode:
+			for card_obj in card_array:
+				var loc = card_obj.current_location
+				if (loc == "bench" or loc == "active") and card_obj.metadata.has("hp"):
+					max_energies = max(max_energies, card_obj.attached_energies.size())
+		
+		# The "scale level" key for card_scales. Larger key = smaller card.
+		# For a single card, go one size smaller (key+1) so it doesn't dominate the screen.
+		var scale_key = float(amount_of_cards_to_show)
+		if amount_of_cards_to_show == 1:
+			scale_key = 2.0  # one step smaller than scale[1]
+		
+		# Retrieve the base card size for this array count.
+		var base_card_size: Vector2 = card_scales.get(scale_key, card_scales[7])
+		
+		# Compute the energy strip height using the same formula as the slot builder.
+		# This tells us how many pixels of energy stack sit above the card.
+		var energy_strip_px: float = 0.0
+		if max_energies > 0:
+			var fraction = 0.12 - (max_energies - 1) * 0.01
+			energy_strip_px = max(10.0, base_card_size.y * fraction) * max_energies
+		
+		# Estimated HP label height in pixels. Font size 33 ≈ 40px rendered height.
+		var hp_label_px: float = 40.0 if is_pokemon_mode else 0.0
+		
+		# Total slot height = energy stack + card height + HP label.
+		var total_slot_height = energy_strip_px + base_card_size.y + hp_label_px
+		
+		# If the total height exceeds the usable zone, scale the card down proportionally.
+		# The active pokemon is 1.05x (was 1.2x, now halved the extra: 1.0 + (0.2/2) = 1.1, then
+		# request #1 says halve that again: 1.0 + 0.1/2 = 1.05).
+		# We account for this by using the active card's height (1.05x) in the ceiling calculation.
+		var active_scale_factor = 1.05
+		var max_card_h = base_card_size.y
+		if is_pokemon_mode and amount_of_cards_to_show > 1:
+			max_card_h = base_card_size.y * active_scale_factor
+		
+		# Recompute total slot height with active scale applied.
+		var energy_strip_active_px: float = 0.0
+		if max_energies > 0:
+			var fraction = 0.12 - (max_energies - 1) * 0.01
+			energy_strip_active_px = max(10.0, max_card_h * fraction) * max_energies
+		var effective_total_h = energy_strip_active_px + max_card_h + hp_label_px
+		
+		# Scale factor to fit everything in the usable zone.
+		var fit_scale = 1.0
+		if effective_total_h > USABLE_HEIGHT:
+			fit_scale = USABLE_HEIGHT / effective_total_h
+		
+		var card_size = Vector2(base_card_size.x * fit_scale, base_card_size.y * fit_scale)
+		
+		# Recompute energy stack and total slot height with final card size.
+		var final_energy_px: float = 0.0
+		if max_energies > 0:
+			var fraction = 0.12 - (max_energies - 1) * 0.01
+			final_energy_px = max(10.0, card_size.y * fraction) * max_energies
+		var final_hp_px: float = 40.0 * fit_scale if is_pokemon_mode else 0.0
+		var final_card_h = card_size.y * (active_scale_factor if (is_pokemon_mode and amount_of_cards_to_show > 1) else 1.0)
+		var final_total_h = final_energy_px + final_card_h + final_hp_px
+		
+		# The HBoxContainer has alignment=END, meaning its children are bottom-aligned
+		# within the container rect. With center anchor (anchor_y = 408 on a 816px screen)
+		# and grow_vertical=BOTH:
+		#   container top    = anchor_y - offset_top
+		#   container bottom = anchor_y + offset_bottom
+		#   content sits at the BOTTOM of this rect.
+		#
+		# So content bottom y = anchor_y + offset_bottom.
+		# We want the content to be vertically centred in the white zone.
+		# White zone center = WHITE_ZONE_CENTER_Y = 468.
+		# Content spans final_total_h pixels, so:
+		#   content bottom = WHITE_ZONE_CENTER_Y + final_total_h / 2
+		#   offset_bottom  = content_bottom - anchor_y
+		# The small_selection_container parent SELECTION_MODE is a 40x40 Control at (0,0).
+		# anchor_top = anchor_bottom = 0.5, so anchor screen y = 0 + 0.5*40 = 20.
+		# With alignment=END: content bottom = anchor_screen_y + offset_bottom = 20 + offset_bottom.
+		# To centre content in white zone (top=165, bottom=771, centre=468):
+		#   content_bottom = 468 + total_h/2  =>  offset_bottom = content_bottom - 20
+		# offset_top: make container top well above content top (negative = above anchor).
+		var anchor_screen_y: float = 20.0
+		var content_bottom = WHITE_ZONE_CENTER_Y + final_total_h / 2.0 + 100.0
+		var new_offset_bottom = content_bottom - anchor_screen_y
+		var content_top = content_bottom - final_total_h
+		var new_offset_top = content_top - anchor_screen_y - ZONE_PADDING
+		small_selection_container.offset_top = new_offset_top
+		small_selection_container.offset_bottom = new_offset_bottom
+		
+		display_hand_cards_array(card_array, small_selection_container, card_size, should_hide)
 
 # Both the cancel button and action button will hide selection mode so function is vaguely named for both actions
 func hide_selection_mode_display_main() -> void:
@@ -480,48 +549,35 @@ func display_hand_cards_array(hand: Array, hand_container, card_size: Vector2, f
 			hand_container.add_theme_constant_override("separation", 3)
 	
 	# Determine if we are in a pokemon selection mode.
-	# In these modes the array contains bench pokemon (and optionally the active pokemon as the last entry).
-	# We show energy stacks and HP labels on every pokemon card in these modes.
-	var is_pokemon_selection_mode = (card_attach_mode_active or evolution_mode_active or retreat_mode_active or trainer_pokemon_selection_active or forced_switch_selection_active or knockout_bench_selection_active or damage_swap_mode_active or rain_dance_mode_active or energy_trans_mode_active or buzzap_mode_active or trainer_bench_token_discard_active)
+	var is_bench_view = (hand == player_bench or hand == opponent_bench)
+	var is_pokemon_selection_mode = is_bench_view or (card_attach_mode_active or evolution_mode_active or retreat_mode_active or trainer_pokemon_selection_active or forced_switch_selection_active or knockout_bench_selection_active or damage_swap_mode_active or rain_dance_mode_active or energy_trans_mode_active or buzzap_mode_active or trainer_bench_token_discard_active)
 	
 	# Draw all cards in the hand
 	for index in range(hand.size()):
 		var this_card_in_hand = hand[index]
 		
-		# Detect if this card is a pokemon in selection mode that should show energy/HP.
-		# Conditions: selection mode is active, card is not face-down, card has HP metadata.
+		var loc = this_card_in_hand.current_location
+		var card_is_in_play = (loc == "bench" or loc == "active")
 		var is_displayed_pokemon = is_pokemon_selection_mode and not face_down and this_card_in_hand.metadata.has("hp")
-		
-		# Detect if this is the active pokemon slot (last entry, location == "active").
 		var is_active_slot = is_pokemon_selection_mode and index == hand.size() - 1 and this_card_in_hand.current_location == "active"
 		
 		if is_displayed_pokemon:
-			# Use the larger size for the active pokemon card itself (1.2x), bench stays at card_size.
-			var display_size = Vector2(card_size.x * 1.2, card_size.y * 1.2) if is_active_slot else card_size
-			
-			# build_pokemon_slot_with_energies_and_hp returns a VBoxContainer with:
-			#   - a Control (free-layout) containing energy TextureRects stacked behind the pokemon TextureRect
-			#   - optional "(Active)" label
-			#   - HP label
-			# Font size 48 for selection mode readability.
-			var slot = build_pokemon_slot_with_energies_and_hp(this_card_in_hand, display_size, 48, is_active_slot)
+			# Active pokemon shown 1.05x (halved from 1.1x as per requirement).
+			var display_size = Vector2(card_size.x * 1.05, card_size.y * 1.05) if is_active_slot else card_size
+			var show_hp_and_energies = card_is_in_play
+			var slot = build_pokemon_slot_with_energies_and_hp(this_card_in_hand, display_size, 33, is_active_slot, show_hp_and_energies)
 			slot.size_flags_vertical = Control.SIZE_SHRINK_END
 			
 			if is_active_slot:
-				# Insert a spacer before the active pokemon slot to visually separate it from the bench.
 				var spacer = Control.new()
 				spacer.custom_minimum_size = Vector2(25, 0)
 				spacer.mouse_filter = MOUSE_FILTER_IGNORE
 				hand_container.add_child(spacer)
-				
-				# Also align all previously added bench slots to the bottom.
 				for child_idx in range(hand_container.get_child_count() - 1):
-					var child_node = hand_container.get_child(child_idx)
-					child_node.size_flags_vertical = Control.SIZE_SHRINK_END
+					hand_container.get_child(child_idx).size_flags_vertical = Control.SIZE_SHRINK_END
 			
 			hand_container.add_child(slot)
 		else:
-			# Standard card display (hand cards, prize cards, discard, etc.)
 			var hand_card_to_display = TextureRect.new()
 			hand_card_to_display.set_script(card_display_script)
 			hand_container.add_child(hand_card_to_display)
@@ -566,7 +622,7 @@ func display_pokemon(is_opponent: bool) -> void:
 	# bench_container is an HBoxContainer so slots are laid out horizontally.
 	if bench_pokemon_array.size() > 0:
 		for bench_pokemon in bench_pokemon_array:
-			var slot = build_pokemon_slot_with_energies_and_hp(bench_pokemon, card_scales[11], 18)
+			var slot = build_pokemon_slot_with_energies_and_hp(bench_pokemon, card_scales[11], 16)
 			bench_container.add_child(slot)
 			
 	# Display HP circles for active Pokemon
@@ -777,80 +833,98 @@ func display_active_pokemon_energies(is_opponent: bool = false) -> void:
 		energy_display.load_card_image(attached_energy.uid, energy_card_size, attached_energy)
 		energy_display.position.x = overlap_offset * i if is_opponent else -(i * overlap_offset)
 		
-# Builds a VBoxContainer wrapping a card with stacked energy behind it and an HP label below.
-# card_obj: the pokemon card_object
-# card_size: Vector2 pixel size for both the pokemon card and each energy card
+# Calculates the total pixel height the tallest energy stack in the array will occupy above
+# its pokemon card. Used by display_hand_cards_array to shift small_selection_container down
+# so energy cards don't clip into the header area.
+# Returns 0.0 if no cards in the array are in play or if pokemon_selection_mode is false.
+func _calculate_max_energy_stack_height(card_array: Array, card_size: Vector2, pokemon_selection_mode: bool) -> float:
+	if not pokemon_selection_mode:
+		return 0.0
+	var max_px = 0.0
+	for card_obj in card_array:
+		var loc = card_obj.current_location
+		if loc != "bench" and loc != "active":
+			continue
+		if not card_obj.metadata.has("hp"):
+			continue
+		var energy_count = card_obj.attached_energies.size()
+		if energy_count == 0:
+			continue
+		# Mirror the same formula used in build_pokemon_slot_with_energies_and_hp.
+		var fraction = 0.12 - (energy_count - 1) * 0.01
+		var energy_offset = max(10.0, card_size.y * fraction)
+		# Total stack height = sum of all offsets = energy_count * energy_offset
+		# (each card peeks by energy_offset, and the stack is energy_count cards deep).
+		var stack_height = energy_count * energy_offset
+		max_px = max(max_px, stack_height)
+	return max_px
+
+# Builds a VBoxContainer wrapping a pokemon card with stacked energy behind it and an HP label below.
+# card_obj      : the pokemon card_object
+# card_size     : Vector2 pixel size for the pokemon card and each energy card
 # label_font_size: font size for the HP label
-# is_active: if true, adds an "(Active)" line above the HP label
-# Returns the VBoxContainer ready to add to any parent container.
-func build_pokemon_slot_with_energies_and_hp(card_obj: card_object, card_size: Vector2, label_font_size: int, is_active: bool = false) -> VBoxContainer:
+# show_hp_and_energies: only true when card is on bench or active spot
+# Returns the VBoxContainer ready to add to any HBoxContainer / layout parent.
+#
+# ALIGNMENT: card_area Control has a fixed custom_minimum_size = card_size.
+# Energy cards use NEGATIVE y positions to extend upward outside card_area without
+# affecting the VBoxContainer's layout height, so the pokemon card and HP label never shift.
+func build_pokemon_slot_with_energies_and_hp(card_obj: card_object, card_size: Vector2, label_font_size: int, _is_active: bool = false, show_hp_and_energies: bool = true) -> VBoxContainer:
 	
-	# VBoxContainer stacks children vertically: [card_area, hp_label]
-	# In Godot, VBoxContainer automatically sizes itself to fit its children top-to-bottom.
 	var slot = VBoxContainer.new()
 	slot.alignment = BoxContainer.ALIGNMENT_CENTER
 	
-	# Energy cards offset upward by 13% of card height.
-	# 13% is the strip of each energy card visible above the pokemon card.
-	var energy_offset = card_size.y * 0.13
+	var energy_count = card_obj.attached_energies.size() if show_hp_and_energies else 0
 	
-	# Count energies to know how far the stack extends upward.
-	var energy_count = card_obj.attached_energies.size()
+	# Per-energy visible strip: starts at 12% of card height, shrinks by 1% per extra energy
+	# attached (beyond the first), floored at a hard minimum of 10px so it never disappears.
+	# This prevents a large stack from overflowing the UI vertically.
+	var base_fraction = 0.12
+	var shrink_per_card = 0.01
+	var min_px = 10.0
+	var energy_offset: float = 0.0
+	if energy_count > 0:
+		var fraction = base_fraction - (energy_count - 1) * shrink_per_card
+		energy_offset = max(min_px, card_size.y * fraction)
 	
-	# The card_area Control is a fixed-size free-layout container.
-	# Control nodes do NOT auto-layout children — positions are set manually.
-	# This lets us place energy cards and the pokemon card at exact pixel offsets.
+	# card_area is a fixed-size free-layout Control — energies overflow upward with negative y.
 	var card_area = Control.new()
-	# Total height = card height + (energy_count * energy_offset) to accommodate the upward stack.
-	var area_height = card_size.y + (energy_count * energy_offset)
-	card_area.custom_minimum_size = Vector2(card_size.x, area_height)
-	# MOUSE_FILTER_PASS lets click events pass through to child nodes.
+	card_area.custom_minimum_size = card_size
 	card_area.mouse_filter = MOUSE_FILTER_PASS
 	slot.add_child(card_area)
 	
-	# Add energy cards from bottom of stack upward.
-	# Energy[0] is directly behind the pokemon card (offset -energy_offset).
-	# Energy[1] is behind Energy[0] (offset -2*energy_offset), etc.
-	# We add them in REVERSE order so earlier energies render on top (Godot draws children in order).
-	for i in range(energy_count - 1, -1, -1):
-		var energy_obj = card_obj.attached_energies[i]
-		var energy_display = TextureRect.new()
-		energy_display.set_script(card_display_script)
-		card_area.add_child(energy_display)
-		energy_display.load_card_image(energy_obj.uid, card_size, energy_obj)
-		# Position: y starts at the bottom of the area minus card height, offset upward per energy.
-		# The pokemon card sits at y = energy_count * energy_offset inside the area.
-		# Each energy is offset upward by (i+1) * energy_offset from the pokemon card's y.
-		energy_display.position = Vector2(0, (energy_count - 1 - i) * energy_offset)
-		energy_display.mouse_filter = MOUSE_FILTER_IGNORE
+	if show_hp_and_energies and energy_count > 0:
+		# Add energies in REVERSE draw order so energy[0] (first attached) renders on top.
+		# i goes from energy_count-1 down to 0.
+		# Position formula: -(i + 1) * energy_offset
+		#   i = energy_count-1 (added first, drawn under) → position = -(energy_count * offset)  [furthest up]
+		#   i = 0             (added last,  drawn on top) → position = -(1 * offset)             [closest to card]
+		for i in range(energy_count - 1, -1, -1):
+			var energy_obj = card_obj.attached_energies[i]
+			var energy_display = TextureRect.new()
+			energy_display.set_script(card_display_script)
+			card_area.add_child(energy_display)
+			energy_display.load_card_image(energy_obj.uid, card_size, energy_obj)
+			energy_display.position = Vector2(0, -(i + 1) * energy_offset)
+			energy_display.mouse_filter = MOUSE_FILTER_IGNORE
 	
-	# Add the pokemon card on top of all energies.
+	# Pokemon card at (0, 0) — on top of all energies.
 	var card_display = TextureRect.new()
 	card_display.set_script(card_display_script)
 	card_area.add_child(card_display)
 	card_display.load_card_image(card_obj.uid, card_size, card_obj)
-	# Pokemon card sits at the bottom of the area, above all energies.
-	card_display.position = Vector2(0, energy_count * energy_offset)
+	card_display.position = Vector2(0, 0)
 	card_display.card_clicked.connect(this_card_clicked)
 	
-	# Add "(Active)" label above HP if this is the active pokemon slot.
-	if is_active:
-		var active_label = Label.new()
-		active_label.text = "(Active)"
-		active_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		active_label.add_theme_font_size_override("font_size", label_font_size)
-		active_label.theme = theme_disabled
-		slot.add_child(active_label)
-	
-	# HP label showing "current/maxhp" format.
-	if card_obj.metadata.has("hp"):
+	# HP label only when card is in play (bench or active) and hp metadata exists.
+	if show_hp_and_energies and card_obj.metadata.has("hp"):
 		var max_hp = int(card_obj.metadata["hp"])
 		var current_hp = card_obj.current_hp
 		var hp_label = Label.new()
 		hp_label.text = str(current_hp) + "/" + str(max_hp) + "hp"
 		hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		hp_label.add_theme_font_size_override("font_size", label_font_size)
-		hp_label.theme = theme_disabled
+		hp_label.add_theme_color_override("font_color", Color.BLACK)
 		slot.add_child(hp_label)
 	
 	return slot
@@ -1837,45 +1911,74 @@ func add_pokemon_to_bench(pokemon: card_object) -> void:
 
 # Function that get's the card position/location/object. Called from various functions when trying to find a specific card object
 func find_card_ui_for_object(card_obj: card_object) -> TextureRect:
-	# Check small selection container
+	# Helper: searches one level of direct children for a TextureRect matching card_obj,
+	# then also searches one level deeper through VBoxContainer → Control wrappers
+	# created by build_pokemon_slot_with_energies_and_hp.
+	var containers_to_search: Array = []
+	
 	if small_selection_container.visible:
-		for card_ui in small_selection_container.get_children():
-			# Only check if this is a TextureRect with card_ref
-			if card_ui is TextureRect and "card_ref" in card_ui:
-				if card_ui.card_ref == card_obj:
-					return card_ui
-	
-	# Check large selection container
+		containers_to_search.append(small_selection_container)
 	if selection_scroller.visible:
-		for card_ui in large_selection_container.get_children():
-			if card_ui is TextureRect and "card_ref" in card_ui:
-				if card_ui.card_ref == card_obj:
-					return card_ui
+		containers_to_search.append(large_selection_container)
 	
-	# Check main screen containers
-	for container in [player_active_container, opponent_active_container, 
-			player_bench_container, opponent_bench_container,
-			player_energy_container, opponent_energy_container,
-			player_hand_container, opponent_hand_container]:
-		for card_ui in container.get_children():
-			if card_ui is TextureRect and "card_ref" in card_ui:
-				if card_ui.card_ref == card_obj:
-					return card_ui
+	containers_to_search.append_array([
+		player_active_container, opponent_active_container,
+		player_bench_container, opponent_bench_container,
+		player_energy_container, opponent_energy_container,
+		player_hand_container, opponent_hand_container
+	])
+	
+	for container in containers_to_search:
+		for child in container.get_children():
+			# Direct TextureRect (hand cards, active pokemon, etc.)
+			if child is TextureRect and "card_ref" in child:
+				if child.card_ref == card_obj:
+					return child
+			# Slot wrapper: VBoxContainer → card_area (Control) → TextureRect nodes
+			# This is the structure created by build_pokemon_slot_with_energies_and_hp.
+			if child is VBoxContainer:
+				for slot_child in child.get_children():
+					if slot_child is Control and not (slot_child is Label):
+						for card_ui in slot_child.get_children():
+							if card_ui is TextureRect and "card_ref" in card_ui:
+								if card_ui.card_ref == card_obj:
+									return card_ui
 	
 	return null
 
 # Deselects the currently selected card and selects a new card, updating the UI visuals
 func select_card_in_ui(new_card: card_object) -> void:
+	# Deselect the previous card and all energy UIs in its slot.
 	if selected_card_for_action != null:
 		var prev_display = find_card_ui_for_object(selected_card_for_action)
 		if prev_display:
 			prev_display.set_selected(false)
+			# Also deselect attached energy card UIs in the same slot wrapper.
+			for energy_ui in _find_energy_uis_in_same_slot(prev_display):
+				energy_ui.set_selected(false)
 	
 	selected_card_for_action = new_card
 	
 	var card_display = find_card_ui_for_object(new_card)
 	if card_display:
 		card_display.set_selected(true)
+		# Also select attached energy card UIs so they animate together.
+		for energy_ui in _find_energy_uis_in_same_slot(card_display):
+			energy_ui.set_selected(true)
+
+# Returns all energy TextureRect nodes that are siblings of card_ui inside the same
+# VBoxContainer → Control slot created by build_pokemon_slot_with_energies_and_hp.
+# Energy nodes use MOUSE_FILTER_IGNORE (pokemon card uses MOUSE_FILTER_PASS/STOP).
+func _find_energy_uis_in_same_slot(card_ui: TextureRect) -> Array:
+	var result: Array = []
+	# card_ui.get_parent() is the card_area Control inside a VBoxContainer slot.
+	var card_area = card_ui.get_parent()
+	if not (card_area is Control) or card_area is VBoxContainer:
+		return result
+	for sibling in card_area.get_children():
+		if sibling is TextureRect and sibling != card_ui and sibling.mouse_filter == MOUSE_FILTER_IGNORE:
+			result.append(sibling)
+	return result
 
 # Function called when selecting an energy card to attach to a pokemon. Calls show enlarged array as a subfunction	
 func start_energy_attachment() -> void:
@@ -2104,7 +2207,12 @@ func player_pick_prize_card() -> void:
 	show_enlarged_array_selection_mode(player_prize_cards)
 	header_label.text = "TAKE A PRIZE CARD"
 	hint_label.text = "Select a prize card to add to your hand"
+	# Hide cancel and re-centre the action button.
+	# show_enlarged_array_selection_mode already ran its button layout, so we must
+	# explicitly restore the action button to the default centred position here.
 	cancel_button.visible = false
+	action_button.offset_left = action_button_default_offset_left
+	action_button.offset_right = action_button_default_offset_right
 	action_button.text = "TAKE PRIZE"
 	action_button.disabled = true
 	action_button.theme = theme_disabled

@@ -1,11 +1,11 @@
 [
   {
 	"id": "base1-69",
-	"count": 2
+	"count": 4
   },
   {
 	"id": "base1-55",
-	"count": 2
+	"count": 4
   },
   {
 	"id": "base1-54",
@@ -33,6 +33,14 @@
   },
 {
 	"id": "base1-99",
-	"count": 25
+	"count": 15
+  },
+  {
+	"id": "base1-88",
+	"count": 6
+  },
+  {
+	"id": "base1-91",
+	"count": 6
   }
 ]

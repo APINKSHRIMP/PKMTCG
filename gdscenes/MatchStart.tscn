@@ -1,6 +1,6 @@
 [gd_scene load_steps=12 format=3 uid="uid://dqwekyllekveg"]
 
-[ext_resource type="Script" uid="uid://ck4b11f6acowv" path="res://gdscripts/main_match_script.gd" id="1_c6k6o"]
+[ext_resource type="Script" uid="uid://bu715ca3pbw60" path="res://gdscripts/main_match_script.gd" id="1_c6k6o"]
 [ext_resource type="Shader" uid="uid://ccm481fk14lc8" path="res://gdscenes/backgroundscroll.gdshader" id="2_0kjtx"]
 [ext_resource type="Texture2D" uid="uid://cpbbo8tyee1n4" path="res://backgrounds/background2.png" id="2_1cpm0"]
 [ext_resource type="Theme" uid="uid://mbsg4xqnedxi" path="res://uiresources/kenneyUI-red.tres" id="2_6pfim"]
@@ -514,10 +514,10 @@ columns = 12
 
 [node name="opponent_active_pokemon_status_container" type="VBoxContainer" parent="ACTIVE_POKEMON/OPPONENT"]
 layout_mode = 0
-offset_left = 1065.0
-offset_top = 808.0
-offset_right = 1105.0
-offset_bottom = 848.0
+offset_left = 986.0
+offset_top = 820.0
+offset_right = 1026.0
+offset_bottom = 860.0
 
 [node name="SELECTION_MODE" type="Control" parent="."]
 anchors_preset = 0
@@ -532,9 +532,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = 920.0
-offset_top = 510.0
+offset_top = 576.0
 offset_right = 960.0
-offset_bottom = 550.0
+offset_bottom = 616.0
 grow_horizontal = 2
 grow_vertical = 2
 alignment = 2
