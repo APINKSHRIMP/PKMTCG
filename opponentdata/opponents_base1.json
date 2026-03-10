@@ -1,0 +1,11 @@
+{
+  "opponents": [
+    {
+      "name": "Fisherman John",
+      "overworld_sprite": "Fisherman",
+      "battle_sprite": "Fisherman",
+      "music": "normal_battle",
+      "deck": "Fisherman1"
+    }
+  ]
+}

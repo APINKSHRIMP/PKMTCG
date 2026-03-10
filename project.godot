@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="PKM_TCG_GDT"
-run/main_scene="uid://dqwekyllekveg"
+run/main_scene="uid://d0bvtkrvu07k3"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="uid://xujrd2j28w2v"
 
@@ -20,3 +20,7 @@ config/icon="uid://xujrd2j28w2v"
 window/size/viewport_width=1920
 window/size/viewport_height=1080
 window/stretch/mode="canvas_items"
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0

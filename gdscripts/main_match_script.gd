@@ -9,7 +9,7 @@ extends Control
 # TESTING VARIABLES
 var amount_of_cards_to_draw = 12	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
 var hide_hidden_cards = true      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
-var opponent_deck_name = "TestingWeedleOnly"
+var opponent_deck_name = "Fisherman1"
 var player_deck_name = "Grass"
 
 # TESTING - There are different rulesets for burn and confusion depending on what generation/set is being played.
@@ -24,6 +24,7 @@ var tex_tails = load("res://gameimageassets/coins/coin_back_basic.png")
 
 # Game Variables
 var turn_number: int = 0
+var opponent_data = {}
 
 # PLAYER VARIABLES
 var player_hand: Array = []
@@ -6190,6 +6191,47 @@ func score_parsed_effects(effects: Array, defender: card_object) -> float:
 ######################################################################################################################################################
 ###################################################### OPPONENT GENERAL FUNCTIONALITY FUNCTIONS ######################################################
 
+# Load all the opponent's data 
+func load_opponent_data(deck_name: String):
+	var file = FileAccess.open("res://opponentdata/opponents_base1.json", FileAccess.READ)
+	if file == null:
+		print("Error loading file")
+		return
+	
+	var json = JSON.new()
+	var error = json.parse(file.get_as_text())
+	if error != OK:
+		print("JSON parse error")
+		return
+	
+	var opponents = json.data["opponents"]
+	for opponent in opponents:
+		if opponent.get("deck") == deck_name:
+			opponent_data = opponent
+			return
+	
+	print("Opponent with deck ", deck_name, " not found")
+
+# Play the correct music
+func play_opponent_music():
+	var music_file = opponent_data.get("music")
+	if music_file == null:
+		print("No music file specified")
+		return
+	
+	var audio_player = AudioStreamPlayer.new()
+	add_child(audio_player)
+	
+	var audio_stream = load("res://audio/bgm/" + music_file + ".ogg")
+	if audio_stream == null:
+		print("Music file not found: ", music_file)
+		return
+	
+	audio_player.stream = audio_stream
+	audio_player.bus = "Master"
+	audio_player.stream.loop = true
+	audio_player.play()
+
 # Function to set up opponent's active and bench pokemon using the priority condition criteria scoring selection
 func opponent_setup_pokemon_from_hand() -> void:
 	var selected_pokemon = select_opponent_pokemon_for_setup(opponent_hand)
@@ -10645,6 +10687,11 @@ func _ready() -> void:
 	
 	main_buttons_container.get_node("button_main_endturn").pressed.connect(player_end_turn_checks)
 
+
+	load_opponent_data(opponent_deck_name)
+	play_opponent_music()
+
+	# BEGIN THE GAME SETUP
 	setup_player()
 	setup_opponent(opponent_deck_name)
 	

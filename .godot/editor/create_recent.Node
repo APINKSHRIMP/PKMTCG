@@ -1,8 +1,9 @@
+Label
 Control
+Sprite2D
+TextureRect
 ColorRect
 VBoxContainer
-TextureRect
-Label
 GridContainer
 Button
 HBoxContainer
