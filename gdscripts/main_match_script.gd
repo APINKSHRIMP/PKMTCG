@@ -19,7 +19,7 @@ var confusion_rules: String = "base_set_confusion_rules" # "base_set_confusion_r
 
 # Customisable in game textures
 # Load coin textures
-var tex_heads = load("res://gameimageassets/coins/coin_blastoise_blue_2.png")
+var tex_heads = load("res://gameimageassets/coins/coin_pikachu_gold_1.png")
 var tex_tails = load("res://gameimageassets/coins/coin_back_basic.png")
 
 # Game Variables
@@ -1226,6 +1226,7 @@ func show_floating_label(message: String, spawn_position: Vector2, upwards: bool
 
 # Animates a card back image sliding from one node's position to another
 func animate_card_a_to_b(from_node: Control, to_node: Control, animation_speed: float = 0.8, custom_texture: Texture2D = null, custom_size: Vector2 = Vector2(83, 113)) -> void:
+	SoundManagerScript.play_sfx(SoundManagerScript.SFX_card_draw_sound)
 	animation_blocker.visible = true
 	var card_image = TextureRect.new()
 	card_image.texture = custom_texture if custom_texture else card_back_texture
@@ -1385,6 +1386,7 @@ func get_pokemon_screen_location(pokemon: card_object) -> Dictionary:
 	return {}
 
 func play_evolution_effect(pokemon: card_object) -> void:
+	SoundManagerScript.play_sfx(SoundManagerScript.SFX_evolve_sound)
 	var loc = get_pokemon_screen_location(pokemon)
 	if loc.is_empty():
 		print("WARNING: play_evolution_effect - could not locate pokemon: ", pokemon.metadata["name"])
@@ -1435,6 +1437,7 @@ func play_evolution_effect(pokemon: card_object) -> void:
 	
 # Plays a one-shot upward particle burst when energy is attached to a pokemon
 func play_energy_attached_effect(pokemon: card_object, energy_card: card_object) -> void:
+	SoundManagerScript.play_sfx(SoundManagerScript.SFX_energy_sound)
 	var loc = get_pokemon_screen_location(pokemon)
 	if loc.is_empty():
 		print("WARNING: play_energy_attached_effect - could not locate pokemon: ", pokemon.metadata["name"])
@@ -2059,7 +2062,6 @@ func game_end_logic(loser_is_player: bool) -> void:
 func draw_card_from_deck(is_opponent: bool) -> card_object:
 	var deck = opponent_deck if is_opponent else player_deck
 	var hand = opponent_hand if is_opponent else player_hand
-
 	if deck.size() == 0:
 		game_end_logic(not is_opponent)
 		return null
@@ -2078,6 +2080,7 @@ func draw_card_from_deck(is_opponent: bool) -> card_object:
 # Flips a coin with animation, blocks input, shows result message, returns true for heads
 func flip_coin(silent: bool = false) -> bool:
 	var result: bool = (randi() % 2 == 0)
+	SoundManagerScript.play_sfx(SoundManagerScript.SFX_coin_flip_sound)
 
 	# Show the input-blocking overlay and set initial coin image to heads
 	coin_container.visible = true
@@ -2959,6 +2962,7 @@ func display_and_apply_attack_damage(attacker: card_object, defender: card_objec
 	
 	# Check for Machamp's Strikes Back power (triggers when Machamp takes damage)
 	if final_damage > 0:
+		SoundManagerScript.play_sfx(SoundManagerScript.SFX_damage_sound)
 		await check_strikes_back(defender, attacker, !is_opponent)
 
 # Parses the attack text for card effects and applies them
@@ -2984,7 +2988,8 @@ func perform_attack(attack_index: int) -> void:
 		await show_message(attack_name.to_upper() + " IS DISABLED!")
 		hide_attack_buttons()
 		return
-
+	
+	SoundManagerScript.play_sfx(SoundManagerScript.SFX_attack_sound)
 	await show_message((player_active_pokemon.metadata["name"] + " USED " + attack_name).to_upper())
 	
 	# Handle special attacks that have completely unique flows
@@ -3163,6 +3168,7 @@ func check_and_handle_knockout(pokemon: card_object, is_opponent: bool) -> bool:
 	# Save destiny bond flag BEFORE send_card_to_discard clears it
 	var had_destiny_bond = pokemon.has_destiny_bond
 	
+	SoundManagerScript.play_sfx(SoundManagerScript.SFX_knockout_sound)
 	await show_message(ko_name.to_upper() + " WAS KNOCKED OUT!")
 	
 	# Grab UI references before any animations that might free nodes
@@ -3385,6 +3391,7 @@ func apply_status_effect(effect: Dictionary, attacker: card_object, defender: ca
 	if status == "Burned":
 		target_pokemon.is_burned = true
 
+	SoundManagerScript.play_sfx(SoundManagerScript.SFX_status_sound)
 	await show_message(target_pokemon.metadata["name"].to_upper() + " IS NOW " + status.to_upper() + "!")
 	print("STATUS APPLIED: ", target_pokemon.metadata["name"], " is now ", status)
 	update_status_icons(target_pokemon, is_target_opponent)
@@ -3399,9 +3406,10 @@ func process_status_between_turns(pokemon: card_object, is_opponent: bool) -> vo
 	if pokemon.is_poisoned:
 		pokemon.current_hp = max(0, pokemon.current_hp - pokemon.poison_damage)
 		var label = "TOXIC" if pokemon.poison_damage == 20 else "POISON"
-		await show_message(pokemon_name.to_upper() + " TAKES " + str(pokemon.poison_damage) + " " + label + " DAMAGE!")
+		SoundManagerScript.play_sfx(SoundManagerScript.SFX_poison_sound)
 		show_floating_label("-" + str(pokemon.poison_damage) + "HP", Vector2(530 if !is_opponent else 1030, 300), true)
 		display_hp_circles_above_align(pokemon, is_opponent)
+		await show_message(pokemon_name.to_upper() + " TAKES " + str(pokemon.poison_damage) + " " + label + " DAMAGE!")
 		print("BETWEEN TURNS: ", pokemon_name, " took ", pokemon.poison_damage, " poison damage. HP: ", pokemon.current_hp)
 
 	if pokemon.is_burned:
@@ -3766,8 +3774,9 @@ func apply_self_heal(effect: Dictionary, attacker: card_object, is_opponent_atta
 		attacker.current_hp = min(max_hp, attacker.current_hp + heal_hp)
 
 	if healed > 0:
-		await show_message(name.to_upper() + " HEALED " + str(healed) + " HP!")
+		SoundManagerScript.play_sfx(SoundManagerScript.SFX_heal_sound)
 		display_hp_circles_above_align(attacker, is_opponent_attacking)
+		await show_message(name.to_upper() + " HEALED " + str(healed) + " HP!")
 		print("EFFECT APPLIED: ", name, " healed ", healed, " HP. Now at: ", attacker.current_hp)
 	else:
 		print("EFFECT SKIPPED: ", name, " already at full HP")
@@ -6720,6 +6729,7 @@ func cpu_phase_attack(cpu_eval: Dictionary) -> void:
 	var chosen_name = chosen_attack.get("name", "")
 	var chosen_text = chosen_attack.get("text", "").to_lower()
 
+	SoundManagerScript.play_sfx(SoundManagerScript.SFX_attack_sound)
 	await show_message("Opponent's " + opponent_active_pokemon.metadata["name"].to_upper() + " used " + chosen_name.to_upper() + "!")
 	
 	# Handle special CPU attacks
@@ -6890,11 +6900,11 @@ func opponent_take_prize_card() -> void:
 ######################################################################################################################################################
 
 ######################################################################################################################################################
-#  ########  ######     ##     ########  ##    ##  ########  ######          ######          #######    #######  ##      ##  ########  ######    #######
-#     ##     ##   ##   ####       ##     ###   ##  ##        ##   ##        ##      ##       ##    ##  ##     ## ##      ##  ##        ##   ##  ##
-#     ##     ######   ##  ##      ##     ## ## ##  ########  ######    ###  ########    ###  #######   ##     ## ##  ##  ##  ########  ######    #######
-#     ##     ##  ##  ########     ##     ##  ####  ##        ##  ##        ##      ##       ##        ##     ## ## #### ##  ##        ##  ##         ##
-#     ##     ##   ## ##      ##   ##     ##   ###  ########  ##   ##        ######          ##         #######   ###  ###   ########  ##   ##  #######
+#  ########  ######     ##     ########  ##    ##  ########  ######          &&&&&&&          #######    #######  ##      ##  ########  ######    #######
+#     ##     ##   ##   ####       ##     ###   ##  ##        ##   ##        &&      &         ##    ##  ##     ## ##      ##  ##        ##   ##  ##
+#     ##     ######   ##  ##      ##     ## ## ##  ########  ######    ###  &&&&&&      ###   #######   ##     ## ##  ##  ##  ########  ######    #######
+#     ##     ##  ##  ########     ##     ##  ####  ##        ##  ##        &&     &&&         ##        ##     ## ## #### ##  ##        ##  ##         ##
+#     ##     ##   ## ##      ## #######  ##   ###  ########  ##   ##        &&&&&& &          ##         #######   ###  ###   ########  ##   ##  #######
 ######################################################################################################################################################
 ##################################################### TRAINER CARD & POKEMON POWER FUNCTIONS ########################################################
 
@@ -7053,6 +7063,7 @@ func display_attached_trainer_cards(is_opponent: bool) -> void:
 
 # Plays a healing animation: restores red HP circles to green with delay, shows floating +HP label
 func play_heal_animation(pokemon: card_object, heal_amount: int, is_opponent: bool) -> void:
+	SoundManagerScript.play_sfx(SoundManagerScript.SFX_heal_sound)
 	if heal_amount <= 0:
 		return
 	var loc = get_pokemon_screen_location(pokemon)
@@ -7390,6 +7401,8 @@ func play_trainer_card(card: card_object, is_opponent: bool) -> void:
 	# Remove from hand first
 	hand.erase(card)
 	refresh_hand_display(is_opponent)
+	
+	SoundManagerScript.play_sfx(SoundManagerScript.SFX_trainer_sound)
 	
 	# Step 1: Show trainer card animation
 	await show_trainer_card_played_animation(card, is_opponent)
@@ -8556,6 +8569,7 @@ func effect_full_heal(is_opponent: bool) -> void:
 	var had_status = active.special_condition != "" or active.is_poisoned
 	clear_all_statuses(active, is_opponent)
 	if had_status:
+		SoundManagerScript.play_sfx(SoundManagerScript.SFX_heal_sound)
 		await show_message(active.metadata.get("name", "") + " was fully healed of all conditions!")
 	else:
 		await show_message(active.metadata.get("name", "") + " had no conditions to heal.")
@@ -8614,6 +8628,7 @@ func effect_pokemon_center(is_opponent: bool) -> void:
 		# Show floating heal label at pokemon location
 		var loc = get_pokemon_screen_location(pokemon)
 		if not loc.is_empty():
+			SoundManagerScript.play_sfx(SoundManagerScript.SFX_heal_sound)
 			show_floating_label("+" + str(damage) + " HP", loc["position"] + Vector2(0, -20), true)
 		
 		# Animate energy cards going to discard

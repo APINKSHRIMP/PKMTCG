@@ -1,11 +1,11 @@
 {
   "opponents": [
     {
-      "name": "Fisherman John",
+      "name": "Fisherman_John",
       "overworld_sprite": "Fisherman",
       "battle_sprite": "Fisherman",
       "music": "normal_battle",
-      "deck": "Fisherman1"
+      "deck": "Squirty_Karps"
     },
     {
       "name": "Bug_Catcher_Alex",
@@ -15,32 +15,11 @@
       "deck": "I_love_bugs!"
     },
     {
-      "name": "Fisherman John",
-      "overworld_sprite": "Fisherman",
-      "battle_sprite": "Fisherman",
-      "music": "normal_battle",
-      "deck": "Fisherman1"
-    },
-    {
-      "name": "Fisherman John",
-      "overworld_sprite": "Fisherman",
-      "battle_sprite": "Fisherman",
-      "music": "normal_battle",
-      "deck": "Fisherman1"
-    },
-    {
-      "name": "Fisherman John",
-      "overworld_sprite": "Fisherman",
-      "battle_sprite": "Fisherman",
-      "music": "normal_battle",
-      "deck": "Fisherman1"
-    },
-    {
-      "name": "Fisherman John",
-      "overworld_sprite": "Fisherman",
-      "battle_sprite": "Fisherman",
-      "music": "normal_battle",
-      "deck": "Fisherman1"
+      "name": "Swimmer_Jordan",
+      "overworld_sprite": "swimmerfemale",
+      "battle_sprite": "swimmerfemale",
+      "music": "surrounded_sea",
+      "deck": "poli'swrath_and_gong"
     }
   ]
 }

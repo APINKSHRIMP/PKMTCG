@@ -13,11 +13,13 @@ config_version=5
 config/name="PKM_TCG_GDT"
 run/main_scene="uid://d0bvtkrvu07k3"
 config/features=PackedStringArray("4.5", "Forward Plus")
+boot_splash/bg_color=Color(0, 0, 0, 1)
 config/icon="uid://xujrd2j28w2v"
 
 [autoload]
 
 GameDataManager="*res://gdscripts/game_data_manager.gd"
+SoundManagerScript="*res://gdscripts/sound_manager_script.gd"
 
 [display]
 

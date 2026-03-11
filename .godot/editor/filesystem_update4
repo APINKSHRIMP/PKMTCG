@@ -1,8 +1,9 @@
-res://gdscenes/MatchIntro.tscn
+res://gdscenes/MatchStart.tscn
 res://uiresources/kenneyUI.tres
 res://uiresources/kenneyUI-green.tres
 res://uiresources/kenneyUI-blue.tres
 res://uiresources/kenneyUI-red.tres
 res://gdscenes/backgroundscroll.gdshader
 res://gdscripts/main_match_script.gd
+res://gdscripts/sound_manager_script.gd
 res://gdscripts/match_intro_script.gd
