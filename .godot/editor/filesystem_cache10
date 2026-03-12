@@ -1,5 +1,5 @@
 63f7b34db8d8cdea90c76aacccf841ec
-::res://::1773319481
+::res://::1773323513
 ::res://audio/::1773155353
 ::res://audio/bgm/::1773319481
 003_-_Welcome_to_the_World_of_Pokmon__-_Pokmon_Mystery_Dungeon_-_Explorers_of_Sky.ogg::AudioStreamOggVorbis::3932577130640942653::1773155363::1773155945::1::::<><><>0<>0<>1adc09b20eb9036c30c33d5b91e26b76<>res://.godot/imported/003_-_Welcome_to_the_World_of_Pokmon__-_Pokmon_Mystery_Dungeon_-_Explorers_of_Sky.ogg-f8bb641ebdd35189235953dae22c98d4.oggvorbisstr::
@@ -1823,9 +1823,9 @@ Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Peli
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Pokemon Square.png::CompressedTexture2D::7975275552531345460::1770808341::1771183064::1::::<><><>0<>0<>ee287859ff216f171adf577dae60c58a<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Pokemon Square.png-f5412f9af4fcfce81f675190407edccd.ctex::
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Wake Up Forest.png::CompressedTexture2D::9016169070841043957::1770808384::1771183064::1::::<><><>0<>0<>47055b80a4ee4919c2d6e4ae2f977f83<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Wake Up Forest.png-d83d0c9873d41b1328175f397b82083a.ctex::
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Whiscash Pond.png::CompressedTexture2D::564202538199469867::1770808387::1771183064::1::::<><><>0<>0<>49c17e0e692eab42328086fad63f0563<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Whiscash Pond.png-dd496132545824659bc15464d84a1900.ctex::
-::res://gdscenes/::1773319319
-backgroundscroll.gdshader::Shader::4939812685521450649::1773319283::0::1::::<><><>0<>0<><>::
-CoinCase.tscn::PackedScene::4678573339311089521::1773319319::0::1::::<><><>0<>0<><>::uid://qneea1dv6lmq::::res://gdscripts/coin_case_script.gd<>uid://ccm481fk14lc8::::res://gdscenes/backgroundscroll.gdshader<>uid://dieqv60p12hlk::::res://backgrounds/border_only.png
+::res://gdscenes/::1773323127
+backgroundscroll.gdshader::Shader::4939812685521450649::1773320144::0::1::::<><><>0<>0<><>::
+CoinCase.tscn::PackedScene::4678573339311089521::1773323127::0::1::::<><><>0<>0<><>::uid://qneea1dv6lmq::::res://gdscripts/coin_case_script.gd<>uid://ccm481fk14lc8::::res://gdscenes/backgroundscroll.gdshader<>uid://dieqv60p12hlk::::res://backgrounds/border_only.png<>uid://6shp5ck1tnja::::res://uiresources/kenneyUI.tres<>uid://mbsg4xqnedxi::::res://uiresources/kenneyUI-red.tres
 DeckBuild.tscn::PackedScene::3965241932450757130::1773317132::0::1::::<><><>0<>0<><>::
 MainMenu.tscn::PackedScene::1271296883351467006::1773317740::0::1::::<><><>0<>0<><>::uid://d31lopv6mm8la::::res://gdscripts/main_menu_script.gd<>uid://degk17sx8q4mr::::res://gameimageassets/menuimages/deck_mode.png<>uid://dha51fw450he::::res://gameimageassets/menuimages/map_mode.png<>uid://bwoe2jmpei611::::res://gameimageassets/menuimages/player_mode.png<>uid://c68w15ma8ytwb::::res://gameimageassets/menuimages/options_mode.png<>uid://bb66wdtlkuwnm::::res://gameimageassets/menuimages/coin_case_mode.png<>uid://ccm481fk14lc8::::res://gdscenes/backgroundscroll.gdshader<>uid://dieqv60p12hlk::::res://backgrounds/border_only.png<>uid://6shp5ck1tnja::::res://uiresources/kenneyUI.tres
 MatchIntro.tscn::PackedScene::8917357059193528408::1773316968::0::1::::<><><>0<>0<><>::uid://b0v8vgujq8hfb::::res://backgrounds/battle_start_screen.png<>uid://b7siqta1nvfmb::::res://gdscripts/match_intro_script.gd<>uid://4ky851fyq64f::::res://gameimageassets/npcs/in_battle/fisherman.png<>uid://bb0r4srgpcfa3::::res://gameimageassets/playersprites/in_battle/lucasplatinum.png<>uid://6shp5ck1tnja::::res://uiresources/kenneyUI.tres
@@ -1833,10 +1833,10 @@ MatchStart.tscn::PackedScene::8327961863846055698::1773247919::0::1::::<><><>0<>
 Options.tscn::PackedScene::2668957580047992005::1773317160::0::1::::<><><>0<>0<><>::
 TrainerCard.tscn::PackedScene::8977491100883602099::1773319283::0::1::::<><><>0<>0<><>::
 WorldMap.tscn::PackedScene::722778692382311862::1773317170::0::1::::<><><>0<>0<><>::
-::res://gdscripts/::1773319319
+::res://gdscripts/::1773323506
 cardimage.gd::GDScript::8839746712978955150::1773175963::0::1::::<>TextureRect<><>0<>0<><>::
 card_class_object.gd::GDScript::9005189776063436535::1772825582::0::1::::card_object<>RefCounted<><>0<>0<><>::
-coin_case_script.gd::GDScript::1150108460488496380::1773319319::0::1::::<>Node<><>0<>0<><>::
+coin_case_script.gd::GDScript::1150108460488496380::1773323494::0::1::::<>Node<><>0<>0<><>::
 game_data_manager.gd::GDScript::6821646683417671353::1773175224::0::1::::<>Node<><>0<>0<><>::
 main_match_script.gd::GDScript::3857889966551739527::1773247864::0::1::::<>Control<><>0<>0<><>::
 main_menu_script.gd::GDScript::9178917204301052986::1773317628::0::1::::<>Node<><>0<>0<><>::
@@ -1850,17 +1850,17 @@ opponents_base1.json::JSON::-1::1773247574::0::1::::<><><>0<>0<><>::
 I_Love_Bugs!.json::JSON::-1::1773175711::0::1::::<><><>0<>0<><>::
 poli'swrath_and_gong.json::JSON::-1::1773247004::0::1::::<><><>0<>0<><>::
 Squirty_Karps.json::JSON::-1::1770584425::0::1::::<><><>0<>0<><>::
-::res://playerdata/::1773246979
+::res://playerdata/::1773323437
 Bulbasaur_Friends.json::JSON::-1::1773246927::0::1::::<><><>0<>0<><>::
 Grass.json::JSON::-1::1773143878::0::1::::<><><>0<>0<><>::
-player_data.json::JSON::-1::1773247008::0::1::::<><><>0<>0<><>::
+player_data.json::JSON::-1::1773321454::0::1::::<><><>0<>0<><>::
 poli'swrath_and_gong.json::JSON::-1::1773247004::0::1::::<><><>0<>0<><>::
 Trainers.json::JSON::-1::1773070461::0::1::::<><><>0<>0<><>::
-::res://uiresources/::1773319283
-kenneyUI-blue.tres::Theme::2521920198750954642::1773319283::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
-kenneyUI-green.tres::Theme::3314126987880200601::1773319283::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
-kenneyUI-red.tres::Theme::845435681495830482::1773319283::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+::res://uiresources/::1773320144
+kenneyUI-blue.tres::Theme::2521920198750954642::1773320144::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+kenneyUI-green.tres::Theme::3314126987880200601::1773320144::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+kenneyUI-red.tres::Theme::845435681495830482::1773320144::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
 kenneyUI-yellow.tres::Theme::545356902672929525::1770817546::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
-kenneyUI.tres::Theme::2213466337489992798::1773319283::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+kenneyUI.tres::Theme::2213466337489992798::1773320144::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
 kenvector_future.ttf::FontFile::4191331151886121916::1769790644::1769790650::1::::<><><>0<>0<>b5f2fbf7341fa91df600bf6a2cd79529<>res://.godot/imported/kenvector_future.ttf-0df52ea86bc6bd37fdc474d8a1e4c7a4.fontdata::
 UIpack_vector.svg::CompressedTexture2D::8966962219257996827::1769790644::1769790651::1::::<><><>0<>0<>85e2938788acfa1d2a1358e64153b160<>res://.godot/imported/UIpack_vector.svg-de0b2e46bae3527b25cbbf9a474f3ed7.ctex::

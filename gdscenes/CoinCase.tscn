@@ -1,0 +1,76 @@
+[gd_scene load_steps=7 format=3 uid="uid://b7wloi1e7ici0"]
+
+[ext_resource type="Script" uid="uid://qneea1dv6lmq" path="res://gdscripts/coin_case_script.gd" id="1_shnqs"]
+[ext_resource type="Shader" uid="uid://ccm481fk14lc8" path="res://gdscenes/backgroundscroll.gdshader" id="2_dp4bi"]
+[ext_resource type="Texture2D" uid="uid://dieqv60p12hlk" path="res://backgrounds/border_only.png" id="3_4sdkt"]
+[ext_resource type="Theme" uid="uid://6shp5ck1tnja" path="res://uiresources/kenneyUI.tres" id="4_ui6o0"]
+[ext_resource type="Theme" uid="uid://mbsg4xqnedxi" path="res://uiresources/kenneyUI-red.tres" id="5_krh4r"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ui6o0"]
+shader = ExtResource("2_dp4bi")
+shader_parameter/scroll_speed = -0.009
+
+[node name="COIN CASE" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_shnqs")
+
+[node name="BACKGROUND" type="Control" parent="."]
+anchors_preset = 0
+offset_top = 59.0
+offset_right = 40.0
+offset_bottom = 99.0
+
+[node name="white_background" type="ColorRect" parent="BACKGROUND"]
+layout_mode = 0
+offset_right = 1921.0
+offset_bottom = 969.0
+
+[node name="top_border" type="TextureRect" parent="BACKGROUND"]
+z_index = 200
+material = SubResource("ShaderMaterial_ui6o0")
+layout_mode = 0
+offset_top = -59.0
+offset_right = 1921.0
+offset_bottom = 48.0
+texture = ExtResource("3_4sdkt")
+stretch_mode = 1
+
+[node name="bottom_border" type="TextureRect" parent="BACKGROUND"]
+z_index = 200
+material = SubResource("ShaderMaterial_ui6o0")
+layout_mode = 0
+offset_top = 918.0
+offset_right = 1921.0
+offset_bottom = 1021.0
+texture = ExtResource("3_4sdkt")
+stretch_mode = 1
+
+[node name="coin_grid_container" type="GridContainer" parent="."]
+layout_mode = 0
+offset_left = 26.0
+offset_top = 111.0
+offset_right = 1912.0
+offset_bottom = 971.0
+
+[node name="coin_save_button" type="Button" parent="."]
+z_index = 300
+layout_mode = 0
+offset_left = 568.0
+offset_top = 998.0
+offset_right = 912.0
+offset_bottom = 1061.0
+theme = ExtResource("4_ui6o0")
+text = "save"
+
+[node name="coin_cancel_button" type="Button" parent="."]
+z_index = 300
+layout_mode = 0
+offset_left = 935.0
+offset_top = 998.0
+offset_right = 1279.0
+offset_bottom = 1061.0
+theme = ExtResource("5_krh4r")
+text = "cancel"
