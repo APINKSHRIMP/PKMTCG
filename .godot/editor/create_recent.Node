@@ -1,10 +1,10 @@
-Label
-Control
-Sprite2D
-TextureRect
-ColorRect
-VBoxContainer
 GridContainer
+Control
+Label
+ColorRect
+TextureRect
+Sprite2D
+VBoxContainer
 Button
 HBoxContainer
 Container
