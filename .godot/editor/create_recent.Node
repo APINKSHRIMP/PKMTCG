@@ -1,8 +1,10 @@
+TextureRect
+LineEdit
+TextEdit
 GridContainer
 Control
 Label
 ColorRect
-TextureRect
 Sprite2D
 VBoxContainer
 Button

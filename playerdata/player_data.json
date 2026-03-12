@@ -1,7 +1,6 @@
 {
-	"battle_sprite": "dawnplatinum",
-	"coin": "coin_dragonite_gold_2",
+	"coin": "coin_espeon_purple",
 	"deck": "Bulbasaur_Friends",
 	"name": "APINKSHRIMP",
-	"overworld_sprite": "dawnplatinum"
+	"sprite": "1ash"
 }

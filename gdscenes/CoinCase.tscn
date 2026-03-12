@@ -1,14 +1,21 @@
-[gd_scene load_steps=7 format=3 uid="uid://b7wloi1e7ici0"]
+[gd_scene load_steps=10 format=3 uid="uid://b7wloi1e7ici0"]
 
 [ext_resource type="Script" uid="uid://qneea1dv6lmq" path="res://gdscripts/coin_case_script.gd" id="1_shnqs"]
-[ext_resource type="Shader" uid="uid://ccm481fk14lc8" path="res://gdscenes/backgroundscroll.gdshader" id="2_dp4bi"]
+[ext_resource type="Shader" uid="uid://ccm481fk14lc8" path="res://gdscenes/backgroundscrollright.gdshader" id="2_dp4bi"]
 [ext_resource type="Texture2D" uid="uid://dieqv60p12hlk" path="res://backgrounds/border_only.png" id="3_4sdkt"]
+[ext_resource type="Shader" uid="uid://d3gofmygrsrkm" path="res://gdscenes/backgroundscrollleft.gdshader" id="4_p7p1x"]
 [ext_resource type="Theme" uid="uid://6shp5ck1tnja" path="res://uiresources/kenneyUI.tres" id="4_ui6o0"]
+[ext_resource type="Texture2D" uid="uid://he803mdt247f" path="res://backgrounds/background5.png" id="5_4246g"]
 [ext_resource type="Theme" uid="uid://mbsg4xqnedxi" path="res://uiresources/kenneyUI-red.tres" id="5_krh4r"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_ui6o0"]
 shader = ExtResource("2_dp4bi")
 shader_parameter/scroll_speed = -0.009
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_joqtv"]
+shader = ExtResource("4_p7p1x")
+shader_parameter/scroll_speed = 0.002
+shader_parameter/tint = Vector4(1, 1, 1, 1)
 
 [node name="COIN CASE" type="Control"]
 layout_mode = 3
@@ -22,11 +29,6 @@ anchors_preset = 0
 offset_top = 59.0
 offset_right = 40.0
 offset_bottom = 99.0
-
-[node name="white_background" type="ColorRect" parent="BACKGROUND"]
-layout_mode = 0
-offset_right = 1921.0
-offset_bottom = 969.0
 
 [node name="top_border" type="TextureRect" parent="BACKGROUND"]
 z_index = 200
@@ -48,12 +50,23 @@ offset_bottom = 1021.0
 texture = ExtResource("3_4sdkt")
 stretch_mode = 1
 
+[node name="background_scroller" type="TextureRect" parent="BACKGROUND"]
+material = SubResource("ShaderMaterial_joqtv")
+layout_mode = 0
+offset_left = -2.0000002
+offset_top = 45.000004
+offset_right = 6622.0
+offset_bottom = 4462.0
+scale = Vector2(0.29, 0.29)
+texture = ExtResource("5_4246g")
+stretch_mode = 1
+
 [node name="coin_grid_container" type="GridContainer" parent="."]
 layout_mode = 0
 offset_left = 26.0
 offset_top = 111.0
-offset_right = 1912.0
-offset_bottom = 971.0
+offset_right = 1919.0
+offset_bottom = 977.0
 
 [node name="coin_save_button" type="Button" parent="."]
 z_index = 300

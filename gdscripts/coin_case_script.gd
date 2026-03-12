@@ -26,6 +26,8 @@ var saved_coin_name      : String = ""
 
 var _active_tween        : Tween = null
 var _active_particles    : CPUParticles2D = null
+# Tracks which rect received the most recent click — reset each frame in _input
+var _last_clicked_rect   : TextureRect = null
 
 # Flat set of owned coin filenames e.g. {"coin_pikachu_gold_1.png": true}
 # Using a Dictionary as a set gives O(1) lookups vs iterating an Array
@@ -36,11 +38,18 @@ var _owned_coins         : Dictionary = {}
 @onready var grid        : GridContainer = $"coin_grid_container"
 @onready var save_btn    : Button        = $"coin_save_button"
 @onready var cancel_btn  : Button        = $"coin_cancel_button"
-
+@onready var audio_player = AudioStreamPlayer.new()
 
 # ─── Lifecycle ───────────────────────────────────────────────────────────────
 
 func _ready() -> void:
+	add_child(audio_player)
+
+	var audio_stream = load("res://audio/bgm/coin_mode.ogg")
+	audio_player.stream = audio_stream
+	audio_player.bus = "Master"
+	audio_player.stream.loop = true
+	audio_player.play()
 	_load_owned_coins_list()
 	_load_player_data()
 
@@ -204,12 +213,15 @@ func _on_coin_clicked(event: InputEvent, rect: TextureRect) -> void:
 			and event.button_index == MOUSE_BUTTON_LEFT \
 			and event.pressed):
 		return
+	# Mark this rect as the last thing clicked so _input knows a valid target was hit
+	_last_clicked_rect = rect
+	SoundManagerScript.play_sfx(SoundManagerScript.SFX_plus_select)
 
 	if selected_coin_rect and selected_coin_rect != rect:
 		_deselect_coin(selected_coin_rect)
-
+		
 	_select_coin(rect)
-
+	
 	# Enable save only when the chosen coin differs from what is already saved
 	var chosen_name : String = rect.get_meta("coin_name", "")
 	if chosen_name != saved_coin_name:
@@ -276,7 +288,9 @@ func _on_save_pressed() -> void:
 		return
 	var json_text := file.get_as_text()
 	file.close()
-
+	
+	SoundManagerScript.play_sfx(SoundManagerScript.SFX_gamemode_select)
+	
 	var data = JSON.parse_string(json_text)
 	if not data is Dictionary:
 		push_error("CoinCase: player_data.json is malformed")
@@ -308,6 +322,18 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		get_tree().change_scene_to_file("res://gdscenes/MainMenu.tscn")
 
+	if event is InputEventMouseButton \
+			and event.button_index == MOUSE_BUTTON_LEFT \
+			and event.pressed:
+		# Defer the miss-check to the end of the frame so all gui_input signals
+		# on rects have had a chance to fire and set _last_clicked_rect first
+		call_deferred("_check_click_miss")
+
+
+func _check_click_miss() -> void:
+	if _last_clicked_rect == null:
+		SoundManagerScript.play_sfx(SoundManagerScript.SFX_minus_select)
+	_last_clicked_rect = null
 
 # ─── Sparkle particles ───────────────────────────────────────────────────────
 
