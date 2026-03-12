@@ -20,6 +20,7 @@ config/icon="uid://xujrd2j28w2v"
 
 GameDataManager="*res://gdscripts/game_data_manager.gd"
 SoundManagerScript="*res://gdscripts/sound_manager_script.gd"
+GameState="*res://gdscripts/game_state.gd"
 
 [display]
 

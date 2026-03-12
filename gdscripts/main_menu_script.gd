@@ -81,4 +81,5 @@ func _on_mode_hover(rect: TextureRect, hovered: bool) -> void:
 func _on_mode_clicked(event: InputEvent, node_name: String) -> void:
 	# Guard: only fire on a left mouse button press, not release or other events
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		SoundManagerScript.play_sfx(SoundManagerScript.SFX_gamemode_select)
 		get_tree().change_scene_to_file(SCENE_MAP[node_name])

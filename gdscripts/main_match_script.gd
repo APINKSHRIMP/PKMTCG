@@ -9,8 +9,8 @@ extends Control
 # TESTING VARIABLES
 var amount_of_cards_to_draw = 7	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
 var hide_hidden_cards = false      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
-var opponent_deck_name = GameDataManager.opponent_data["deck"]
-var player_deck_name = GameDataManager.player_data["deck"]
+var opponent_deck_name = "null"
+var player_deck_name = "null"
 
 # TESTING - There are different rulesets for burn and confusion depending on what generation/set is being played.
 # Additionally I personally felt base set confusion retreat rule is horrendous, so I have created a personal rule that doesn't give free retreat but doesn't force discard then coin flip
@@ -2052,11 +2052,20 @@ func game_end_logic(loser_is_player: bool) -> void:
 	if loser_is_player:
 		print("GAME OVER: Player has lost the game!")
 		await show_message("GAME OVER: YOU LOST!!!!!")
-		end_game()
+		# Set these before changing scene
+		GameState.battle_result = "loss"  # or "loss"
+		#GameState.returning_from_battle = true
+		#get_tree().change_scene_to_file("res://gdscenes/WorldMap.tscn")
+		#end_game()
 	else:
 		print("GAME OVER: Opponent has lost the game!")
 		await show_message("CONGRATULATIONS: YOU WON!!!!!")
-		end_game()
+		# Set these before changing scene
+		GameState.battle_result = "win"  # or "loss"
+		
+	GameState.returning_from_battle = true
+	get_tree().change_scene_to_file("res://gdscenes/WorldMap.tscn")
+		#end_game()
 
 # Draws one card from the top of the deck and adds it to the hand
 func draw_card_from_deck(is_opponent: bool) -> card_object:
@@ -6201,7 +6210,7 @@ func score_parsed_effects(effects: Array, defender: card_object) -> float:
 ###################################################### OPPONENT GENERAL FUNCTIONALITY FUNCTIONS ######################################################
 
 # Load all the opponent's data 
-func load_opponent_data(deck_name: String):
+func load_opponent_data_by_name(opp_name: String):
 	var file = FileAccess.open("res://opponentdata/opponents_base1.json", FileAccess.READ)
 	if file == null:
 		print("Error loading file")
@@ -6215,11 +6224,11 @@ func load_opponent_data(deck_name: String):
 	
 	var opponents = json.data["opponents"]
 	for opponent in opponents:
-		if opponent.get("deck") == deck_name:
+		if opponent.get("name") == opp_name:
 			opponent_data = opponent
 			return
 	
-	print("Opponent with deck ", deck_name, " not found")
+	print("Opponent with name ", opp_name, " not found")
 
 # Play the correct music
 func play_opponent_music():
@@ -10682,7 +10691,7 @@ func _input(event: InputEvent) -> void:
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	
+	var opponent_name = GameState.current_opponent_name
 	modulate.a = 0.0
 	var tween = create_tween()
 	tween.tween_property(self, "modulate:a", 1.0, 0.5)
@@ -10708,8 +10717,15 @@ func _ready() -> void:
 	main_buttons_container.get_node("button_main_endturn").pressed.connect(player_end_turn_checks)
 
 
-	load_opponent_data(opponent_deck_name)
+	opponent_deck_name = GameState.current_opponent_deck
+	load_opponent_data_by_name(GameState.current_opponent_name)
 	play_opponent_music()
+
+	# Load the player's deck name from their save data
+	var pfile = FileAccess.open("res://playerdata/player_data.json", FileAccess.READ)
+	var pdata = JSON.parse_string(pfile.get_as_text())
+	pfile.close()
+	player_deck_name = pdata["deck"]
 
 	# BEGIN THE GAME SETUP
 	setup_player()

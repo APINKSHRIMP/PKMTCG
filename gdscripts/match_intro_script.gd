@@ -19,8 +19,9 @@ var main_match_instance: Node
 
 # Called when the scene enters the scene tree
 func _ready() -> void:
+	var opponent_name = GameState.current_opponent_name
 	# Step 1: Load opponent and player data
-	load_opponent_data("Bug_Catcher_Alex")
+	load_opponent_data(opponent_name)
 	load_player_data()
 	
 	main_match_scene = load("res://gdscenes/MatchStart.tscn")
@@ -96,7 +97,7 @@ func update_ui_with_data() -> void:
 	
 	# Load opponent sprite from file path
 	if opponent_data.has("battle_sprite"):
-		var opponent_sprite_path = "res://gameimageassets/npcs/in_battle/" + opponent_data["battle_sprite"].to_lower() + ".png"
+		var opponent_sprite_path = "res://gameimageassets/charactersprites/in_battle/" + opponent_data["battle_sprite"].to_lower() + ".png"
 		var opponent_texture = load(opponent_sprite_path)
 		if opponent_texture:
 			opponent_sprite.texture = opponent_texture
@@ -113,7 +114,7 @@ func update_ui_with_data() -> void:
 	
 	# Load player sprite from file path
 	if player_data.has("battle_sprite"):
-		var player_sprite_path = "res://gameimageassets/playersprites/in_battle/" + player_data["battle_sprite"].to_lower() + ".png"
+		var player_sprite_path = "res://gameimageassets/charactersprites/in_battle/" + player_data["battle_sprite"].to_lower() + ".png"
 		var player_texture = load(player_sprite_path)
 		if player_texture:
 			player_sprite.texture = player_texture

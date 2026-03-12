@@ -1,6 +1,8 @@
 {
-	"coin": "coin_espeon_purple",
+	"battle_sprite": "youngster",
+	"coin": "coin_gyarados_blue",
 	"deck": "Bulbasaur_Friends",
 	"name": "APINKSHRIMP",
-	"sprite": "1ash"
+	"overworld_sprite": "youngster",
+	"sprite": "youngster"
 }

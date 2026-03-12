@@ -10,3 +10,16 @@ res://gdscenes/MatchIntro.tscn
 res://gdscenes/CoinCase.tscn
 res://gdscenes/MainMenu.tscn
 res://gdscripts/coin_case_script.gd
+res://gdscripts/main_menu_script.gd
+res://gdscenes/WorldMap.tscn
+res://gdscripts/sprite_sheet_loader.gd
+res://gdscenes/player.tscn
+res://gdscenes/opponent.tscn
+res://gdscripts/world_map.gd
+res://gdscripts/main_match_script.gd
+res://gdscripts/match_intro_script.gd
+res://gdscripts/player.gd
+res://gdscenes/Player.tscn
+res://gdscripts/opponent.gd
+res://gdscenes/Opponent.tscn
+res://gdscripts/game_state.gd

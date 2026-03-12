@@ -1,9 +1,8 @@
 63f7b34db8d8cdea90c76aacccf841ec
-::res://::1773328165
+::res://::1773345714
 ::res://audio/::1773155353
-::res://audio/bgm/::1773319481
+::res://audio/bgm/::1773352822
 003_-_Welcome_to_the_World_of_Pokmon__-_Pokmon_Mystery_Dungeon_-_Explorers_of_Sky.ogg::AudioStreamOggVorbis::3932577130640942653::1773155363::1773155945::1::::<><><>0<>0<>1adc09b20eb9036c30c33d5b91e26b76<>res://.godot/imported/003_-_Welcome_to_the_World_of_Pokmon__-_Pokmon_Mystery_Dungeon_-_Explorers_of_Sky.ogg-f8bb641ebdd35189235953dae22c98d4.oggvorbisstr::
-004_-_On_the_Beach_at_Dusk_-_Pokmon_Mystery_Dungeon_-_Explorers_of_Sky.ogg::AudioStreamOggVorbis::4114069186515384056::1773155363::1773155945::1::::<><><>0<>0<>44e80f5ba699e376919e3b4b006a53b2<>res://.godot/imported/004_-_On_the_Beach_at_Dusk_-_Pokmon_Mystery_Dungeon_-_Explorers_of_Sky.ogg-0ec8e8b09199d3c477a1743ef07b4d27.oggvorbisstr::
 004_Personality_Test_PMD_Blue_Rescue_Team_OST.ogg::AudioStreamOggVorbis::3394520193055341966::1773155363::1773155945::1::::<><><>0<>0<>89e261250d15494bbfafdeeba3a44145<>res://.godot/imported/004_Personality_Test_PMD_Blue_Rescue_Team_OST.ogg-3e4204d544dfc0c3710e9defcd5acbbb.oggvorbisstr::
 005_-_Beach_Cave_-_Pokmon_Mystery_Dungeon_-_Explorers_of_Sky.ogg::AudioStreamOggVorbis::3272743878940065962::1773155363::1773155945::1::::<><><>0<>0<>0fa47adeaf410f6d9e6f8de9c8382add<>res://.godot/imported/005_-_Beach_Cave_-_Pokmon_Mystery_Dungeon_-_Explorers_of_Sky.ogg-820a9f05883e1b1ed33e6e86e27e11a9.oggvorbisstr::
 012_Thunderwave_Cave_PMD_Blue_Rescue_Team_OST.ogg::AudioStreamOggVorbis::5047245439062854246::1773155363::1773155945::1::::<><><>0<>0<>eb367746b3a98959e96a1ccb48ae5038<>res://.godot/imported/012_Thunderwave_Cave_PMD_Blue_Rescue_Team_OST.ogg-876d6d1611352485d2838af09376dda3.oggvorbisstr::
@@ -14,6 +13,7 @@
 036_Kecleon_Shop_PMD_Blue_Rescue_Team_OST.ogg::AudioStreamOggVorbis::7980125662348669290::1773155363::1773155945::1::::<><><>0<>0<>12663a780f064d87ecdffb9a0365c1f9<>res://.godot/imported/036_Kecleon_Shop_PMD_Blue_Rescue_Team_OST.ogg-6067130c4091b85817eba9d6b5456463.oggvorbisstr::
 043_-_Crystal_Cave_-_Pokmon_Mystery_Dungeon_-_Explorers_of_Sky.ogg::AudioStreamOggVorbis::594957375274118082::1773155363::1773155945::1::::<><><>0<>0<>d7ca4a1f3a4ac049ae51b62ebf3d903b<>res://.godot/imported/043_-_Crystal_Cave_-_Pokmon_Mystery_Dungeon_-_Explorers_of_Sky.ogg-d94f8bd6bec25cf2ce001cee8ce559e0.oggvorbisstr::
 043_Mt_Freeze_PMD_Blue_Rescue_Team_OST.ogg::AudioStreamOggVorbis::1012970939176414251::1773155363::1773155945::1::::<><><>0<>0<>13f3e11e660e8b2e9b860460fcb76de9<>res://.godot/imported/043_Mt_Freeze_PMD_Blue_Rescue_Team_OST.ogg-cc4c003c2039d90b0132577c3f72056f.oggvorbisstr::
+beach_bgm.ogg::AudioStreamOggVorbis::897165044957821194::1773155363::1773352824::1::::<><><>0<>0<>4d8d86250bb95e94081eeaa0e9a5f728<>res://.godot/imported/beach_bgm.ogg-6113f34cc45489c8688c7cfd513d7100.oggvorbisstr::
 chilled_battle.ogg::AudioStreamOggVorbis::7694014183995206633::1773155407::1773155945::1::::<><><>0<>0<>ee0ce9236b7dffbbfee780ab0a2ec44e<>res://.godot/imported/chilled_battle.ogg-4738559300dd05701347e1b16b5f8f0b.oggvorbisstr::
 coin_mode.ogg::AudioStreamOggVorbis::2648980416519064819::1773155407::1773319481::1::::<><><>0<>0<>47b4c9a48937e99a2d627de5da7c41b6<>res://.godot/imported/coin_mode.ogg-63e12060ba33991de336759377cda352.oggvorbisstr::
 fast_battle.ogg::AudioStreamOggVorbis::2869403746859089132::1773155408::1773155945::1::::<><><>0<>0<>300cae993660323c7d0d875182c7145c<>res://.godot/imported/fast_battle.ogg-ee41c81bcfc07ee58729bddd53d3a178.oggvorbisstr::
@@ -25,7 +25,7 @@ snaky_battle.ogg::AudioStreamOggVorbis::2933477126983533222::1773155415::1773155
 surrounded_sea.ogg::AudioStreamOggVorbis::4692049975490767310::1773155363::1773247331::1::::<><><>0<>0<>71121eac3aa5b621aa25d5cc0d99c390<>res://.godot/imported/surrounded_sea.ogg-879ad909b41e86d33cbca6cda5cc3867.oggvorbisstr::
 weird_battle.ogg::AudioStreamOggVorbis::7880279284811121764::1773155416::1773155945::1::::<><><>0<>0<>9830256726a783782a3991c2f7f536e1<>res://.godot/imported/weird_battle.ogg-521dce3246438c6ae4c44dfb7b619f9b.oggvorbisstr::
 world_map.ogg::AudioStreamOggVorbis::1736827328577021337::1773155410::1773316933::1::::<><><>0<>0<>fc9938f989af5403697101b99ad17c7c<>res://.godot/imported/world_map.ogg-b59a1eff9ed3290017c66d374492fdae.oggvorbisstr::
-::res://audio/sfx/::1773246146
+::res://audio/sfx/::1773331988
 attack_sound.ogg::AudioStreamOggVorbis::5277956669137564882::1773155373::1773155945::1::::<><><>0<>0<>b69a02e697e3a7dd786afe40f585d1e5<>res://.godot/imported/attack_sound.ogg-e15ba7335755a54bb078706ebb3515b6.oggvorbisstr::
 battle_start.ogg::AudioStreamOggVorbis::7343286306681375379::1773155373::1773155945::1::::<><><>0<>0<>db3669bacfba10b032911df62e8a7f7b<>res://.godot/imported/battle_start.ogg-0e02a75b79a3d99c309e3645124a677d.oggvorbisstr::
 card_draw_sound.ogg::AudioStreamOggVorbis::7233551014047773912::1773243367::1773243382::1::::<><><>0<>0<>14d6ee5f888fd83d22cc34371e3c6bfe<>res://.godot/imported/card_draw_sound.ogg-642ca7d21ccdeeaa199115da6a6388b3.oggvorbisstr::
@@ -33,7 +33,7 @@ coin_flip_sound.ogg::AudioStreamOggVorbis::221478353573355654::1773245914::17732
 damage_sound.ogg::AudioStreamOggVorbis::485198837644906719::1773155373::1773155945::1::::<><><>0<>0<>72e0f5e6f38cf51bb486b70151268cd2<>res://.godot/imported/damage_sound.ogg-a761747e3e94101d2978d060474eca26.oggvorbisstr::
 energy_sound.ogg::AudioStreamOggVorbis::922226435676603336::1773155373::1773155945::1::::<><><>0<>0<>cc651d3adcac2d9229edc27ce466524a<>res://.godot/imported/energy_sound.ogg-7153785f68de4762106a0d972dcf82c1.oggvorbisstr::
 evolve_sound.ogg::AudioStreamOggVorbis::3589514745923688556::1773155373::1773155945::1::::<><><>0<>0<>267cc741b6d7d896d399297ddb2660fe<>res://.godot/imported/evolve_sound.ogg-a42d9ce0bc0ae129d76146dcb13ad2bf.oggvorbisstr::
-gamemode_select_sound.ogg::AudioStreamOggVorbis::4297046592600826166::1773155373::1773241092::1::::<><><>0<>0<>6bf5c088ba84fc2f4e49aeee27481923<>res://.godot/imported/gamemode_select_sound.ogg-d63ae70e848e1ba802c631901c2f4714.oggvorbisstr::
+gamemode_select_sound.ogg::AudioStreamOggVorbis::4297046592600826166::1773331984::1773331988::1::::<><><>0<>0<>6bf5c088ba84fc2f4e49aeee27481923<>res://.godot/imported/gamemode_select_sound.ogg-d63ae70e848e1ba802c631901c2f4714.oggvorbisstr::
 heal_sound.ogg::AudioStreamOggVorbis::4648995480720641309::1773245643::1773245656::1::::<><><>0<>0<>60b623af5d30150178f2aa059480a5b2<>res://.godot/imported/heal_sound.ogg-597443d4ebcefbd66a18d97f4a0eeaf0.oggvorbisstr::
 knockout_sound.ogg::AudioStreamOggVorbis::1597442793743143771::1773155373::1773241092::1::::<><><>0<>0<>739cf35a479d835c4df85e66d3f4d19e<>res://.godot/imported/knockout_sound.ogg-240896e3a4f58819caca8e80cf4ffbb5.oggvorbisstr::
 minus_select.ogg::AudioStreamOggVorbis::4179305245265359846::1773330612::1773330639::1::::<><><>0<>0<>7499de1e16ed2f4f7b7474bbbc2357cb<>res://.godot/imported/minus_select.ogg-e5dc319f03b7d811aaaa6af83e13d317.oggvorbisstr::
@@ -1307,8 +1307,17 @@ twins.png::CompressedTexture2D::4418651663630819720::1773172771::1773325396::1::
 umbrellagirl.png::CompressedTexture2D::8768814826768556433::1773173547::1773325396::1::::<><><>0<>0<>ad87213b1d3b86f7515f64aeb0ce25cb<>res://.godot/imported/umbrellagirl.png-ab9ef9f7849da667d2a843013340baf0.ctex::
 waiter.png::CompressedTexture2D::4879584588203926343::1773173537::1773325396::1::::<><><>0<>0<>e3077a40c70ef3ee60b573e58f218199<>res://.godot/imported/waiter.png-8c88ccfac81ce63d79847954c59a4fb3.ctex::
 youngster.png::CompressedTexture2D::5580872746514128364::1773172620::1773325396::1::::<><><>0<>0<>92d0a176459f217e183a98d49d8c2458<>res://.godot/imported/youngster.png-a1d40921498dd5614459e33fc9e9549a.ctex::
-::res://gameimageassets/charactersprites/overworld/::1773325395
-fisherman.png::CompressedTexture2D::846460675501340153::1773155777::1773325395::1::::<><><>0<>0<>98717c8e06edd460ba074b1048bd3e2b<>res://.godot/imported/fisherman.png-b3b134a75fd3e4317c9be6e780702151.ctex::
+::res://gameimageassets/charactersprites/overworld/::1773335994
+DS _ DSi - Pokemon Diamond _ Pearl - Playable Characters - Dawn.png::CompressedTexture2D::7632969826623900254::1773333179::1773335994::1::::<><><>0<>0<>4899ac264314011a46a61f75daed49e7<>res://.godot/imported/DS _ DSi - Pokemon Diamond _ Pearl - Playable Characters - Dawn.png-597162866b4a611b1e3b60646e6ce3b9.ctex::
+DS _ DSi - Pokemon Platinum - Playable Characters - Lucas.png::CompressedTexture2D::4155427729364766035::1773333204::1773335994::1::::<><><>0<>0<>1614d75617570c7e2ee251fa9e40dbac<>res://.godot/imported/DS _ DSi - Pokemon Platinum - Playable Characters - Lucas.png-906755f62c266c3651388b6290d465ad.ctex::
+sprite_sheet_bugcatcher.png::CompressedTexture2D::1620818636734956439::1773335303::1773335994::1::::<><><>0<>0<>4b9b88dabae465f782f1968924d405de<>res://.godot/imported/sprite_sheet_bugcatcher.png-09439ca7c9b2cbb6e559a710bc64abe6.ctex::
+sprite_sheet_dawnplatinum.png::CompressedTexture2D::4374977594639048375::1773333200::1773335994::1::::<><><>0<>0<>3879ece9035fc20109b02ec652a13647<>res://.godot/imported/sprite_sheet_dawnplatinum.png-0f06ef47131d5cd5de103d13a36a8d17.ctex::
+sprite_sheet_fisherman.png::CompressedTexture2D::5096841022044038477::1773335394::1773335994::1::::<><><>0<>0<>08faf84630b9dde6b551844555001240<>res://.godot/imported/sprite_sheet_fisherman.png-4c009040ccbf679927ef1f8cbf03d3ad.ctex::
+sprite_sheet_karateman.png::CompressedTexture2D::4355348688413081346::1773335380::1773335994::1::::<><><>0<>0<>dccc886a1c47ad932adf7d551228b035<>res://.godot/imported/sprite_sheet_karateman.png-be9011c7619f2f43a08a318a3df75373.ctex::
+sprite_sheet_lucasdp.png::CompressedTexture2D::7903551473272383947::1773333176::1773335994::1::::<><><>0<>0<>15540f1c425ad0fb30cfc156d9eeaa5e<>res://.godot/imported/sprite_sheet_lucasdp.png-58a4fc11d3e52f00554202da781bd9a3.ctex::
+sprite_sheet_parasolgirl.png::CompressedTexture2D::7267241786072479333::1773335255::1773335994::1::::<><><>0<>0<>6014ccf9a100b3708cf013d10a69bbff<>res://.godot/imported/sprite_sheet_parasolgirl.png-c01b83142a70de796559e67090fe1131.ctex::
+sprite_sheet_swimmerfemale.png::CompressedTexture2D::4160683598154697842::1773335348::1773335994::1::::<><><>0<>0<>172dc43ec0e028bade8bf8cfd59a3f53<>res://.godot/imported/sprite_sheet_swimmerfemale.png-ee03ca58c0dfd8277c6e8c1a41682d4d.ctex::
+sprite_sheet_youngster.png::CompressedTexture2D::5134051865115714281::1773335453::1773335994::1::::<><><>0<>0<>df601c3a8e9d0646789571305fa77e9a<>res://.godot/imported/sprite_sheet_youngster.png-7ac759a5e9c50601b4e2a27ae790e1cf.ctex::
 ::res://gameimageassets/coins/::1772301253
 coin_alakazam_purple.png::CompressedTexture2D::3995485036133240823::1772301253::1771864207::1::::<><><>0<>0<>26e517b717549def0cad37d204f218fb<>res://.godot/imported/coin_alakazam_purple.png-23ca53d241858a8d2abc292eaa29f0a5.ctex::
 coin_arcanine_red.png::CompressedTexture2D::3159638001484219328::1772301253::1771864207::1::::<><><>0<>0<>e255c1341fd74d1d1d7282c779e4a70d<>res://.godot/imported/coin_arcanine_red.png-06a4af0539392566a86e0e70c28bb591.ctex::
@@ -1828,40 +1837,48 @@ Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Peli
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Pokemon Square.png::CompressedTexture2D::7975275552531345460::1770808341::1771183064::1::::<><><>0<>0<>ee287859ff216f171adf577dae60c58a<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Pokemon Square.png-f5412f9af4fcfce81f675190407edccd.ctex::
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Wake Up Forest.png::CompressedTexture2D::9016169070841043957::1770808384::1771183064::1::::<><><>0<>0<>47055b80a4ee4919c2d6e4ae2f977f83<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Wake Up Forest.png-d83d0c9873d41b1328175f397b82083a.ctex::
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Whiscash Pond.png::CompressedTexture2D::564202538199469867::1770808387::1771183064::1::::<><><>0<>0<>49c17e0e692eab42328086fad63f0563<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Whiscash Pond.png-dd496132545824659bc15464d84a1900.ctex::
-::res://gdscenes/::1773330427
+::res://gdscenes/::1773352748
 backgroundscrollleft.gdshader::Shader::9137795573988388996::1773328975::0::1::::<><><>0<>0<><>::
 backgroundscrollright.gdshader::Shader::4939812685521450649::1773328300::0::1::::<><><>0<>0<><>::
 CoinCase.tscn::PackedScene::4678573339311089521::1773329955::0::1::::<><><>0<>0<><>::uid://qneea1dv6lmq::::res://gdscripts/coin_case_script.gd<>uid://ccm481fk14lc8::::res://gdscenes/backgroundscrollright.gdshader<>uid://dieqv60p12hlk::::res://backgrounds/border_only.png<>uid://d3gofmygrsrkm::::res://gdscenes/backgroundscrollleft.gdshader<>uid://6shp5ck1tnja::::res://uiresources/kenneyUI.tres<>uid://he803mdt247f::::res://backgrounds/background5.png<>uid://mbsg4xqnedxi::::res://uiresources/kenneyUI-red.tres
 DeckBuild.tscn::PackedScene::3965241932450757130::1773317132::0::1::::<><><>0<>0<><>::
-MainMenu.tscn::PackedScene::1271296883351467006::1773330427::0::1::::<><><>0<>0<><>::uid://d31lopv6mm8la::::res://gdscripts/main_menu_script.gd<>uid://degk17sx8q4mr::::res://gameimageassets/menuimages/deck_mode.png<>uid://dha51fw450he::::res://gameimageassets/menuimages/map_mode.png<>uid://bwoe2jmpei611::::res://gameimageassets/menuimages/player_mode.png<>uid://c68w15ma8ytwb::::res://gameimageassets/menuimages/options_mode.png<>uid://bb66wdtlkuwnm::::res://gameimageassets/menuimages/coin_case_mode.png<>uid://ccm481fk14lc8::::res://gdscenes/backgroundscrollright.gdshader<>uid://dieqv60p12hlk::::res://backgrounds/border_only.png<>uid://6shp5ck1tnja::::res://uiresources/kenneyUI.tres
-MatchIntro.tscn::PackedScene::8917357059193528408::1773329232::0::1::::<><><>0<>0<><>::uid://b0v8vgujq8hfb::::res://backgrounds/battle_start_screen.png<>uid://b7siqta1nvfmb::::res://gdscripts/match_intro_script.gd<>uid://4ky851fyq64f::::res://gameimageassets/charactersprites/in_battle/fisherman.png<>uid://bsp4tmf0hr5w8::::res://gameimageassets/charactersprites/in_battle/1lucasplatinum.png<>uid://6shp5ck1tnja::::res://uiresources/kenneyUI.tres
+MainMenu.tscn::PackedScene::1271296883351467006::1773331949::0::1::::<><><>0<>0<><>::uid://d31lopv6mm8la::::res://gdscripts/main_menu_script.gd<>uid://degk17sx8q4mr::::res://gameimageassets/menuimages/deck_mode.png<>uid://dha51fw450he::::res://gameimageassets/menuimages/map_mode.png<>uid://bwoe2jmpei611::::res://gameimageassets/menuimages/player_mode.png<>uid://c68w15ma8ytwb::::res://gameimageassets/menuimages/options_mode.png<>uid://bb66wdtlkuwnm::::res://gameimageassets/menuimages/coin_case_mode.png<>uid://ccm481fk14lc8::::res://gdscenes/backgroundscrollright.gdshader<>uid://dieqv60p12hlk::::res://backgrounds/border_only.png<>uid://6shp5ck1tnja::::res://uiresources/kenneyUI.tres
+MatchIntro.tscn::PackedScene::8917357059193528408::1773350771::0::1::::<><><>0<>0<><>::uid://b0v8vgujq8hfb::::res://backgrounds/battle_start_screen.png<>uid://b7siqta1nvfmb::::res://gdscripts/match_intro_script.gd<>uid://4ky851fyq64f::::res://gameimageassets/charactersprites/in_battle/fisherman.png<>uid://bsp4tmf0hr5w8::::res://gameimageassets/charactersprites/in_battle/1lucasplatinum.png<>uid://6shp5ck1tnja::::res://uiresources/kenneyUI.tres
 MatchStart.tscn::PackedScene::8327961863846055698::1773327872::0::1::::<><><>0<>0<><>::uid://bu715ca3pbw60::::res://gdscripts/main_match_script.gd<>uid://ccm481fk14lc8::::res://gdscenes/backgroundscrollright.gdshader<>uid://cpbbo8tyee1n4::::res://backgrounds/background2.png<>uid://mbsg4xqnedxi::::res://uiresources/kenneyUI-red.tres<>uid://bnhngmri4tfgr::::res://uiresources/kenneyUI-green.tres<>uid://bb6vwl0h1flws::::res://uiresources/kenneyUI-blue.tres<>uid://41l5prxtsvdk::::res://gameimageassets/menutiles/bluesquaremessagebox.png<>uid://dmay144mc3hmo::::res://cardimages/cardbacksanddecks/1deckfulltrans_clean.png<>uid://6shp5ck1tnja::::res://uiresources/kenneyUI.tres
+Opponent.tscn::PackedScene::5328478855013312185::1773352568::0::1::::<><><>0<>0<><>::uid://65icfpeaid30::::res://gdscripts/opponent.gd
 Options.tscn::PackedScene::2668957580047992005::1773317160::0::1::::<><><>0<>0<><>::
+Player.tscn::PackedScene::3475572301797819136::1773351675::0::1::::<><><>0<>0<><>::uid://ddwhpv4d35a2l::::res://gdscripts/player.gd
 TrainerCard.tscn::PackedScene::8977491100883602099::1773329648::0::1::::<><><>0<>0<><>::uid://c1yumpfxp1ebh::::res://gdscripts/trainer_card_script.gd<>uid://ccm481fk14lc8::::res://gdscenes/backgroundscrollright.gdshader<>uid://dieqv60p12hlk::::res://backgrounds/border_only.png<>uid://d3gofmygrsrkm::::res://gdscenes/backgroundscrollleft.gdshader<>uid://6shp5ck1tnja::::res://uiresources/kenneyUI.tres<>uid://he803mdt247f::::res://backgrounds/background5.png<>uid://mbsg4xqnedxi::::res://uiresources/kenneyUI-red.tres
-WorldMap.tscn::PackedScene::722778692382311862::1773317170::0::1::::<><><>0<>0<><>::
-::res://gdscripts/::1773330427
+WorldMap.tscn::PackedScene::722778692382311862::1773352748::0::1::::<><><>0<>0<><>::uid://663wesm8innb::::res://gdscripts/world_map.gd<>uid://dfvaw65wnkawx::::res://gameimageassets/friendareas/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Friend Areas - Shallow Beach.png<>uid://bprufyh8mxqom::::res://gdscenes/Player.tscn
+::res://gdscripts/::1773352748
 cardimage.gd::GDScript::8839746712978955150::1773175963::0::1::::<>TextureRect<><>0<>0<><>::
 card_class_object.gd::GDScript::9005189776063436535::1772825582::0::1::::card_object<>RefCounted<><>0<>0<><>::
-coin_case_script.gd::GDScript::1150108460488496380::1773330423::0::1::::<>Node<><>0<>0<><>::
+coin_case_script.gd::GDScript::1150108460488496380::1773331599::0::1::::<>Node<><>0<>0<><>::
 game_data_manager.gd::GDScript::6821646683417671353::1773175224::0::1::::<>Node<><>0<>0<><>::
-main_match_script.gd::GDScript::3857889966551739527::1773247864::0::1::::<>Control<><>0<>0<><>::
-main_menu_script.gd::GDScript::9178917204301052986::1773317628::0::1::::<>Node<><>0<>0<><>::
-match_intro_script.gd::GDScript::4670137787471001061::1773247681::0::1::::<>Control<><>0<>0<><>::
+game_state.gd::GDScript::3420139636670588205::1773352028::0::1::::<>Node<><>0<>0<><>::
+main_match_script.gd::GDScript::3857889966551739527::1773352418::0::1::::<>Control<><>0<>0<><>::
+main_menu_script.gd::GDScript::9178917204301052986::1773331949::0::1::::<>Node<><>0<>0<><>::
+match_intro_script.gd::GDScript::4670137787471001061::1773350372::0::1::::<>Control<><>0<>0<><>::
+opponent.gd::GDScript::2238275078901616221::1773351716::0::1::::<>CharacterBody2D<><>0<>0<><>::
+player.gd::GDScript::7415697846405238897::1773351801::0::1::::<>CharacterBody2D<><>0<>0<><>::
 sound_manager_script.gd::GDScript::6131346398827806915::1773245684::0::1::::<>Node<><>0<>0<><>::
-trainer_card_script.gd::GDScript::6648532934095027353::1773330427::0::1::::<>Node<><>0<>0<><>::
+sprite_sheet_loader.gd::GDScript::1513215229486332235::1773349661::0::1::::SpriteSheetLoader<>RefCounted<><>0<>0<><>::
+trainer_card_script.gd::GDScript::6648532934095027353::1773331602::0::1::::<>Node<><>0<>0<><>::
+world_map.gd::GDScript::2241589464907759807::1773352748::0::1::::<>Node2D<><>0<>0<><>::
 ::res://icon/::1770067344
 RayquazaSprite.png::CompressedTexture2D::1656207969913314715::1770062602::1770067344::1::::<><><>0<>0<>5c1b9796eaa598df7e62bda5eabd4b61<>res://.godot/imported/RayquazaSprite.png-e2b18131d0ebafe8706566d3d48f1901.ctex::
 ::res://opponentdata/::1773155930
-opponents_base1.json::JSON::-1::1773247574::0::1::::<><><>0<>0<><>::
+opponents_base1.json::JSON::-1::1773350309::0::1::::<><><>0<>0<><>::
 ::res://opponentdeckdata/::1773247323
 I_Love_Bugs!.json::JSON::-1::1773175711::0::1::::<><><>0<>0<><>::
 poli'swrath_and_gong.json::JSON::-1::1773247004::0::1::::<><><>0<>0<><>::
 Squirty_Karps.json::JSON::-1::1770584425::0::1::::<><><>0<>0<><>::
-::res://playerdata/::1773323541
+::res://playerdata/::1773347529
 Bulbasaur_Friends.json::JSON::-1::1773246927::0::1::::<><><>0<>0<><>::
 Grass.json::JSON::-1::1773143878::0::1::::<><><>0<>0<><>::
-player_data.json::JSON::-1::1773329898::0::1::::<><><>0<>0<><>::
+player_data.json::JSON::-1::1773350470::0::1::::<><><>0<>0<><>::
 player_owned_coin_list.txt::TextFile::-1::1773323602::0::1::::<><><>0<>0<><>::
+player_progress.json::JSON::-1::1773347529::0::1::::<><><>0<>0<><>::
 poli'swrath_and_gong.json::JSON::-1::1773247004::0::1::::<><><>0<>0<><>::
 Trainers.json::JSON::-1::1773070461::0::1::::<><><>0<>0<><>::
 ::res://uiresources/::1773328300
