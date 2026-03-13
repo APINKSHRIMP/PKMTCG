@@ -11,10 +11,11 @@ config_version=5
 [application]
 
 config/name="PKM_TCG_GDT"
-run/main_scene="uid://sd3crp0k4w67"
+run/main_scene="uid://dy73eing56d31"
 config/features=PackedStringArray("4.5", "Forward Plus")
 boot_splash/bg_color=Color(0, 0, 0, 1)
-config/icon="uid://xujrd2j28w2v"
+boot_splash/image="uid://cagy8rhu6sscj"
+config/icon="uid://b1rcninkqbn58"
 
 [autoload]
 

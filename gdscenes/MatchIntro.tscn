@@ -1,6 +1,6 @@
 [gd_scene load_steps=8 format=3 uid="uid://d0bvtkrvu07k3"]
 
-[ext_resource type="Texture2D" uid="uid://b0v8vgujq8hfb" path="res://backgrounds/battle_start_screen.png" id="1_6x0iv"]
+[ext_resource type="Texture2D" uid="uid://b0v8vgujq8hfb" path="res://gameimageassets/backgrounds/battle_start_screen.png" id="1_6x0iv"]
 [ext_resource type="Script" uid="uid://b7siqta1nvfmb" path="res://gdscripts/match_intro_script.gd" id="1_xrwa4"]
 [ext_resource type="Texture2D" uid="uid://4ky851fyq64f" path="res://gameimageassets/charactersprites/in_battle/fisherman.png" id="2_f8er1"]
 [ext_resource type="Texture2D" uid="uid://bsp4tmf0hr5w8" path="res://gameimageassets/charactersprites/in_battle/1lucasplatinum.png" id="3_wfiko"]

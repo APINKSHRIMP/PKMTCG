@@ -2,10 +2,10 @@
 
 [ext_resource type="Script" uid="uid://c1yumpfxp1ebh" path="res://gdscripts/trainer_card_script.gd" id="1_0828g"]
 [ext_resource type="Shader" uid="uid://ccm481fk14lc8" path="res://gdscenes/backgroundscrollright.gdshader" id="2_kftsc"]
-[ext_resource type="Texture2D" uid="uid://dieqv60p12hlk" path="res://backgrounds/border_only.png" id="3_2qd32"]
+[ext_resource type="Texture2D" uid="uid://dieqv60p12hlk" path="res://gameimageassets/backgrounds/border_only.png" id="3_2qd32"]
 [ext_resource type="Shader" uid="uid://d3gofmygrsrkm" path="res://gdscenes/backgroundscrollleft.gdshader" id="4_2qd32"]
 [ext_resource type="Theme" uid="uid://6shp5ck1tnja" path="res://uiresources/kenneyUI.tres" id="4_t1d7u"]
-[ext_resource type="Texture2D" uid="uid://he803mdt247f" path="res://backgrounds/background5.png" id="5_2qd32"]
+[ext_resource type="Texture2D" uid="uid://he803mdt247f" path="res://gameimageassets/backgrounds/background5.png" id="5_2qd32"]
 [ext_resource type="Theme" uid="uid://mbsg4xqnedxi" path="res://uiresources/kenneyUI-red.tres" id="5_bgxs0"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_ui6o0"]
