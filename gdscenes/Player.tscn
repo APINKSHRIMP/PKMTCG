@@ -3,10 +3,10 @@
 [ext_resource type="Script" uid="uid://ddwhpv4d35a2l" path="res://gdscripts/player.gd" id="1_50vay"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_xe548"]
-size = Vector2(40, 30)
+size = Vector2(40, 40)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_50vay"]
-size = Vector2(50, 50)
+size = Vector2(50, 75)
 
 [node name="Player" type="CharacterBody2D"]
 script = ExtResource("1_50vay")

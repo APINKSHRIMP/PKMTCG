@@ -5,3 +5,4 @@ coin_dragonite_gold_2.png
 coin_espeon_purple.png
 coin_gloom_green.png
 coin_gyarados_blue.png
+coin_energy_blue.png

@@ -8,7 +8,7 @@ extends Control
 
 # TESTING VARIABLES
 var amount_of_cards_to_draw = 7	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO CHECK ARRAYS AND CARD FUNCTIONS
-var hide_hidden_cards = false      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
+var hide_hidden_cards = true      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
 var opponent_deck_name = "null"
 var player_deck_name = "null"
 
@@ -2052,20 +2052,14 @@ func game_end_logic(loser_is_player: bool) -> void:
 	if loser_is_player:
 		print("GAME OVER: Player has lost the game!")
 		await show_message("GAME OVER: YOU LOST!!!!!")
-		# Set these before changing scene
-		GameState.battle_result = "loss"  # or "loss"
-		#GameState.returning_from_battle = true
-		#get_tree().change_scene_to_file("res://gdscenes/WorldMap.tscn")
-		#end_game()
+		GameState.battle_result = "loss"
 	else:
 		print("GAME OVER: Opponent has lost the game!")
 		await show_message("CONGRATULATIONS: YOU WON!!!!!")
-		# Set these before changing scene
-		GameState.battle_result = "win"  # or "loss"
-		
+		GameState.battle_result = "win"
+	
 	GameState.returning_from_battle = true
-	get_tree().change_scene_to_file("res://gdscenes/WorldMap.tscn")
-		#end_game()
+	get_tree().call_deferred("change_scene_to_file", "res://gdscenes/WorldMap.tscn")
 
 # Draws one card from the top of the deck and adds it to the hand
 func draw_card_from_deck(is_opponent: bool) -> card_object:
@@ -10692,6 +10686,11 @@ func _input(event: InputEvent) -> void:
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	var opponent_name = GameState.current_opponent_name
+	
+	if GameDataManager.player_data.has("coin"):
+		var coin_loaded_text = GameDataManager.player_data["coin"]
+		tex_heads = load("res://gameimageassets/coins/"+coin_loaded_text+".png")
+		
 	modulate.a = 0.0
 	var tween = create_tween()
 	tween.tween_property(self, "modulate:a", 1.0, 0.5)

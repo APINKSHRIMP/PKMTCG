@@ -81,8 +81,8 @@ func _load_player_data() -> void:
 		push_error("TrainerCard: player_data.json is malformed")
 		return
 
-	if data.has("sprite"):
-		var raw : String = data["sprite"]
+	if data.has("overworld_sprite"):
+		var raw : String = data["overworld_sprite"]
 		if not raw.ends_with(".png"):
 			raw = raw + ".png"
 		saved_sprite_name = raw
@@ -268,7 +268,8 @@ func _on_save_pressed() -> void:
 	if selected_character_rect != null:
 		var new_sprite : String = selected_character_rect.get_meta("sprite_name", "")
 		if new_sprite != "":
-			data["sprite"]    = new_sprite.trim_suffix(".png")
+			data["battle_sprite"]    = new_sprite.trim_suffix(".png")
+			data["overworld_sprite"]    = new_sprite.trim_suffix(".png")
 			saved_sprite_name = new_sprite
 	
 	SoundManagerScript.play_sfx(SoundManagerScript.SFX_gamemode_select)

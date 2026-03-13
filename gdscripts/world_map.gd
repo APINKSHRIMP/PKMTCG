@@ -42,7 +42,7 @@ var button_container: HBoxContainer
 var opponent_placements = [
 	{
 		"name": "Fisherman_John",
-		"position": Vector2(600, 400),
+		"position": Vector2(1100, 720),
 		"pattern": "idle_random",
 	},
 	{
@@ -54,7 +54,7 @@ var opponent_placements = [
 	},
 	{
 		"name": "Swimmer_Jordan",
-		"position": Vector2(400, 700),
+		"position": Vector2(400, 800),
 		"pattern": "idle_cycle",
 	},
 ]
@@ -275,6 +275,21 @@ func _on_ok_pressed():
 # POST-BATTLE HANDLING
 # ============================================================
 
+func format_coin_name(raw: String) -> String:
+	var name = raw.replace("coin_", "").replace(".png", "")
+	var colors = ["red", "blue", "gold", "silver", "green", "black", "purple", "pink", "brown"]
+	var parts = name.split("_")
+	var color = ""
+	var pokemon_parts = []
+	
+	for part in parts:
+		if part in colors:
+			color = part
+		else:
+			pokemon_parts.append(part)
+	
+	return (color + " " + " ".join(pokemon_parts)).strip_edges()
+
 func _handle_battle_return():
 	# Find the opponent we just fought
 	var fought_name = GameState.current_opponent_name
@@ -296,7 +311,8 @@ func _handle_battle_return():
 		# First-time win: reward coin and mark as beaten
 		if not GameState.has_beaten_opponent(fought_name):
 			GameState.add_coin_to_collection(fought_opponent.coin_reward)
-			result_text += "\n\nYou received a " + fought_opponent.coin_reward + " coin!"
+			var coin_friendly_name = format_coin_name(fought_opponent.coin_reward)
+			result_text += "\n\nYou received a " + coin_friendly_name + " coin!"
 		GameState.mark_opponent_beaten(fought_name)
 	
 	current_opponent = fought_opponent
@@ -305,3 +321,7 @@ func _handle_battle_return():
 	# Clean up the return state
 	GameState.returning_from_battle = false
 	GameState.battle_result = ""
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		get_tree().change_scene_to_file("res://gdscenes/MainMenu.tscn")
