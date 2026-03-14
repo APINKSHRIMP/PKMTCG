@@ -5,8 +5,8 @@ extends Node2D
 
 var audio_player := AudioStreamPlayer.new()
 
-const GROW_DURATION := 5.5
-const BLACK_FADE_DURATION := 5
+const GROW_DURATION := 5.0
+const BLACK_FADE_DURATION := 4
 const SCENE_FADE_DURATION := 1.0
 const NEXT_SCENE := "res://gdscenes/MainMenu.tscn"
 
@@ -17,7 +17,7 @@ func _ready() -> void:
 	white_splash.pivot_offset = white_splash.size / 2
 
 	# Audio
-	var audio_path = "res://audio/sfx/battle_start.ogg"
+	var audio_path = "res://audio/sfx/fatsynth.ogg"
 	var audio_stream = load(audio_path)
 	if audio_stream:
 		audio_player.stream = audio_stream
@@ -34,8 +34,8 @@ func _run_sequence() -> void:
 	tween.set_parallel(true)
 
 	# Scale both splashes from 1.0 to 1.2 over 5.5 seconds
-	tween.tween_property(black_splash, "scale", Vector2(1.5, 1.5), GROW_DURATION)
-	tween.tween_property(white_splash, "scale", Vector2(1.5, 1.5), GROW_DURATION)
+	tween.tween_property(black_splash, "scale", Vector2(1.4, 1.4), GROW_DURATION)
+	tween.tween_property(white_splash, "scale", Vector2(1.4, 1.4), GROW_DURATION)
 
 	# Fade black splash alpha to 0 over 3.5 seconds
 	tween.tween_property(black_splash, "modulate:a", 0.0, BLACK_FADE_DURATION)
