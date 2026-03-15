@@ -1,0 +1,16 @@
+res://gdscenes/game_start_splash.tscn
+res://uiresources/kenneyUI.tres
+res://uiresources/kenneyUI-green.tres
+res://uiresources/kenneyUI-blue.tres
+res://uiresources/kenneyUI-red.tres
+res://gdscenes/backgroundscrollright.gdshader
+res://gdscenes/backgroundscrollleft.gdshader
+res://gdscenes/WorldMap.tscn
+res://worldmap/mapscenes/ShallowBeach.tscn
+res://playerdata/player_data.json
+res://worldmap/mapscenes/WorldMap.tscn
+res://gdscripts/main_menu_script.gd
+res://worldmap/mapscripts/worldmap.gd
+res://gdscripts/game_start_splash.gd
+res://worldmap/mapscripts/shallowbeach.gd
+res://worldmap/mapscenes/WorldMapButtons.tres

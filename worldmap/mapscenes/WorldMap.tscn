@@ -1,0 +1,20 @@
+[gd_scene load_steps=4 format=3 uid="uid://y4gjyg4a0cgy"]
+
+[ext_resource type="Texture2D" uid="uid://dlo38yglmjo2n" path="res://worldmap/mapbackgrounds/worldmap.png" id="1_bgc0n"]
+[ext_resource type="Script" uid="uid://bk7qvd17s33e3" path="res://worldmap/mapscripts/worldmap.gd" id="1_kfatd"]
+[ext_resource type="Theme" uid="uid://c5tq4biitod6t" path="res://worldmap/mapscenes/WorldMapButtons.tres" id="3_xf5ol"]
+
+[node name="WORLD MAP" type="Node2D"]
+script = ExtResource("1_kfatd")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(949.5, 548.5)
+scale = Vector2(1.5288067, 1.5792683)
+texture = ExtResource("1_bgc0n")
+
+[node name="Button" type="Button" parent="."]
+offset_left = 1268.0
+offset_top = 844.0
+offset_right = 1359.0
+offset_bottom = 936.0
+theme = ExtResource("3_xf5ol")

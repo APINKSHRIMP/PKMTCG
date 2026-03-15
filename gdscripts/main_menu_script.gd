@@ -5,7 +5,7 @@ extends Node
 # Map each TextureRect node name to its scene file path
 const SCENE_MAP = {
 	"deck_mode_background": "res://gdscenes/DeckBuild.tscn",
-	"map_mode_background": "res://gdscenes/WorldMap.tscn",
+	"map_mode_background": "res://worldmap/mapscenes/WorldMap.tscn",
 	"player_mode_background": "res://gdscenes/TrainerCard.tscn",
 	"options_mode_background": "res://gdscenes/Options.tscn",
 	"coin_case_mode_background": "res://gdscenes/CoinCase.tscn",

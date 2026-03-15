@@ -1,8 +1,8 @@
 [gd_scene load_steps=4 format=3 uid="uid://dy73eing56d31"]
 
 [ext_resource type="Script" uid="uid://illukoiykc5j" path="res://gdscripts/game_start_splash.gd" id="1_bhgcj"]
-[ext_resource type="Texture2D" uid="uid://cagy8rhu6sscj" path="res://gameimageassets/icon_and_splash/splash_black.png" id="2_n4bia"]
-[ext_resource type="Texture2D" uid="uid://2vsk04jt6ljr" path="res://gameimageassets/icon_and_splash/splash_white.png" id="3_b0gyo"]
+[ext_resource type="Texture2D" uid="uid://cagy8rhu6sscj" path="res://gameimageassets/iconandsplash/splash_black.png" id="2_n4bia"]
+[ext_resource type="Texture2D" uid="uid://2vsk04jt6ljr" path="res://gameimageassets/iconandsplash/splash_white.png" id="3_b0gyo"]
 
 [node name="GAME START SPLASH" type="Node2D"]
 script = ExtResource("1_bhgcj")

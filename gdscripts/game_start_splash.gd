@@ -10,6 +10,9 @@ const BLACK_FADE_DURATION := 4
 const SCENE_FADE_DURATION := 1.0
 const NEXT_SCENE := "res://gdscenes/MainMenu.tscn"
 
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		get_tree().quit()
 
 func _ready() -> void:
 	# Set pivot to centre of each TextureRect so scaling grows outward from middle
