@@ -3,6 +3,6 @@ coin_celebi_green.png
 coin_deoxys_silver.png
 coin_dragonite_gold_2.png
 coin_espeon_purple.png
-coin_gloom_green.png
-coin_gyarados_blue.png
 coin_energy_blue.png
+coin_energy_green.png
+coin_gyarados_blue.png

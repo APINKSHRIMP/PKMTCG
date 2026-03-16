@@ -1,5 +1,8 @@
 {
+	"cash": 2100,
 	"opponents_beaten": [
-		"Swimmer_Jordan"
+		"Swimmer_Jordan",
+		"Bug_Catcher_Alex",
+		"Fisherman_John"
 	]
 }

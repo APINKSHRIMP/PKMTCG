@@ -1,0 +1,5 @@
+1dawn_platinum.png
+1lucas_platinum.png
+swimmerfemale.png
+bugcatcher.png
+fisherman.png

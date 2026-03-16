@@ -7,9 +7,9 @@ extends Node2D
 
 var audio_player := AudioStreamPlayer.new()
 
-const GROW_DURATION := 7.0
-const BLACK_FADE_DURATION := 7
-const SCENE_FADE_DURATION := 3
+const GROW_DURATION := 1 # 7.0
+const BLACK_FADE_DURATION := 1 # 7
+const SCENE_FADE_DURATION := 1 # 3
 const NEXT_SCENE := "res://gdscenes/MainMenu.tscn"
 
 func _input(event: InputEvent) -> void:
@@ -49,8 +49,8 @@ func _run_sequence() -> void:
 	#tween.tween_property(black_splash, "modulate:a", 0.0, BLACK_FADE_DURATION)
 	
 	# Scale both splashes from 1.0 to 1.2 over 5.5 seconds
-	tween.tween_property(black_text, "scale", Vector2(1.1, 1.1), GROW_DURATION)
-	tween.tween_property(white_text, "scale", Vector2(1.1, 1.1), GROW_DURATION)
+	#tween.tween_property(black_text, "scale", Vector2(1.1, 1.1), GROW_DURATION)
+	#tween.tween_property(white_text, "scale", Vector2(1.1, 1.1), GROW_DURATION)
 
 	# Fade black splash alpha to 0 over 3.5 seconds
 	#tween.tween_property(white_text, "modulate:a", 0.0, BLACK_FADE_DURATION)

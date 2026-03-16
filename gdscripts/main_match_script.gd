@@ -11,6 +11,16 @@ var amount_of_cards_to_draw = 7	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO
 var hide_hidden_cards = true      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
 var opponent_deck_name = "null"
 var player_deck_name = "null"
+var amount_of_prize_cards = 1
+
+# When true, the match is ending — all turn logic should bail out immediately
+var game_is_over: bool = false
+
+# Helper: returns true if the game has ended or this node has been removed from
+# the scene tree (which happens after change_scene_to_file). Every async function
+# should call this after any await and return immediately if true.
+func _should_bail() -> bool:
+	return game_is_over or not is_inside_tree()
 
 # TESTING - There are different rulesets for burn and confusion depending on what generation/set is being played.
 # Additionally I personally felt base set confusion retreat rule is horrendous, so I have created a personal rule that doesn't give free retreat but doesn't force discard then coin flip
@@ -1652,7 +1662,7 @@ func draw_prize_cards(is_opponent: bool) -> void:
 		return
 	
 	# Draw the top 6 cards from the deck and add them to prize cards
-	for i in range(6):
+	for i in range(amount_of_prize_cards):
 		var prize_card = deck.pop_front()
 		prize_cards.append(prize_card)
 	
@@ -2049,6 +2059,9 @@ func perform_energy_attachment() -> void:
 
 # Called when any win/loss condition is met to end the match
 func game_end_logic(loser_is_player: bool) -> void:
+	# Set the flag immediately so no other async functions continue processing
+	game_is_over = true
+	
 	if loser_is_player:
 		print("GAME OVER: Player has lost the game!")
 		await show_message("GAME OVER: YOU LOST!!!!!")
@@ -2059,7 +2072,28 @@ func game_end_logic(loser_is_player: bool) -> void:
 		GameState.battle_result = "win"
 	
 	GameState.returning_from_battle = true
-	get_tree().call_deferred("change_scene_to_file", "res://gdscenes/WorldMap.tscn")
+	
+	# Stop the match BGM before transitioning
+	SoundManagerScript.stop_bgm()
+	
+	# Instead of awaiting a tween on this node (which gets freed by
+	# change_scene_to_file), we create a ColorRect overlay on the ROOT
+	# CanvasLayer and tween that. The transition is handled via a
+	# one-shot timer on the autoload so this script never needs to
+	# resume after the scene change.
+	var overlay = ColorRect.new()
+	overlay.color = Color(0, 0, 0, 0)
+	overlay.size = Vector2(1920, 1080)
+	overlay.z_index = 1000
+	# Add to the tree root so it persists through scene change
+	get_tree().root.add_child(overlay)
+	
+	var tween = get_tree().create_tween()
+	tween.tween_property(overlay, "color:a", 1.0, 0.5)
+	tween.tween_callback(func():
+		overlay.queue_free()
+		get_tree().change_scene_to_file("res://gdscenes/MatchOutro.tscn")
+	)
 
 # Draws one card from the top of the deck and adds it to the hand
 func draw_card_from_deck(is_opponent: bool) -> card_object:
@@ -2240,6 +2274,8 @@ func reset_field_pokemon_turn_flags(is_opponent: bool) -> void:
 
 # Called at the start of the player's turn to perform mandatory actions
 func player_start_turn_checks() -> void:
+	if _should_bail():
+		return
 	opponent_blocker.visible = false
 	show_floating_label("Start turn", Vector2(50, 180), false)
 	turn_number += 1
@@ -2264,10 +2300,16 @@ func player_end_turn_checks() -> void:
 	
 	await check_all_knockouts()
 	
+	if _should_bail():
+		return
+	
 	await inbetween_turn_checks(true)
 
 # Resets shared state between turns, processes status effects, and starts the next turn
 func inbetween_turn_checks(player_turn_just_ended: bool = true) -> void:
+	if _should_bail():
+		return
+	
 	player_energy_played_this_turn = false
 	player_retreated_this_turn = false
 	opponent_energy_played_this_turn = false
@@ -2305,6 +2347,9 @@ func inbetween_turn_checks(player_turn_just_ended: bool = true) -> void:
 		# Tick down Defender on player's pokemon
 		await tick_defender_counters(false)
 	
+	if _should_bail():
+		return
+	
 	# Reset power_used_this_turn for all pokemon
 	if player_turn_just_ended:
 		reset_power_used_flags(false)
@@ -2314,10 +2359,17 @@ func inbetween_turn_checks(player_turn_just_ended: bool = true) -> void:
 	# Process between-turn effects (poison, burn, sleep) for both active pokemon
 	if player_active_pokemon != null:
 		await process_status_between_turns(player_active_pokemon, false)
+	if _should_bail():
+		return
 	if opponent_active_pokemon != null:
 		await process_status_between_turns(opponent_active_pokemon, true)
+	if _should_bail():
+		return
 
 	await check_all_knockouts()
+	
+	if _should_bail():
+		return
 
 	if player_turn_just_ended:
 		opponent_start_turn_checks()
@@ -3266,17 +3318,23 @@ func check_all_knockouts() -> Dictionary:
 	
 	if results["opponent_kos"] > 0:
 		await handle_post_knockout(true)
+	if _should_bail():
+		return results
 	
 	if results["player_kos"] > 0:
 		await handle_post_knockout(false)
+	if _should_bail():
+		return results
 	
 	# Check win condition: all prize cards taken
 	if player_prize_cards.size() == 0 and opponent_prize_kos > 0:
 		await show_message("YOU TOOK YOUR LAST PRIZE CARD!")
 		game_end_logic(false)  # false = opponent loses
+		return results
 	if opponent_prize_cards.size() == 0 and player_prize_kos > 0:
 		await show_message("OPPONENT TOOK THEIR LAST PRIZE CARD!")
 		game_end_logic(true)  # true = player loses
+		return results
 
 	return results
 
@@ -6224,25 +6282,15 @@ func load_opponent_data_by_name(opp_name: String):
 	
 	print("Opponent with name ", opp_name, " not found")
 
-# Play the correct music
+# Play the correct music via the global SoundManager
 func play_opponent_music():
 	var music_file = opponent_data.get("music")
 	if music_file == null:
 		print("No music file specified")
 		return
 	
-	var audio_player = AudioStreamPlayer.new()
-	add_child(audio_player)
-	
-	var audio_stream = load("res://audio/bgm/" + music_file + ".ogg")
-	if audio_stream == null:
-		print("Music file not found: ", music_file)
-		return
-	
-	audio_player.stream = audio_stream
-	audio_player.bus = "Master"
-	audio_player.stream.loop = true
-	audio_player.play()
+	var music_path = "res://audio/bgm/" + music_file + ".ogg"
+	SoundManagerScript.play_bgm(music_path, true)
 
 # Function to set up opponent's active and bench pokemon using the priority condition criteria scoring selection
 func opponent_setup_pokemon_from_hand() -> void:
@@ -6269,6 +6317,8 @@ func opponent_setup_pokemon_from_hand() -> void:
 
 # Handles start-of-turn duties then hands off to the CPU decision orchestrator
 func opponent_start_turn_checks() -> void:
+	if _should_bail():
+		return
 	turn_number += 1
 	print("OPPONENT'S TURN START. TURN NUMBER IS ", turn_number)
 	await get_tree().create_timer(0.5).timeout
@@ -6290,41 +6340,61 @@ func opponent_start_turn_checks() -> void:
 
 # Orchestrates all CPU decision phases in the correct order
 func cpu_turn_orchestrator() -> void:
+	if _should_bail():
+		return
 	# Phase 0: Activate beneficial Pokemon Powers (Rain Dance, Energy Trans, Damage Swap)
 	await cpu_phase_activate_powers()
 	
+	if _should_bail():
+		return
 	# Phase 1a: Play Bill first (always highest priority)
 	await cpu_phase_play_trainer_cards_priority()
 
+	if _should_bail():
+		return
 	# Phase 2: Evolution plays
 	await cpu_phase_evolution()
 
+	if _should_bail():
+		return
 	# Phase 3: Bench pokemon plays (uses existing priority scoring)
 	await cpu_phase_bench_play()
 
+	if _should_bail():
+		return
 	# Phase 4: Build evaluation AFTER all board-altering plays have resolved
 	var cpu_eval = build_cpu_evaluation()
 
 	# Phase 4b: Play remaining trainer cards after evolutions/bench plays
 	await cpu_phase_play_trainer_cards_remaining()
 
+	if _should_bail():
+		return
 	# Phase 5: First retreat evaluation (before energy attachment)
 	var retreat_deferred = await cpu_phase_retreat_first_pass(cpu_eval)
 
 	# Phase 6: Energy attachment
 	await cpu_phase_energy_attachment(cpu_eval)
 
+	if _should_bail():
+		return
 	# Phase 7: Second retreat pass (only if Phase 5 deferred pending energy)
 	if retreat_deferred:
 		cpu_eval = build_cpu_evaluation()
 		await cpu_phase_retreat_second_pass(cpu_eval)
 
+	if _should_bail():
+		return
 	# Phase 7b: Final trainer card check (re-evaluate after energy/retreat)
 	await cpu_phase_play_trainer_cards_remaining()
 
+	if _should_bail():
+		return
 	# Phase 8: Attack decision (must always be last)
 	await cpu_phase_attack(cpu_eval)
 
+	if _should_bail():
+		return
 	await get_tree().create_timer(0.5).timeout
 	await show_message("Your opponent ends their turn")
 	await inbetween_turn_checks(false)
