@@ -1,8 +1,8 @@
 [gd_scene load_steps=8 format=3 uid="uid://kkeca0ghlekk"]
 
-[ext_resource type="Script" uid="uid://663wesm8innb" path="res://worldmap/mapscripts/shallowbeach.gd" id="1_5o55x"]
-[ext_resource type="Texture2D" uid="uid://dfvaw65wnkawx" path="res://worldmap/mapbackgrounds/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Friend Areas - Shallow Beach.png" id="2_lheit"]
-[ext_resource type="PackedScene" uid="uid://bprufyh8mxqom" path="res://gdscenes/Player.tscn" id="3_php38"]
+[ext_resource type="Script" uid="uid://663wesm8innb" path="res://worldmap/mapscripts/Shallow_Beach.gd" id="1_ng4qn"]
+[ext_resource type="Texture2D" uid="uid://dfvaw65wnkawx" path="res://worldmap/mapbackgrounds/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Friend Areas - Shallow Beach.png" id="2_lnhv8"]
+[ext_resource type="PackedScene" uid="uid://bprufyh8mxqom" path="res://gdscenes/Player.tscn" id="3_q78ux"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_2p66v"]
 radius = 50.0
@@ -17,12 +17,12 @@ size = Vector2(1920, 200)
 size = Vector2(300, 1000)
 
 [node name="SHALLOW BEACH" type="Node2D"]
-script = ExtResource("1_5o55x")
+script = ExtResource("1_ng4qn")
 
 [node name="shallow_beach_background" type="Sprite2D" parent="."]
 position = Vector2(969, 536)
 scale = Vector2(3.815, 3.815)
-texture = ExtResource("2_lheit")
+texture = ExtResource("2_lnhv8")
 
 [node name="OPPONENTS" type="Node2D" parent="."]
 
@@ -80,5 +80,5 @@ shape = SubResource("RectangleShape2D_ytr86")
 
 [node name="UILAYER" type="CanvasLayer" parent="."]
 
-[node name="Player" parent="." instance=ExtResource("3_php38")]
+[node name="Player" parent="." instance=ExtResource("3_q78ux")]
 position = Vector2(878, 622)

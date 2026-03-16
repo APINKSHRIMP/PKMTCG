@@ -1,7 +1,8 @@
 63f7b34db8d8cdea90c76aacccf841ec
-::res://::1773609744
+::res://::1773654770
 ::res://audio/::1773155353
-::res://audio/bgm/::1773352824
+::res://audio/bgm/::1773656746
+003 File Select PMD Blue Rescue Team OST.mp3::AudioStreamMP3::4626839842380616969::1773656543::1773656570::1::::<><><>0<>0<>6f22c6c9c1257be59275bd58877748fe<>res://.godot/imported/003 File Select PMD Blue Rescue Team OST.mp3-62ed47216237105c2624b157db139094.mp3str::
 003_-_Welcome_to_the_World_of_Pokmon__-_Pokmon_Mystery_Dungeon_-_Explorers_of_Sky.ogg::AudioStreamOggVorbis::3932577130640942653::1773155363::1773155945::1::::<><><>0<>0<>1adc09b20eb9036c30c33d5b91e26b76<>res://.godot/imported/003_-_Welcome_to_the_World_of_Pokmon__-_Pokmon_Mystery_Dungeon_-_Explorers_of_Sky.ogg-f8bb641ebdd35189235953dae22c98d4.oggvorbisstr::
 004_Personality_Test_PMD_Blue_Rescue_Team_OST.ogg::AudioStreamOggVorbis::3394520193055341966::1773155363::1773155945::1::::<><><>0<>0<>89e261250d15494bbfafdeeba3a44145<>res://.godot/imported/004_Personality_Test_PMD_Blue_Rescue_Team_OST.ogg-3e4204d544dfc0c3710e9defcd5acbbb.oggvorbisstr::
 005_-_Beach_Cave_-_Pokmon_Mystery_Dungeon_-_Explorers_of_Sky.ogg::AudioStreamOggVorbis::3272743878940065962::1773155363::1773155945::1::::<><><>0<>0<>0fa47adeaf410f6d9e6f8de9c8382add<>res://.godot/imported/005_-_Beach_Cave_-_Pokmon_Mystery_Dungeon_-_Explorers_of_Sky.ogg-820a9f05883e1b1ed33e6e86e27e11a9.oggvorbisstr::
@@ -21,17 +22,21 @@ hard_battle.ogg::AudioStreamOggVorbis::3766116189302692388::1773155409::17731559
 jazzy_battle.ogg::AudioStreamOggVorbis::3537700186373003804::1773155409::1773155945::1::::<><><>0<>0<>668a5b58b8f3ab2b107e08360595dd73<>res://.godot/imported/jazzy_battle.ogg-8312dc8dee7f65902680591f6b174a59.oggvorbisstr::
 main_menu_music.ogg::AudioStreamOggVorbis::5779047325588136830::1773155416::1773316925::1::::<><><>0<>0<>bb1996991f4a1704796ac9c2516f6a4c<>res://.godot/imported/main_menu_music.ogg-ddf61194aa2bfd41dba2807a539fd219.oggvorbisstr::
 normal_battle.ogg::AudioStreamOggVorbis::2602630661226443946::1773155414::1773155945::1::::<><><>0<>0<>efc21a8d1a077dd254495c7c8081d72d<>res://.godot/imported/normal_battle.ogg-63341b2570a3e132ba0075b16ab2ab75.oggvorbisstr::
+options_music.ogg::AudioStreamOggVorbis::4341482427438630704::1773155410::1773656737::1::::<><><>0<>0<>258449908aa9aa0e24cf44cb0028579c<>res://.godot/imported/options_music.ogg-f78fd799df49266c74de411cbed483f9.oggvorbisstr::
 snaky_battle.ogg::AudioStreamOggVorbis::2933477126983533222::1773155415::1773155945::1::::<><><>0<>0<>132960208e8659f562397f14a3f1921c<>res://.godot/imported/snaky_battle.ogg-b1ef013501345b520bca7b94b915399d.oggvorbisstr::
 surrounded_sea.ogg::AudioStreamOggVorbis::4692049975490767310::1773155363::1773247331::1::::<><><>0<>0<>71121eac3aa5b621aa25d5cc0d99c390<>res://.godot/imported/surrounded_sea.ogg-879ad909b41e86d33cbca6cda5cc3867.oggvorbisstr::
 weird_battle.ogg::AudioStreamOggVorbis::7880279284811121764::1773155416::1773155945::1::::<><><>0<>0<>9830256726a783782a3991c2f7f536e1<>res://.godot/imported/weird_battle.ogg-521dce3246438c6ae4c44dfb7b619f9b.oggvorbisstr::
-world_map.ogg::AudioStreamOggVorbis::1736827328577021337::1773155410::1773316933::1::::<><><>0<>0<>fc9938f989af5403697101b99ad17c7c<>res://.godot/imported/world_map.ogg-b59a1eff9ed3290017c66d374492fdae.oggvorbisstr::
-::res://audio/sfx/::1773514763
+world_map_music.mp3::AudioStreamMP3::1517722520865956198::1773656554::1773656737::1::::<><><>0<>0<>15aa15d9424153b8fa408765522aa2da<>res://.godot/imported/world_map_music.mp3-86b4eed1cb3388e1f46154cc4e35e38d.mp3str::
+world_map_music.ogg::AudioStreamOggVorbis::7057910776907352565::1773656709::1773656746::1::::<><><>0<>0<>a29d3fd6f784cecb92711d2962834f7d<>res://.godot/imported/world_map_music.ogg-b2ceac0167ed4099e1ab0ce6e1c3aeb5.oggvorbisstr::
+::res://audio/sfx/::1773656746
 attack_sound.ogg::AudioStreamOggVorbis::5277956669137564882::1773155373::1773155945::1::::<><><>0<>0<>b69a02e697e3a7dd786afe40f585d1e5<>res://.godot/imported/attack_sound.ogg-e15ba7335755a54bb078706ebb3515b6.oggvorbisstr::
 battle_start.ogg::AudioStreamOggVorbis::7343286306681375379::1773155373::1773155945::1::::<><><>0<>0<>db3669bacfba10b032911df62e8a7f7b<>res://.godot/imported/battle_start.ogg-0e02a75b79a3d99c309e3645124a677d.oggvorbisstr::
 card_draw_sound.ogg::AudioStreamOggVorbis::7233551014047773912::1773243367::1773243382::1::::<><><>0<>0<>14d6ee5f888fd83d22cc34371e3c6bfe<>res://.godot/imported/card_draw_sound.ogg-642ca7d21ccdeeaa199115da6a6388b3.oggvorbisstr::
 coin_flip_sound.ogg::AudioStreamOggVorbis::221478353573355654::1773245914::1773245916::1::::<><><>0<>0<>63e68c33742335d6c23296b47cf0b5ac<>res://.godot/imported/coin_flip_sound.ogg-29b93c99ebb3885e9ddd8a9ffc5cc744.oggvorbisstr::
 damage_sound.ogg::AudioStreamOggVorbis::485198837644906719::1773155373::1773155945::1::::<><><>0<>0<>72e0f5e6f38cf51bb486b70151268cd2<>res://.godot/imported/damage_sound.ogg-a761747e3e94101d2978d060474eca26.oggvorbisstr::
 energy_sound.ogg::AudioStreamOggVorbis::922226435676603336::1773155373::1773155945::1::::<><><>0<>0<>cc651d3adcac2d9229edc27ce466524a<>res://.godot/imported/energy_sound.ogg-7153785f68de4762106a0d972dcf82c1.oggvorbisstr::
+enter_location_sound.mp3::AudioStreamMP3::2942844034609218353::1773655423::1773655732::1::::<><><>0<>0<>02e3e0b9c4ab51fb8b88ed4c126cb72c<>res://.godot/imported/enter_location_sound.mp3-663aa2f2d23a8831b836293abe8281e7.mp3str::
+enter_location_sound.ogg::AudioStreamOggVorbis::8318152896325603110::1773655670::1773655732::1::::<><><>0<>0<>d91868748d1565d0c8ba02408e418c26<>res://.godot/imported/enter_location_sound.ogg-843230e26a18b93951a046eb8e1ef5f2.oggvorbisstr::
 evolve_sound.ogg::AudioStreamOggVorbis::3589514745923688556::1773155373::1773155945::1::::<><><>0<>0<>267cc741b6d7d896d399297ddb2660fe<>res://.godot/imported/evolve_sound.ogg-a42d9ce0bc0ae129d76146dcb13ad2bf.oggvorbisstr::
 fatsynth.ogg::AudioStreamOggVorbis::5845588441454255339::1773514761::1773514763::1::::<><><>0<>0<>d28ef6adfe07b67b5f2eb8d444c089a2<>res://.godot/imported/fatsynth.ogg-db34980adca868a557698d594200a171.oggvorbisstr::
 gamemode_select_sound.ogg::AudioStreamOggVorbis::4297046592600826166::1773331984::1773331988::1::::<><><>0<>0<>6bf5c088ba84fc2f4e49aeee27481923<>res://.godot/imported/gamemode_select_sound.ogg-d63ae70e848e1ba802c631901c2f4714.oggvorbisstr::
@@ -1808,7 +1813,9 @@ Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Huts - Torchic Hut
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Huts - Totodile Hut.png::CompressedTexture2D::1963504273875343804::1770807925::1771183064::1::::<><><>0<>0<>897de37c67ab17a2195867e73e0e29b9<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Huts - Totodile Hut.png-2cd5965733805decae377d93c95c45a9.ctex::
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Huts - Treecko Hut.png::CompressedTexture2D::6410155770007312648::1770807926::1771183064::1::::<><><>0<>0<>7cbeb6a9402bd0831187642a307e5c36<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Huts - Treecko Hut.png-3ee6428ebc163add4156d66aad7ef11f.ctex::
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Huts - Water Hut.png::CompressedTexture2D::3502654811449797635::1770807928::1771183064::1::::<><><>0<>0<>48275f14f7fba9b197d086e895cf8650<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Huts - Water Hut.png-963bdee25b989cdeff3675c7dd143b5d.ctex::
-::res://gameimageassets/iconandsplash/::1773608948
+::res://gameimageassets/iconandsplash/::1773657098
+black_logo_only.png::CompressedTexture2D::6255809430015247221::1773657098::1773657122::1::::<><><>0<>0<>eb3480816ef92ca5e33d167a196e337e<>res://.godot/imported/black_logo_only.png-1baab6c2aed00e60620c54b35da8ec52.ctex::
+black_text_only.png::CompressedTexture2D::6260739041257417450::1773657000::1773657122::1::::<><><>0<>0<>6fbbee586e333c982136a67f399f94c9<>res://.godot/imported/black_text_only.png-f2877b564528cdff31f2613fbb365499.ctex::
 pkm_tcg_legacy_horizontal.png::CompressedTexture2D::4325483032621577499::1773421085::1773608948::1::::<><><>0<>0<>097779979208f78f4658839160e39199<>res://.godot/imported/pkm_tcg_legacy_horizontal.png-892c8e7e116cb0829406da9f536bd8d5.ctex::
 pkm_tcg_legacy_icon.png::CompressedTexture2D::7792793268550841429::1773421409::1773608948::1::::<><><>0<>0<>869ab16bdb1624128c9f5b920a9fa9dd<>res://.godot/imported/pkm_tcg_legacy_icon.png-27931b04d89e22b96cf63391e37e2873.ctex::
 pkm_tcg_legacy_icon_square_full.png::CompressedTexture2D::4246570130152305369::1773430359::1773608948::1::::<><><>0<>0<>1056f71556561ed5ece807c475701171<>res://.godot/imported/pkm_tcg_legacy_icon_square_full.png-55565d09092bf4ed82dd7289054c0452.ctex::
@@ -1816,6 +1823,8 @@ pkm_tcg_legacy_vertical.png::CompressedTexture2D::4632986933701489379::177342183
 RayquazaSprite.png::CompressedTexture2D::1656207969913314715::1770062602::1773608948::1::::<><><>0<>0<>da7d6602ac18967e0e3888393f1f02af<>res://.godot/imported/RayquazaSprite.png-3a777adf40b74fa515cf4dbb28268733.ctex::
 splash_black.png::CompressedTexture2D::4786744677597264085::1773421983::1773608948::1::::<><><>0<>0<>2c6893622216f5fb35d1255a6c4ce23b<>res://.godot/imported/splash_black.png-552462ee91d1d06a0e4f1b9d6d19742f.ctex::
 splash_white.png::CompressedTexture2D::1939562833189597303::1773421977::1773608948::1::::<><><>0<>0<>cc7469d95aa92968a23d668cced0e9bd<>res://.godot/imported/splash_white.png-ea8b532ea3db7035e0bfc7e1d4da639a.ctex::
+white_logo_only.png::CompressedTexture2D::1042415052165161194::1773657064::1773657122::1::::<><><>0<>0<>892ac5aeccf936d88f5af929d2a02ffb<>res://.godot/imported/white_logo_only.png-eccfed93546215e676e31cf43cc14836.ctex::
+white_text_only.png::CompressedTexture2D::1782162745922363567::1773657020::1773657122::1::::<><><>0<>0<>cfabdd11fa188e0ddc27d13a903647e4<>res://.godot/imported/white_text_only.png-88ffedd1e7adafe3d9a85137115e6790.ctex::
 ::res://gameimageassets/menuimages/::1773314892
 coin_case_mode.png::CompressedTexture2D::2522526939383953918::1773314782::1773314892::1::::<><><>0<>0<>d4f6a9e8cb7f30bc8dec49c5f98e0f1c<>res://.godot/imported/coin_case_mode.png-c01e7df7d8008e8ccac1a748a0fb8b4c.ctex::
 deck_mode.png::CompressedTexture2D::7453059002368444045::1773314816::1773314892::1::::<><><>0<>0<>abfd80e6528d372973fd4b6fb53c395f<>res://.godot/imported/deck_mode.png-1acd682dfc37bbfdbc080857c620c6fc.ctex::
@@ -1889,9 +1898,9 @@ Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Peli
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Pokemon Square.png::CompressedTexture2D::7975275552531345460::1770808341::1771183064::1::::<><><>0<>0<>ee287859ff216f171adf577dae60c58a<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Pokemon Square.png-f5412f9af4fcfce81f675190407edccd.ctex::
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Wake Up Forest.png::CompressedTexture2D::9016169070841043957::1770808384::1771183064::1::::<><><>0<>0<>47055b80a4ee4919c2d6e4ae2f977f83<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Wake Up Forest.png-d83d0c9873d41b1328175f397b82083a.ctex::
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Whiscash Pond.png::CompressedTexture2D::564202538199469867::1770808387::1771183064::1::::<><><>0<>0<>49c17e0e692eab42328086fad63f0563<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Backgrounds - Whiscash Pond.png-dd496132545824659bc15464d84a1900.ctex::
-::res://gdscenes/::1773609258
-backgroundscrollleft.gdshader::Shader::9137795573988388996::1773608947::0::1::::<><><>0<>0<><>::
-backgroundscrollright.gdshader::Shader::4939812685521450649::1773608947::0::1::::<><><>0<>0<><>::
+::res://gdscenes/::1773654179
+backgroundscrollleft.gdshader::Shader::9137795573988388996::1773654179::0::1::::<><><>0<>0<><>::
+backgroundscrollright.gdshader::Shader::4939812685521450649::1773654179::0::1::::<><><>0<>0<><>::
 CoinCase.tscn::PackedScene::4678573339311089521::1773430281::0::1::::<><><>0<>0<><>::uid://qneea1dv6lmq::::res://gdscripts/coin_case_script.gd<>uid://ccm481fk14lc8::::res://gdscenes/backgroundscrollright.gdshader<>uid://dieqv60p12hlk::::res://gameimageassets/backgrounds/border_only.png<>uid://d3gofmygrsrkm::::res://gdscenes/backgroundscrollleft.gdshader<>uid://6shp5ck1tnja::::res://uiresources/kenneyUI.tres<>uid://he803mdt247f::::res://gameimageassets/backgrounds/background5.png<>uid://mbsg4xqnedxi::::res://uiresources/kenneyUI-red.tres
 DeckBuild.tscn::PackedScene::3965241932450757130::1773317132::0::1::::<><><>0<>0<><>::
 game_start_splash.tscn::PackedScene::8911562046078257846::1773608947::0::1::::<><><>0<>0<><>::uid://illukoiykc5j::::res://gdscripts/game_start_splash.gd<>uid://cagy8rhu6sscj::::res://gameimageassets/iconandsplash/splash_black.png<>uid://2vsk04jt6ljr::::res://gameimageassets/iconandsplash/splash_white.png
@@ -1902,15 +1911,15 @@ Opponent.tscn::PackedScene::5328478855013312185::1773399722::0::1::::<><><>0<>0<
 Options.tscn::PackedScene::2668957580047992005::1773317160::0::1::::<><><>0<>0<><>::
 Player.tscn::PackedScene::3475572301797819136::1773399730::0::1::::<><><>0<>0<><>::uid://ddwhpv4d35a2l::::res://gdscripts/player.gd
 TrainerCard.tscn::PackedScene::8977491100883602099::1773430281::0::1::::<><><>0<>0<><>::uid://c1yumpfxp1ebh::::res://gdscripts/trainer_card_script.gd<>uid://ccm481fk14lc8::::res://gdscenes/backgroundscrollright.gdshader<>uid://dieqv60p12hlk::::res://gameimageassets/backgrounds/border_only.png<>uid://d3gofmygrsrkm::::res://gdscenes/backgroundscrollleft.gdshader<>uid://6shp5ck1tnja::::res://uiresources/kenneyUI.tres<>uid://he803mdt247f::::res://gameimageassets/backgrounds/background5.png<>uid://mbsg4xqnedxi::::res://uiresources/kenneyUI-red.tres
-::res://gdscripts/::1773609628
+::res://gdscripts/::1773655787
 cardimage.gd::GDScript::8839746712978955150::1773175963::0::1::::<>TextureRect<><>0<>0<><>::
 card_class_object.gd::GDScript::9005189776063436535::1772825582::0::1::::card_object<>RefCounted<><>0<>0<><>::
 coin_case_script.gd::GDScript::1150108460488496380::1773331599::0::1::::<>Node<><>0<>0<><>::
 game_data_manager.gd::GDScript::6821646683417671353::1773175224::0::1::::<>Node<><>0<>0<><>::
-game_start_splash.gd::GDScript::584923054454160733::1773514856::0::1::::<>Node2D<><>0<>0<><>::
+game_start_splash.gd::GDScript::584923054454160733::1773609846::0::1::::<>Node2D<><>0<>0<><>::
 game_state.gd::GDScript::3420139636670588205::1773352028::0::1::::<>Node<><>0<>0<><>::
 main_match_script.gd::GDScript::3857889966551739527::1773412068::0::1::::<>Control<><>0<>0<><>::
-main_menu_script.gd::GDScript::9178917204301052986::1773609628::0::1::::<>Node<><>0<>0<><>::
+main_menu_script.gd::GDScript::9178917204301052986::1773655787::0::1::::<>Node<><>0<>0<><>::
 match_intro_script.gd::GDScript::4670137787471001061::1773412080::0::1::::<>Control<><>0<>0<><>::
 opponent.gd::GDScript::2238275078901616221::1773351716::0::1::::<>CharacterBody2D<><>0<>0<><>::
 player.gd::GDScript::7415697846405238897::1773351801::0::1::::<>CharacterBody2D<><>0<>0<><>::
@@ -1931,21 +1940,21 @@ player_owned_coin_list.txt::TextFile::-1::1773403807::0::1::::<><><>0<>0<><>::
 player_progress.json::JSON::-1::1773412068::0::1::::<><><>0<>0<><>::
 poli'swrath_and_gong.json::JSON::-1::1773247004::0::1::::<><><>0<>0<><>::
 Trainers.json::JSON::-1::1773070461::0::1::::<><><>0<>0<><>::
-::res://uiresources/::1773608947
-kenneyUI-blue.tres::Theme::2521920198750954642::1773608947::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
-kenneyUI-green.tres::Theme::3314126987880200601::1773608947::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
-kenneyUI-red.tres::Theme::845435681495830482::1773608947::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
-kenneyUI-yellow.tres::Theme::545356902672929525::1770817546::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
-kenneyUI.tres::Theme::2213466337489992798::1773608947::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+::res://uiresources/::1773654179
+kenneyUI-blue.tres::Theme::2521920198750954642::1773654179::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+kenneyUI-green.tres::Theme::3314126987880200601::1773654179::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+kenneyUI-red.tres::Theme::845435681495830482::1773654179::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+kenneyUI-yellow.tres::Theme::545356902672929525::1773654179::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
+kenneyUI.tres::Theme::2213466337489992798::1773654179::0::1::::<><><>0<>0<><>::uid://d00ws7wljnit4::::res://uiresources/UIpack_vector.svg<>uid://b0yku2ewwjiye::::res://uiresources/kenvector_future.ttf
 kenvector_future.ttf::FontFile::4191331151886121916::1769790644::1769790650::1::::<><><>0<>0<>b5f2fbf7341fa91df600bf6a2cd79529<>res://.godot/imported/kenvector_future.ttf-0df52ea86bc6bd37fdc474d8a1e4c7a4.fontdata::
 UIpack_vector.svg::CompressedTexture2D::8966962219257996827::1769790644::1769790651::1::::<><><>0<>0<>85e2938788acfa1d2a1358e64153b160<>res://.godot/imported/UIpack_vector.svg-de0b2e46bae3527b25cbbf9a474f3ed7.ctex::
 ::res://worldmap/::1773609342
 ::res://worldmap/mapbackgrounds/::1773609343
 Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Friend Areas - Shallow Beach.png::CompressedTexture2D::7553599165155960547::1770808639::1773609229::1::::<><><>0<>0<>bf1c8844b483a84f7089a36c0742e051<>res://.godot/imported/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Friend Areas - Shallow Beach.png-a9a4df22293e26a825e6dde1de711aae.ctex::
 worldmap.png::CompressedTexture2D::7962000896996245315::1773608838::1773609343::1::::<><><>0<>0<>f6455b18055c64c7a67e62061db936ee<>res://.godot/imported/worldmap.png-137cd99e8f43d00a1eaedec1bd4ba9ad.ctex::
-::res://worldmap/mapscenes/::1773609744
-ShallowBeach.tscn::PackedScene::722778692382311862::1773609813::0::1::::<><><>0<>0<><>::uid://663wesm8innb::::res://worldmap/mapscripts/ShallowBeach.gd<>uid://dfvaw65wnkawx::::res://worldmap/mapbackgrounds/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Friend Areas - Shallow Beach.png<>uid://bprufyh8mxqom::::res://gdscenes/Player.tscn
-WorldMap.tscn::PackedScene::1744780847430095956::1773609658::0::1::::<><><>0<>0<><>::uid://dlo38yglmjo2n::::res://worldmap/mapbackgrounds/worldmap.png
-::res://worldmap/mapscripts/::1773609744
-worldmap.gd::GDScript::3155378380973689876::1773609808::0::1::::<>Node<><>0<>0<><>::
-ShallowBeach.gd::GDScript::2241589464907759807::1773399441::0::1::::<>Node2D<><>0<>0<><>::
+::res://worldmap/mapscenes/::1773656115
+Shallow_Beach.tscn::PackedScene::722778692382311862::1773656109::0::1::::<><><>0<>0<><>::uid://663wesm8innb::::res://worldmap/mapscripts/Shallow_Beach.gd<>uid://dfvaw65wnkawx::::res://worldmap/mapbackgrounds/Game Boy Advance - Pokemon Mystery Dungeon_ Red Rescue Team - Friend Areas - Shallow Beach.png<>uid://bprufyh8mxqom::::res://gdscenes/Player.tscn
+World_Map.tscn::PackedScene::1744780847430095956::1773656115::0::1::::<><><>0<>0<><>::uid://bk7qvd17s33e3::::res://worldmap/mapscripts/World_Map.gd<>uid://dlo38yglmjo2n::::res://worldmap/mapbackgrounds/worldmap.png<>uid://mbsg4xqnedxi::::res://uiresources/kenneyUI-red.tres
+::res://worldmap/mapscripts/::1773656109
+Shallow_Beach.gd::GDScript::2241589464907759807::1773656109::0::1::::<>Node2D<><>0<>0<><>::
+World_Map.gd::GDScript::3155378380973689876::1773656040::0::1::::<>Node2D<><>0<>0<><>::

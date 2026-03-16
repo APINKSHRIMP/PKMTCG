@@ -1,15 +1,14 @@
+CanvasLayer
+AnimatedSprite2D
 Button
 Sprite2D
 TextureRect
 CollisionShape2D
 StaticBody2D
 Timer
-AnimatedSprite2D
 CharacterBody2D
 Area2D
-CanvasLayer
 Node2D
 LineEdit
 TextEdit
 GridContainer
-Control
