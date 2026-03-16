@@ -7,9 +7,9 @@ extends Node2D
 
 var audio_player := AudioStreamPlayer.new()
 
-const GROW_DURATION := 1 # 7.0
-const BLACK_FADE_DURATION := 1 # 7
-const SCENE_FADE_DURATION := 1 # 3
+const GROW_DURATION := 0.1 # 7.0
+const BLACK_FADE_DURATION := 0.1 # 7
+const SCENE_FADE_DURATION := 0.1 # 3
 const NEXT_SCENE := "res://gdscenes/MainMenu.tscn"
 
 func _input(event: InputEvent) -> void:

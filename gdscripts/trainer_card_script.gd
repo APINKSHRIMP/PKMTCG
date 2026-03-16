@@ -9,7 +9,8 @@ const SPRITE_SEPARATION  := 0
 const COLUMNS            := 9
 const MAX_NAME_LENGTH    := 15
 
-const PLAYER_DATA_PATH   := "C:/pkm-tcg-gdt/playerdata/player_data.json"
+const PLAYER_DATA_PATH    := "C:/pkm-tcg-gdt/playerdata/player_data.json"
+const OWNED_COSTUMES_PATH := "C:/pkm-tcg-gdt/playerdata/player_owned_costumes.txt"
 
 # ─── State ───────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,10 @@ var saved_player_name       : String = ""
 
 var _active_tween           : Tween = null
 var _last_clicked_rect      : TextureRect = null
+
+# Flat set of owned costume filenames e.g. {"1dawn_platinum.png": true}
+# Using a Dictionary as a set gives O(1) lookups vs iterating an Array
+var _owned_costumes         : Dictionary = {}
 
 # ─── Node references ─────────────────────────────────────────────────────────
 
@@ -42,7 +47,8 @@ func _ready() -> void:
 	audio_player.bus = "Master"
 	audio_player.stream.loop = true
 	audio_player.play()
-	
+
+	_load_owned_costumes_list()
 	_load_player_data()
 
 	# LineEdit natively supports max_length and single-line input
@@ -67,6 +73,20 @@ func _ready() -> void:
 
 
 # ─── Data loading ────────────────────────────────────────────────────────────
+
+# Reads player_owned_costumes.txt into _owned_costumes dictionary.
+# Each non-empty line is a costume filename, e.g. "1dawn_platinum.png"
+func _load_owned_costumes_list() -> void:
+	var file := FileAccess.open(OWNED_COSTUMES_PATH, FileAccess.READ)
+	if file == null:
+		push_error("TrainerCard: cannot open " + OWNED_COSTUMES_PATH)
+		return
+	while not file.eof_reached():
+		var line := file.get_line().strip_edges()
+		if line != "":
+			_owned_costumes[line] = true
+	file.close()
+
 
 func _load_player_data() -> void:
 	var file := FileAccess.open(PLAYER_DATA_PATH, FileAccess.READ)
@@ -154,7 +174,7 @@ func _add_character_to_grid(file_name: String) -> void:
 	var rect := TextureRect.new()
 	rect.texture = texture
 
-	# All sprites are displayed in a fixed 250x250 cell.
+	# All sprites are displayed in a fixed cell.
 	# STRETCH_KEEP_ASPECT_CENTERED scales the image to fit within that box while
 	# preserving its original aspect ratio — so a tall sprite like 1ash.png
 	# (290x470) will have horizontal letterboxing, while a wide sprite will have
@@ -164,9 +184,22 @@ func _add_character_to_grid(file_name: String) -> void:
 	rect.stretch_mode        = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	rect.expand_mode         = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 
+	var is_owned : bool = _owned_costumes.has(file_name)
+
 	rect.set_meta("sprite_name", file_name)
-	rect.modulate = Color(0.8, 0.8, 0.8)
-	rect.gui_input.connect(_on_character_clicked.bind(rect))
+	rect.set_meta("is_owned",    is_owned)
+
+	if is_owned:
+		rect.modulate = Color(0.8, 0.8, 0.8)
+		rect.gui_input.connect(_on_character_clicked.bind(rect))
+	else:
+		# Keep the real texture but zero out all RGB channels via modulate.
+		# modulate multiplies every pixel's colour — black makes the sprite appear
+		# as a solid black silhouette with no texture swap needed.
+		# MOUSE_FILTER_IGNORE tells Godot to pass all input events straight through
+		# this node as if it doesn't exist, so it can never be clicked or hovered.
+		rect.modulate     = Color(0, 0, 0, 1)
+		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	grid.add_child(rect)
 
@@ -269,11 +302,11 @@ func _on_save_pressed() -> void:
 		var new_sprite : String = selected_character_rect.get_meta("sprite_name", "")
 		if new_sprite != "":
 			data["battle_sprite"]    = new_sprite.trim_suffix(".png")
-			data["overworld_sprite"]    = new_sprite.trim_suffix(".png")
+			data["overworld_sprite"] = new_sprite.trim_suffix(".png")
 			saved_sprite_name = new_sprite
-	
+
 	SoundManagerScript.play_sfx(SoundManagerScript.SFX_gamemode_select)
-	
+
 	# Save name — trim whitespace before storing
 	var new_name := name_box.text.strip_edges()
 	if new_name != "":

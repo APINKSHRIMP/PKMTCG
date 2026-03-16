@@ -1,8 +1,8 @@
+Button
 Label
 Control
 CanvasLayer
 AnimatedSprite2D
-Button
 Sprite2D
 TextureRect
 CollisionShape2D
@@ -12,4 +12,3 @@ CharacterBody2D
 Area2D
 Node2D
 LineEdit
-TextEdit

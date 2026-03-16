@@ -6,6 +6,8 @@ extends Control
 # Plays the pre-battle intro animation: loads opponent/player
 # data, shows sprites sliding in, plays the battle start SFX
 # via SoundManager, then transitions to the main match scene.
+# Click at any time to skip the animation and go straight to
+# the match.
 # ============================================================
 
 # Variables to store data
@@ -14,6 +16,10 @@ var player_data: Dictionary
 var animation_duration: float = 5
 var main_match_scene: PackedScene
 var main_match_instance: Node
+
+# Click-to-skip tracking
+var click_enabled: bool = false
+var transitioning: bool = false
 
 # References to nodes (these get populated when the scene loads)
 @onready var background = $match_intro_background
@@ -53,11 +59,19 @@ func _ready() -> void:
 	fade_in.tween_property(self, "modulate:a", 1.0, 0.5)
 	await fade_in.finished
 	
+	# Scene is now visible — allow clicking to skip
+	click_enabled = true
+	
+	# Start the intro animation (runs in background, click can interrupt)
 	animate_intro()
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		get_tree().quit()
+	
+	# Any mouse click while the scene is showing skips to the match
+	if event is InputEventMouseButton and event.pressed and click_enabled and not transitioning:
+		transition_to_main_match()
 
 # ============================================================
 # DATA LOADING
@@ -148,10 +162,22 @@ func animate_intro() -> void:
 	tween.tween_property(opponent_deck_label, "position:y", opponent_deck_label.position.y + 50, animation_duration)
 	tween.tween_property(background, "scale", Vector2(1.15, 1.15), animation_duration)
 	
+	# If the animation finishes naturally (not skipped), transition automatically
 	await tween.finished
-	transition_to_main_match()
+	if not transitioning:
+		transition_to_main_match()
 
 func transition_to_main_match() -> void:
+	# Prevent multiple triggers
+	transitioning = true
+	click_enabled = false
+	
+	# Stop any battle start SFX that may still be playing
+	for child in SoundManagerScript.get_children():
+		if child is AudioStreamPlayer:
+			child.stop()
+			child.queue_free()
+	
 	# Fade out to black
 	var tween = create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.5)
