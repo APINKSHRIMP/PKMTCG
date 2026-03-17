@@ -100,7 +100,7 @@ offset_bottom = 87.434326
 theme = ExtResource("6_imsni")
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_colors/font_placeholder_color = Color(0.25565845, 0.25565895, 0.25565854, 0.6)
-theme_override_font_sizes/font_size = 35
+theme_override_font_sizes/font_size = 32
 placeholder_text = "Enter deck name....."
 alignment = 1
 

@@ -40,6 +40,13 @@ var load_popup       : CanvasLayer = null
 # load if the player switches sets before the previous one finishes
 var _loading_set_id  : String = ""
 
+# ─── Zoom state ──────────────────────────────────────────────────────────────
+
+# Reference to the zoom overlay (CanvasLayer) so we can remove it on release
+var zoom_overlay : CanvasLayer = null
+# Whether we're currently in zoom mode
+var is_zoomed : bool = false
+
 # ─── Node references ─────────────────────────────────────────────────────────
 
 @onready var grid             : GridContainer = $deck_grid_container
@@ -76,6 +83,8 @@ func _ready() -> void:
 	# Limit deck name to 20 characters — LineEdit.max_length natively
 	# blocks further typing once the limit is reached
 	deck_name_edit.max_length = 20
+	# Re-evaluate save button whenever the name is typed or cleared
+	deck_name_edit.text_changed.connect(_on_deck_name_changed)
 
 	# Wrap the grid in a scroll container so large sets can scroll
 	_wrap_grid_in_scroll_container()
@@ -356,7 +365,7 @@ func _add_card_to_grid(card_data: Dictionary) -> void:
 
 	# ── Visual styling based on ownership ──
 	if owned == 0:
-		card_rect.modulate     = Color(0.15, 0.15, 0.15, 1.0)
+		card_rect.modulate     = Color(0.08, 0.08, 0.08, 1.0)
 		card_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	else:
 		card_rect.modulate     = Color.WHITE
@@ -630,11 +639,147 @@ func _save_last_set_loaded() -> void:
 	write_file.close()
 
 
-# ─── Escape key ──────────────────────────────────────────────────────────────
+# ─── Input handling (Escape + Spacebar zoom) ────────────────────────────────
 
+## Handles global keyboard input for the deck build screen.
+## - Escape: closes zoom if active, otherwise returns to main menu
+## - Spacebar press: zooms into the hovered card's large image
+## - Spacebar release: closes the zoom overlay and restores UI
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+	if not event is InputEventKey:
+		return
+
+	# ── Escape key ──
+	if event.pressed and event.keycode == KEY_ESCAPE:
+		# If zoomed in, close the zoom instead of leaving the scene
+		if is_zoomed:
+			_hide_zoom()
+			return
 		_on_cancel_pressed()
+
+	# ── Spacebar hold-to-zoom ──
+	if event.keycode == KEY_SPACE:
+		if event.pressed and not event.is_echo():
+			# Key just went down (not a held-key repeat) — try to zoom
+			# Don't zoom if a popup is open or the deck name field has focus
+			if load_popup != null:
+				return
+			if deck_name_edit.has_focus():
+				return
+			var card = _get_hovered_card()
+			if card != null:
+				_show_zoom(card)
+		elif not event.pressed:
+			# Key released — close zoom
+			_hide_zoom()
+
+
+# ─── Card zoom ──────────────────────────────────────────────────────────────
+
+## Returns the card TextureRect under the mouse cursor, or null if none.
+## Uses Godot's built-in gui_get_hovered_control() which returns whichever
+## Control node the mouse is currently over. Because the mouse might land
+## on a child node (the count label, its ColorRect background, etc.) rather
+## than the card TextureRect itself, we walk up the node tree looking for
+## a node that carries our "card_id" metadata — that's the actual card.
+func _get_hovered_card() -> TextureRect:
+	var hovered = get_viewport().gui_get_hovered_control()
+	if hovered == null:
+		return null
+	# Walk up to 5 parents looking for our card_id metadata
+	var node = hovered
+	for i in range(5):
+		if node == null:
+			return null
+		if node.has_meta("card_id"):
+			return node as TextureRect
+		node = node.get_parent()
+	return null
+
+
+## Shows a zoomed-in view of the given card.
+## Creates a CanvasLayer overlay (layer 150, above everything including the
+## load popup at layer 100) with a dimmed background and the large card image
+## displayed at 600×825. Also hides all UI elements except the borders and
+## background scroller so the card is the sole focus.
+func _show_zoom(card_rect: TextureRect) -> void:
+	if is_zoomed:
+		return
+
+	var card_id : String = card_rect.get_meta("card_id")
+	var card_set := card_id.split("-")[0]
+	# Build path to the LARGE version of the card image
+	var large_path := "res://cardimages/" + card_set + "/Large/" + card_id + ".png"
+	var large_texture = load(large_path)
+	if large_texture == null:
+		push_error("DeckBuild: missing large card image " + large_path)
+		return
+
+	is_zoomed = true
+
+	# Hide all UI elements except backgrounds
+	_set_ui_visibility(false)
+
+	# Build the overlay — CanvasLayer renders above everything at layer 150
+	zoom_overlay = CanvasLayer.new()
+	zoom_overlay.layer = 150
+	add_child(zoom_overlay)
+
+	# Semi-transparent black backdrop
+	var backdrop := ColorRect.new()
+	backdrop.color = Color(0, 0, 0, 0.75)
+	backdrop.anchor_right  = 1.0
+	backdrop.anchor_bottom = 1.0
+	zoom_overlay.add_child(backdrop)
+
+	# The large card image, centered on screen
+	var zoom_card := TextureRect.new()
+	zoom_card.texture = large_texture
+	zoom_card.custom_minimum_size = Vector2(600, 825)
+	zoom_card.size                = Vector2(600, 825)
+	zoom_card.expand_mode         = TextureRect.EXPAND_IGNORE_SIZE
+	zoom_card.stretch_mode        = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	# Center it: (1920 - 600) / 2 = 660,  (1080 - 825) / 2 ≈ 128
+	zoom_card.position = Vector2(660, 128)
+	zoom_overlay.add_child(zoom_card)
+
+
+## Removes the zoom overlay and restores all UI elements.
+func _hide_zoom() -> void:
+	if not is_zoomed:
+		return
+
+	is_zoomed = false
+
+	if zoom_overlay != null:
+		zoom_overlay.queue_free()
+		zoom_overlay = null
+
+	# Restore UI visibility
+	_set_ui_visibility(true)
+
+
+## Hides or shows all UI elements except top_border, bottom_border,
+## and background_scroller. When zooming, we want only the card visible
+## against the background.
+func _set_ui_visibility(visible_flag: bool) -> void:
+	# The scroll container is the grid's parent (created in _wrap_grid_in_scroll_container)
+	var scroll = grid.get_parent()
+	var nodes_to_toggle := [
+		scroll,
+		save_btn,
+		cancel_btn,
+		empty_btn,
+		load_btn,
+		next_btn,
+		prev_btn,
+		set_label,
+		deck_name_edit,
+		deck_count_label,
+	]
+	for node in nodes_to_toggle:
+		if node != null and is_instance_valid(node):
+			node.visible = visible_flag
 
 
 # ─── UI helpers ──────────────────────────────────────────────────────────────
@@ -642,6 +787,13 @@ func _input(event: InputEvent) -> void:
 ## Updates the "XX/60" label in the top bar.
 func _update_deck_count_label() -> void:
 	deck_count_label.text = str(total_deck_count) + "/" + str(DECK_SIZE)
+
+
+## Called every time the player types or deletes in the deck name field.
+## text_changed passes the new text as an argument but we just need to
+## re-evaluate whether the save button should be enabled or disabled.
+func _on_deck_name_changed(_new_text: String) -> void:
+	_refresh_save_button()
 
 
 ## Enables the save button only when the deck has exactly 60 cards
