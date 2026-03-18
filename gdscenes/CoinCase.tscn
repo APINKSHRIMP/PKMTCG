@@ -1,7 +1,7 @@
 [gd_scene load_steps=10 format=3 uid="uid://b7wloi1e7ici0"]
 
 [ext_resource type="Script" uid="uid://qneea1dv6lmq" path="res://gdscripts/coin_case_script.gd" id="1_shnqs"]
-[ext_resource type="Shader" uid="uid://ccm481fk14lc8" path="res://gdscenes/backgroundscrollright.gdshader" id="2_dp4bi"]
+[ext_resource type="Shader" uid="uid://ccm481fk14lc8" path="res://gdscenes/backgroundscrollrighttopborder.gdshader" id="2_dp4bi"]
 [ext_resource type="Texture2D" uid="uid://dieqv60p12hlk" path="res://gameimageassets/backgrounds/border_only.png" id="3_4sdkt"]
 [ext_resource type="Shader" uid="uid://d3gofmygrsrkm" path="res://gdscenes/backgroundscrollleft.gdshader" id="4_p7p1x"]
 [ext_resource type="Theme" uid="uid://6shp5ck1tnja" path="res://uiresources/kenneyUI.tres" id="4_ui6o0"]

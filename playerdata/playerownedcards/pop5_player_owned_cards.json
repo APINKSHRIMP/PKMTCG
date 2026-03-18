@@ -23,17 +23,17 @@
 		},
 		{
 			"card_id": "pop5-5",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "pop5-6",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "pop5-7",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -53,22 +53,22 @@
 		},
 		{
 			"card_id": "pop5-11",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "pop5-12",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "pop5-13",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "pop5-14",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -83,7 +83,7 @@
 		},
 		{
 			"card_id": "pop5-17",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		}
 	]

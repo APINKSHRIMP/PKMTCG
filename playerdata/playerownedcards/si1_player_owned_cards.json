@@ -3,12 +3,12 @@
 	"owned_cards": [
 		{
 			"card_id": "si1-1",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "si1-2",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -18,7 +18,7 @@
 		},
 		{
 			"card_id": "si1-4",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -33,7 +33,7 @@
 		},
 		{
 			"card_id": "si1-7",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -58,7 +58,7 @@
 		},
 		{
 			"card_id": "si1-12",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -68,7 +68,7 @@
 		},
 		{
 			"card_id": "si1-14",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -83,12 +83,12 @@
 		},
 		{
 			"card_id": "si1-17",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "si1-18",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		}
 	]

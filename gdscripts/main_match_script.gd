@@ -11,7 +11,7 @@ var amount_of_cards_to_draw = 7	# CAN CHANGE THE AMOUNT OF INITIAL HAND CARDS TO
 var hide_hidden_cards = true      	# TO SHOW PRIZE CARDS AND OPPONENTS HAND SET TO TRUE. FOR REAL GAME SET TO FALSE
 var opponent_deck_name = "null"
 var player_deck_name = "null"
-var amount_of_prize_cards = 1
+var amount_of_prize_cards = 6
 
 # When true, the match is ending — all turn logic should bail out immediately
 var game_is_over: bool = false

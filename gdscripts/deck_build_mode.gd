@@ -7,10 +7,10 @@ const SET_DICT_PATH        := "C:/pkm-tcg-gdt/playerdata/set_dictionary.json"
 const OWNED_CARDS_FOLDER   := "C:/pkm-tcg-gdt/playerdata/playerownedcards/"
 const PLAYER_DECKS_FOLDER  := "C:/pkm-tcg-gdt/playerdata/playerdecks/"
 
-const CARD_SIZE     := Vector2(188, 260)
-const CARD_H_SEP    := 3
-const CARD_V_SEP    := 1
-const COLUMNS       := 10
+const CARD_SIZE     := Vector2(183, 254)
+const CARD_H_SEP    := 2
+const CARD_V_SEP    := 2
+const COLUMNS       := 9
 const MAX_COPIES    := 4
 const DECK_SIZE     := 60
 
@@ -82,7 +82,8 @@ func _ready() -> void:
 
 	# Limit deck name to 20 characters — LineEdit.max_length natively
 	# blocks further typing once the limit is reached
-	deck_name_edit.max_length = 20
+	deck_name_edit.max_length = 25
+	
 	# Re-evaluate save button whenever the name is typed or cleared
 	deck_name_edit.text_changed.connect(_on_deck_name_changed)
 
@@ -307,7 +308,7 @@ func _add_card_to_grid(card_data: Dictionary) -> void:
 	# even though we want 150x207.
 	var card_rect := TextureRect.new()
 	var card_set := card_id.split("-")[0]
-	var image_path := "res://cardimages/" + card_set + "/Small/" + card_id + ".png"
+	var image_path := "res://cardimages/" + card_set + "/Large/" + card_id + ".png"
 	var card_texture = load(image_path)
 
 	if card_texture != null:

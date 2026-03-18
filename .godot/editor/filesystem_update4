@@ -1,3 +1,4 @@
+res://playerdata/player_data.json
 res://gdscenes/DeckBuild.tscn
 res://uiresources/kenneyUI.tres
 res://uiresources/kenneyUI-green.tres
@@ -6,6 +7,9 @@ res://uiresources/kenneyUI-red.tres
 res://gdscenes/backgroundscrollright.gdshader
 res://gdscenes/backgroundscrollleft.gdshader
 res://uiresources/kenneyUI-yellow.tres
-res://playerdata/player_data.json
+res://gdscenes/MatchStart.tscn
+res://gdscenes/MainMenu.tscn
+res://gdscenes/CoinCase.tscn
+res://gdscenes/TrainerCard.tscn
+res://gdscenes/backgroundscrollrightsideborder.gdshader
 res://gdscripts/deck_build_mode.gd
-res://gdscripts/game_start_splash.gd

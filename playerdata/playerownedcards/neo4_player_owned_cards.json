@@ -18,7 +18,7 @@
 		},
 		{
 			"card_id": "neo4-4",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -28,7 +28,7 @@
 		},
 		{
 			"card_id": "neo4-6",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -43,7 +43,7 @@
 		},
 		{
 			"card_id": "neo4-9",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -53,7 +53,7 @@
 		},
 		{
 			"card_id": "neo4-11",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -63,12 +63,12 @@
 		},
 		{
 			"card_id": "neo4-13",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-14",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -78,12 +78,12 @@
 		},
 		{
 			"card_id": "neo4-16",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-17",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -93,12 +93,12 @@
 		},
 		{
 			"card_id": "neo4-19",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-20",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -113,12 +113,12 @@
 		},
 		{
 			"card_id": "neo4-23",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-24",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -133,7 +133,7 @@
 		},
 		{
 			"card_id": "neo4-27",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -143,7 +143,7 @@
 		},
 		{
 			"card_id": "neo4-29",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -158,7 +158,7 @@
 		},
 		{
 			"card_id": "neo4-32",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -178,7 +178,7 @@
 		},
 		{
 			"card_id": "neo4-36",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -188,12 +188,12 @@
 		},
 		{
 			"card_id": "neo4-38",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-39",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -203,7 +203,7 @@
 		},
 		{
 			"card_id": "neo4-41",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -213,17 +213,17 @@
 		},
 		{
 			"card_id": "neo4-43",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-44",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-45",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -238,7 +238,7 @@
 		},
 		{
 			"card_id": "neo4-48",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -248,17 +248,17 @@
 		},
 		{
 			"card_id": "neo4-50",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-51",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-52",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -268,7 +268,7 @@
 		},
 		{
 			"card_id": "neo4-54",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -298,12 +298,12 @@
 		},
 		{
 			"card_id": "neo4-60",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-61",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -318,12 +318,12 @@
 		},
 		{
 			"card_id": "neo4-64",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-65",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -333,12 +333,12 @@
 		},
 		{
 			"card_id": "neo4-67",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-68",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -353,12 +353,12 @@
 		},
 		{
 			"card_id": "neo4-71",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-72",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -383,7 +383,7 @@
 		},
 		{
 			"card_id": "neo4-77",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -398,7 +398,7 @@
 		},
 		{
 			"card_id": "neo4-80",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -418,7 +418,7 @@
 		},
 		{
 			"card_id": "neo4-84",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -428,7 +428,7 @@
 		},
 		{
 			"card_id": "neo4-86",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -438,7 +438,7 @@
 		},
 		{
 			"card_id": "neo4-88",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -448,7 +448,7 @@
 		},
 		{
 			"card_id": "neo4-90",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -458,7 +458,7 @@
 		},
 		{
 			"card_id": "neo4-92",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -468,12 +468,12 @@
 		},
 		{
 			"card_id": "neo4-94",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-95",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -483,7 +483,7 @@
 		},
 		{
 			"card_id": "neo4-97",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -493,7 +493,7 @@
 		},
 		{
 			"card_id": "neo4-99",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -503,7 +503,7 @@
 		},
 		{
 			"card_id": "neo4-101",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -513,32 +513,32 @@
 		},
 		{
 			"card_id": "neo4-103",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-104",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-105",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-106",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-107",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "neo4-108",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -553,7 +553,7 @@
 		},
 		{
 			"card_id": "neo4-111",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -563,7 +563,7 @@
 		},
 		{
 			"card_id": "neo4-113",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		}
 	]

@@ -3,12 +3,12 @@
 	"owned_cards": [
 		{
 			"card_id": "ecard1-1",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-2",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -23,7 +23,7 @@
 		},
 		{
 			"card_id": "ecard1-5",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -43,17 +43,17 @@
 		},
 		{
 			"card_id": "ecard1-9",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-10",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-11",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -63,12 +63,12 @@
 		},
 		{
 			"card_id": "ecard1-13",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-14",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -88,12 +88,12 @@
 		},
 		{
 			"card_id": "ecard1-18",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-19",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -113,7 +113,7 @@
 		},
 		{
 			"card_id": "ecard1-23",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -128,7 +128,7 @@
 		},
 		{
 			"card_id": "ecard1-26",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -148,12 +148,12 @@
 		},
 		{
 			"card_id": "ecard1-30",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-31",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -163,12 +163,12 @@
 		},
 		{
 			"card_id": "ecard1-33",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-34",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -178,27 +178,27 @@
 		},
 		{
 			"card_id": "ecard1-36",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-37",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-38",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-39",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-40",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -213,7 +213,7 @@
 		},
 		{
 			"card_id": "ecard1-43",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -223,12 +223,12 @@
 		},
 		{
 			"card_id": "ecard1-45",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-46",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -238,7 +238,7 @@
 		},
 		{
 			"card_id": "ecard1-48",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -248,17 +248,17 @@
 		},
 		{
 			"card_id": "ecard1-50",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-51",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-52",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -273,7 +273,7 @@
 		},
 		{
 			"card_id": "ecard1-55",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -288,7 +288,7 @@
 		},
 		{
 			"card_id": "ecard1-58",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -303,12 +303,12 @@
 		},
 		{
 			"card_id": "ecard1-61",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-62",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -323,7 +323,7 @@
 		},
 		{
 			"card_id": "ecard1-65",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -343,17 +343,17 @@
 		},
 		{
 			"card_id": "ecard1-69",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-70",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-71",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -363,12 +363,12 @@
 		},
 		{
 			"card_id": "ecard1-73",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-74",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -398,12 +398,12 @@
 		},
 		{
 			"card_id": "ecard1-80",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-81",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -418,7 +418,7 @@
 		},
 		{
 			"card_id": "ecard1-84",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -443,7 +443,7 @@
 		},
 		{
 			"card_id": "ecard1-89",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -453,22 +453,22 @@
 		},
 		{
 			"card_id": "ecard1-91",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-92",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-93",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-94",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -478,7 +478,7 @@
 		},
 		{
 			"card_id": "ecard1-96",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -493,7 +493,7 @@
 		},
 		{
 			"card_id": "ecard1-99",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -508,12 +508,12 @@
 		},
 		{
 			"card_id": "ecard1-102",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-103",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -523,7 +523,7 @@
 		},
 		{
 			"card_id": "ecard1-105",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -533,7 +533,7 @@
 		},
 		{
 			"card_id": "ecard1-107",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -543,7 +543,7 @@
 		},
 		{
 			"card_id": "ecard1-109",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -563,12 +563,12 @@
 		},
 		{
 			"card_id": "ecard1-113",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-114",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -583,27 +583,27 @@
 		},
 		{
 			"card_id": "ecard1-117",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-118",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-119",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-120",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-121",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -618,7 +618,7 @@
 		},
 		{
 			"card_id": "ecard1-124",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -628,17 +628,17 @@
 		},
 		{
 			"card_id": "ecard1-126",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-127",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-128",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -653,7 +653,7 @@
 		},
 		{
 			"card_id": "ecard1-131",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -698,12 +698,12 @@
 		},
 		{
 			"card_id": "ecard1-140",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-141",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -733,22 +733,22 @@
 		},
 		{
 			"card_id": "ecard1-147",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-148",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-149",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ecard1-150",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -758,7 +758,7 @@
 		},
 		{
 			"card_id": "ecard1-152",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -768,7 +768,7 @@
 		},
 		{
 			"card_id": "ecard1-154",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -778,7 +778,7 @@
 		},
 		{
 			"card_id": "ecard1-156",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -788,7 +788,7 @@
 		},
 		{
 			"card_id": "ecard1-158",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{

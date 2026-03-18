@@ -3,7 +3,7 @@
 	"owned_cards": [
 		{
 			"card_id": "ex16-1",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -23,7 +23,7 @@
 		},
 		{
 			"card_id": "ex16-5",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -33,7 +33,7 @@
 		},
 		{
 			"card_id": "ex16-7",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -48,12 +48,12 @@
 		},
 		{
 			"card_id": "ex16-10",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-11",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -73,7 +73,7 @@
 		},
 		{
 			"card_id": "ex16-15",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -103,12 +103,12 @@
 		},
 		{
 			"card_id": "ex16-21",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-22",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -118,7 +118,7 @@
 		},
 		{
 			"card_id": "ex16-24",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -138,7 +138,7 @@
 		},
 		{
 			"card_id": "ex16-28",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -168,12 +168,12 @@
 		},
 		{
 			"card_id": "ex16-34",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-35",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -213,7 +213,7 @@
 		},
 		{
 			"card_id": "ex16-43",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -238,12 +238,12 @@
 		},
 		{
 			"card_id": "ex16-48",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-49",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -258,7 +258,7 @@
 		},
 		{
 			"card_id": "ex16-52",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -288,17 +288,17 @@
 		},
 		{
 			"card_id": "ex16-58",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-59",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-60",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -308,22 +308,22 @@
 		},
 		{
 			"card_id": "ex16-62",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-63",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-64",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-65",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -348,17 +348,17 @@
 		},
 		{
 			"card_id": "ex16-70",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-71",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-72",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -373,7 +373,7 @@
 		},
 		{
 			"card_id": "ex16-75",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -383,7 +383,7 @@
 		},
 		{
 			"card_id": "ex16-77",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -408,12 +408,12 @@
 		},
 		{
 			"card_id": "ex16-82",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-83",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -428,7 +428,7 @@
 		},
 		{
 			"card_id": "ex16-86",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -448,32 +448,32 @@
 		},
 		{
 			"card_id": "ex16-90",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-91",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-92",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-93",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-94",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "ex16-95",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -483,7 +483,7 @@
 		},
 		{
 			"card_id": "ex16-97",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -498,7 +498,7 @@
 		},
 		{
 			"card_id": "ex16-100",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -508,7 +508,7 @@
 		},
 		{
 			"card_id": "ex16-102",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{

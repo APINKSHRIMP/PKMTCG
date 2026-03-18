@@ -8,17 +8,17 @@
 		},
 		{
 			"card_id": "np-2",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "np-3",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "np-4",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -28,7 +28,7 @@
 		},
 		{
 			"card_id": "np-6",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -38,12 +38,12 @@
 		},
 		{
 			"card_id": "np-8",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "np-9",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -78,7 +78,7 @@
 		},
 		{
 			"card_id": "np-16",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -93,7 +93,7 @@
 		},
 		{
 			"card_id": "np-19",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -103,7 +103,7 @@
 		},
 		{
 			"card_id": "np-21",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -113,7 +113,7 @@
 		},
 		{
 			"card_id": "np-23",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -123,17 +123,17 @@
 		},
 		{
 			"card_id": "np-25",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "np-26",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "np-27",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -153,12 +153,12 @@
 		},
 		{
 			"card_id": "np-31",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "np-32",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -168,7 +168,7 @@
 		},
 		{
 			"card_id": "np-34",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
@@ -193,12 +193,12 @@
 		},
 		{
 			"card_id": "np-39",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		},
 		{
 			"card_id": "np-40",
-			"owned": 0,
+			"owned": 4,
 			"is_basic_energy": false
 		}
 	]

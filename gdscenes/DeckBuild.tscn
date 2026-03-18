@@ -1,18 +1,33 @@
-[gd_scene load_steps=12 format=3 uid="uid://bwq17qlbumpnu"]
+[gd_scene load_steps=21 format=3 uid="uid://bwq17qlbumpnu"]
 
 [ext_resource type="Script" uid="uid://ctjdfhmpwnrs3" path="res://gdscripts/deck_build_mode.gd" id="1_yufqt"]
-[ext_resource type="Shader" uid="uid://ccm481fk14lc8" path="res://gdscenes/backgroundscrollright.gdshader" id="2_ksdf2"]
+[ext_resource type="Shader" uid="uid://ccm481fk14lc8" path="res://gdscenes/backgroundscrollrighttopborder.gdshader" id="2_ksdf2"]
 [ext_resource type="Texture2D" uid="uid://dieqv60p12hlk" path="res://gameimageassets/backgrounds/border_only.png" id="3_yufqt"]
+[ext_resource type="Shader" uid="uid://wbryi6fdcofj" path="res://gdscenes/backgroundscrollrightsideborder.gdshader" id="4_imsni"]
 [ext_resource type="Shader" uid="uid://d3gofmygrsrkm" path="res://gdscenes/backgroundscrollleft.gdshader" id="4_jrvq0"]
+[ext_resource type="Texture2D" uid="uid://gcwevp2g0xyv" path="res://gameimageassets/backgrounds/full_screen_border.png" id="5_imsni"]
 [ext_resource type="Texture2D" uid="uid://he803mdt247f" path="res://gameimageassets/backgrounds/background5.png" id="5_yrpwa"]
 [ext_resource type="Theme" uid="uid://6shp5ck1tnja" path="res://uiresources/kenneyUI.tres" id="6_imsni"]
 [ext_resource type="Theme" uid="uid://mbsg4xqnedxi" path="res://uiresources/kenneyUI-red.tres" id="7_vop12"]
-[ext_resource type="Theme" uid="uid://h1f7iqhh7ycb" path="res://uiresources/kenneyUI-yellow.tres" id="8_yufqt"]
 [ext_resource type="Theme" uid="uid://bb6vwl0h1flws" path="res://uiresources/kenneyUI-blue.tres" id="9_jrvq0"]
+[ext_resource type="Texture2D" uid="uid://iysbowkj1prm" path="res://cardimages/base1/Small/base1-97.png" id="11_pt50q"]
+[ext_resource type="Texture2D" uid="uid://b7vg0qsb6ujfx" path="res://cardimages/base1/Small/base1-98.png" id="12_nb5df"]
+[ext_resource type="Texture2D" uid="uid://5bbo7dgoecv4" path="res://cardimages/base1/Small/base1-99.png" id="13_v4gxw"]
+[ext_resource type="Texture2D" uid="uid://c0ajtwvguppu" path="res://cardimages/base1/Small/base1-100.png" id="14_aanao"]
+[ext_resource type="Texture2D" uid="uid://bxde4dsu018d7" path="res://cardimages/base1/Small/base1-101.png" id="15_j0blx"]
+[ext_resource type="Texture2D" uid="uid://4jq4itcs7pxr" path="res://cardimages/base1/Small/base1-102.png" id="16_mqn1m"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_vop12"]
+shader = ExtResource("2_ksdf2")
+shader_parameter/scroll_speed = -0.009
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_ui6o0"]
 shader = ExtResource("2_ksdf2")
 shader_parameter/scroll_speed = -0.009
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_tpt08"]
+shader = ExtResource("4_imsni")
+shader_parameter/scroll_speed = -0.01
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_2qd32"]
 shader = ExtResource("4_jrvq0")
@@ -33,8 +48,9 @@ offset_right = 40.0
 offset_bottom = 99.0
 
 [node name="top_border" type="TextureRect" parent="BACKGROUND"]
+visible = false
 z_index = 200
-material = SubResource("ShaderMaterial_ui6o0")
+material = SubResource("ShaderMaterial_vop12")
 layout_mode = 0
 offset_top = -59.0
 offset_right = 1921.0
@@ -43,6 +59,7 @@ texture = ExtResource("3_yufqt")
 stretch_mode = 1
 
 [node name="bottom_border" type="TextureRect" parent="BACKGROUND"]
+visible = false
 z_index = 200
 material = SubResource("ShaderMaterial_ui6o0")
 layout_mode = 0
@@ -52,42 +69,54 @@ offset_bottom = 1021.0
 texture = ExtResource("3_yufqt")
 stretch_mode = 1
 
+[node name="right_border" type="TextureRect" parent="BACKGROUND"]
+z_index = -10
+material = SubResource("ShaderMaterial_tpt08")
+layout_mode = 0
+offset_top = -59.0
+offset_right = 1919.0
+offset_bottom = 1260.0
+texture = ExtResource("5_imsni")
+stretch_mode = 1
+
 [node name="background_scroller" type="TextureRect" parent="BACKGROUND"]
 material = SubResource("ShaderMaterial_2qd32")
 layout_mode = 0
-offset_left = -2.0000002
-offset_top = 45.000004
-offset_right = 6622.0
-offset_bottom = 4462.0
+offset_left = -238.00002
+offset_top = 48.000004
+offset_right = 6386.0
+offset_bottom = 4465.0
 scale = Vector2(0.29, 0.29)
 texture = ExtResource("5_yrpwa")
 stretch_mode = 1
 
 [node name="deck_grid_container" type="GridContainer" parent="."]
 layout_mode = 0
-offset_left = 2.0
+offset_left = 3.0
 offset_top = 108.0
-offset_right = 1918.0
-offset_bottom = 977.0
+offset_right = 1681.0
+offset_bottom = 1077.0
 
 [node name="deck_save_button" type="Button" parent="."]
 z_index = 300
 layout_mode = 0
-offset_left = 568.0
-offset_top = 998.0
-offset_right = 912.0
-offset_bottom = 1061.0
+offset_left = 1702.0
+offset_top = 902.0
+offset_right = 1904.0
+offset_bottom = 965.0
 theme = ExtResource("6_imsni")
+theme_override_font_sizes/font_size = 23
 text = "save deck"
 
 [node name="deck_cancel_button" type="Button" parent="."]
 z_index = 300
 layout_mode = 0
-offset_left = 935.0
-offset_top = 998.0
-offset_right = 1279.0
-offset_bottom = 1061.0
+offset_left = 1701.0
+offset_top = 986.0
+offset_right = 1902.0
+offset_bottom = 1049.0
 theme = ExtResource("7_vop12")
+theme_override_font_sizes/font_size = 23
 text = "cancel"
 
 [node name="deck_name" type="LineEdit" parent="."]
@@ -95,7 +124,7 @@ z_index = 300
 layout_mode = 0
 offset_left = 32.0
 offset_top = 19.0
-offset_right = 749.0
+offset_right = 908.0
 offset_bottom = 87.434326
 theme = ExtResource("6_imsni")
 theme_override_colors/font_color = Color(0, 0, 0, 1)
@@ -107,31 +136,45 @@ alignment = 1
 [node name="empty_deck_button" type="Button" parent="."]
 z_index = 300
 layout_mode = 0
-offset_left = 1691.0
-offset_top = 24.0
-offset_right = 1895.3241
-offset_bottom = 88.251
-theme = ExtResource("8_yufqt")
+offset_left = 1700.0
+offset_top = 112.0
+offset_right = 1904.3241
+offset_bottom = 199.0
+theme = ExtResource("7_vop12")
 theme_override_font_sizes/font_size = 23
 text = "EMPTY DECK"
 
 [node name="load_deck_button" type="Button" parent="."]
 z_index = 300
 layout_mode = 0
-offset_left = 1580.0
-offset_top = 994.0
-offset_right = 1891.3241
-offset_bottom = 1058.251
+offset_left = 1699.0
+offset_top = 223.0
+offset_right = 1904.3241
+offset_bottom = 310.0
 theme = ExtResource("9_jrvq0")
 theme_override_font_sizes/font_size = 23
-text = "Load a deck"
+text = "Load deck"
+
+[node name="select_energies_button" type="Button" parent="."]
+z_index = 300
+layout_mode = 0
+offset_left = 1700.0
+offset_top = 427.0
+offset_right = 1904.0
+offset_bottom = 561.251
+theme = ExtResource("9_jrvq0")
+theme_override_constants/line_spacing = 4
+theme_override_font_sizes/font_size = 29
+text = "Select 
+basic 
+energies"
 
 [node name="next_set" type="Button" parent="."]
 z_index = 300
 layout_mode = 0
-offset_left = 1436.0
+offset_left = 1621.0
 offset_top = 8.0
-offset_right = 1514.0
+offset_right = 1682.0
 offset_bottom = 98.251
 theme = ExtResource("9_jrvq0")
 theme_override_font_sizes/font_size = 58
@@ -140,9 +183,9 @@ text = ">"
 [node name="previous_set" type="Button" parent="."]
 z_index = 300
 layout_mode = 0
-offset_left = 778.0
+offset_left = 977.0
 offset_top = 8.0
-offset_right = 856.0
+offset_right = 1037.0
 offset_bottom = 98.251
 theme = ExtResource("9_jrvq0")
 theme_override_font_sizes/font_size = 58
@@ -151,25 +194,157 @@ text = "<"
 [node name="set_name_label" type="Label" parent="."]
 z_index = 999
 layout_mode = 0
-offset_left = 878.0
+offset_left = 1041.0
 offset_top = 35.0
-offset_right = 1428.0
+offset_right = 1621.0
 offset_bottom = 74.0
 theme = ExtResource("6_imsni")
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 34
-text = "firered & leafgreen"
+theme_override_font_sizes/font_size = 29
+text = "EX TEAM MAGMA VS TEAM AQUA"
 horizontal_alignment = 1
 
 [node name="deck_count_label" type="Label" parent="."]
 z_index = 999
 layout_mode = 0
-offset_left = 1544.0
-offset_top = 33.0
-offset_right = 1673.0
-offset_bottom = 72.0
+offset_left = 1741.0
+offset_top = 43.0
+offset_right = 1870.0
+offset_bottom = 82.0
 theme = ExtResource("6_imsni")
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 34
 text = "57/60"
+horizontal_alignment = 1
+
+[node name="fighting_energy_icon" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 1707.0
+offset_top = 567.251
+offset_right = 1770.0
+offset_bottom = 653.876
+texture = ExtResource("11_pt50q")
+expand_mode = 1
+
+[node name="fire_energy_icon" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 1772.0
+offset_top = 567.251
+offset_right = 1835.0
+offset_bottom = 653.876
+texture = ExtResource("12_nb5df")
+expand_mode = 1
+
+[node name="grass_energy_icon" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 1837.0
+offset_top = 567.251
+offset_right = 1900.0
+offset_bottom = 653.876
+texture = ExtResource("13_v4gxw")
+expand_mode = 1
+
+[node name="lightning_energy_icon" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 1707.0
+offset_top = 656.251
+offset_right = 1770.0
+offset_bottom = 742.876
+texture = ExtResource("14_aanao")
+expand_mode = 1
+
+[node name="psychic_energy_icon" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 1772.0
+offset_top = 656.251
+offset_right = 1835.0
+offset_bottom = 742.876
+texture = ExtResource("15_j0blx")
+expand_mode = 1
+
+[node name="water_energy_icon" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 1837.0
+offset_top = 656.251
+offset_right = 1900.0
+offset_bottom = 742.876
+texture = ExtResource("16_mqn1m")
+expand_mode = 1
+
+[node name="figthing_energy_count_label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 1714.0
+offset_top = 580.0
+offset_right = 1772.0
+offset_bottom = 632.0
+theme = ExtResource("6_imsni")
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 33
+text = "22"
+horizontal_alignment = 1
+
+[node name="fire_energy_count_label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 1780.0
+offset_top = 580.0
+offset_right = 1838.0
+offset_bottom = 632.0
+theme = ExtResource("6_imsni")
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 33
+text = "13"
+horizontal_alignment = 1
+
+[node name="grass_energy_count_label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 1843.0
+offset_top = 578.0
+offset_right = 1901.0
+offset_bottom = 630.0
+theme = ExtResource("6_imsni")
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 33
+text = "4"
+horizontal_alignment = 1
+
+[node name="lightning_energy_count_label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 1714.0
+offset_top = 666.0
+offset_right = 1772.0
+offset_bottom = 718.0
+theme = ExtResource("6_imsni")
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 33
+text = "9"
+horizontal_alignment = 1
+
+[node name="psychic_energy_count_label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 1778.0
+offset_top = 665.0
+offset_right = 1836.0
+offset_bottom = 717.0
+theme = ExtResource("6_imsni")
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 33
+text = "10"
+horizontal_alignment = 1
+
+[node name="water_energy_count_label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 1844.0
+offset_top = 666.0
+offset_right = 1902.0
+offset_bottom = 718.0
+theme = ExtResource("6_imsni")
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 33
+text = "97"
 horizontal_alignment = 1
