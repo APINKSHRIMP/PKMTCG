@@ -45,11 +45,22 @@ var current_unlock_pos : int = 0
 var deck_cards       : Dictionary = {}
 var total_deck_count : int = 0
 
-# Tracks which card IDs are basic energies (no 4-copy cap)
-var basic_energy_ids : Dictionary = {}
-
 # The deck name currently loaded
 var current_deck_name : String = ""
+
+# ─── Card metadata cache ────────────────────────────────────────────────────
+# Loaded from the set JSON files (e.g. res://cardimages/base1/base1.json).
+# Maps card_id → {name, supertype, subtypes} so we only parse each set once.
+var _card_metadata_cache : Dictionary = {}
+
+# Tracks how many copies of each "deck name group" are in the current deck.
+# The grouping rules are:
+#   - Pokémon: base name (stripping " δ" suffix) → shared 4-copy pool
+#   - Pokémon ex: exact name → separate 4-copy pool
+#   - Pokémon Star (★/*): ALL stars share a single 1-copy-total pool (key = "__star__")
+#   - Trainers / Special Energy: exact name → 4-copy pool each
+# Key = group name string, Value = count in deck
+var deck_name_counts : Dictionary = {}
 
 # Reference to the load-deck popup so we can free it later
 var load_popup       : CanvasLayer = null
@@ -81,6 +92,12 @@ var _loading_set_id  : String = ""
 var zoom_overlay : CanvasLayer = null
 # Whether we're currently in zoom mode
 var is_zoomed : bool = false
+# The last card that was zoomed — used so the player can re-press spacebar
+# without moving the mouse.  When the zoom overlay is freed, Godot's
+# gui_get_hovered_control() returns null until the mouse physically moves,
+# because hover tracking hasn't recalculated.  Storing the reference lets
+# us skip the hover lookup and zoom straight back in.
+var last_zoomed_card : TextureRect = null
 
 # ─── Node references ─────────────────────────────────────────────────────────
 
@@ -278,6 +295,9 @@ func _load_deck(deck_name: String) -> void:
 			deck_cards[card_id] = count
 			total_deck_count += count
 
+	# Build the name-group tracking from the loaded deck
+	_rebuild_deck_name_counts()
+
 
 ## Loads the player_owned_cards JSON for a given set_id.
 ## Returns the "owned_cards" array, or an empty array on failure.
@@ -293,6 +313,137 @@ func _load_owned_cards_for_set(set_id: String) -> Array:
 	if data is Dictionary and data.has("owned_cards"):
 		return data["owned_cards"]
 	return []
+
+
+# ─── Card metadata & name-based copy limits ─────────────────────────────────
+
+const CARD_IMAGES_FOLDER := "res://cardimages/"
+
+## Loads the set's JSON metadata file (e.g. res://cardimages/base1/base1.json)
+## and caches every card's name/supertype/subtypes.  Only loads each set once.
+func _ensure_set_metadata_loaded(set_id: String) -> void:
+	# If we've already loaded this set, skip
+	if _card_metadata_cache.has(set_id + "-loaded"):
+		return
+
+	var path := CARD_IMAGES_FOLDER + set_id + "/" + set_id + ".json"
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		push_error("DeckBuild: cannot open card metadata " + path)
+		_card_metadata_cache[set_id + "-loaded"] = true
+		return
+	var data = JSON.parse_string(file.get_as_text())
+	file.close()
+
+	if data is Array:
+		for card in data:
+			var cid : String = card.get("id", "")
+			if cid != "":
+				_card_metadata_cache[cid] = {
+					"name": card.get("name", ""),
+					"supertype": card.get("supertype", ""),
+					"subtypes": card.get("subtypes", []),
+				}
+
+	_card_metadata_cache[set_id + "-loaded"] = true
+
+
+## Returns the cached metadata dict for a card_id, or null if not found.
+## Automatically loads the set's metadata if it hasn't been loaded yet.
+func _get_card_meta(card_id: String) -> Variant:
+	if _card_metadata_cache.has(card_id):
+		return _card_metadata_cache[card_id]
+
+	# Try loading the set
+	var card_set := card_id.split("-")[0]
+	_ensure_set_metadata_loaded(card_set)
+
+	if _card_metadata_cache.has(card_id):
+		return _card_metadata_cache[card_id]
+	return null
+
+
+## Returns the "name group key" for a card — this is the string used to
+## track how many copies of a name are in the deck.
+##
+## Rules:
+##   - Pokémon with "ex" in subtypes → exact card name (separate pool)
+##   - Pokémon with star/★ in name  → "__star__" (all stars share 1 slot)
+##   - Pokémon with "Delta Species" in subtypes → base name without " δ"
+##     (shares pool with the non-delta version)
+##   - All other Pokémon → card name as-is
+##   - Trainers / Special Energy → exact card name
+func _get_name_group(card_id: String) -> String:
+	var meta = _get_card_meta(card_id)
+	if meta == null:
+		return card_id   # fallback to card_id if no metadata
+
+	var card_name : String = meta["name"]
+	var supertype : String = meta["supertype"]
+	var subtypes  : Array  = meta["subtypes"]
+
+	# Trainers and Energy use exact name
+	if supertype != "Pokémon":
+		return card_name
+
+	# Star cards: name contains "★" or ends with "Star"
+	# All star cards share a single pool with 1 total allowed
+	if "★" in card_name or card_name.ends_with(" Star"):
+		return "__star__"
+
+	# EX Pokémon: "ex" in subtypes → separate name pool
+	# (the card name itself usually includes "ex" e.g. "Pikachu ex")
+	for st in subtypes:
+		if st.to_lower() == "ex":
+			return card_name
+
+	# Delta Species: strip the " δ" suffix so it shares the pool
+	# with the regular version of that Pokémon
+	var group_name := card_name
+	if group_name.ends_with(" δ"):
+		group_name = group_name.substr(0, group_name.length() - 2)
+
+	return group_name
+
+
+## Returns the maximum number of copies of this specific card that can
+## be added to the deck, considering the name-based group limits.
+## Returns -1 for unlimited (won't happen for non-energy cards).
+func _get_max_for_card(card_id: String, owned: int) -> int:
+	var meta = _get_card_meta(card_id)
+	if meta == null:
+		return mini(owned, MAX_COPIES)
+
+	var card_name : String = meta["name"]
+	var group_key := _get_name_group(card_id)
+
+	# Star cards: 1 total across ALL star cards in the deck
+	if group_key == "__star__":
+		var star_total : int = deck_name_counts.get("__star__", 0)
+		var this_card_in_deck : int = deck_cards.get(card_id, 0)
+		# How many more star cards can be added total?
+		var star_remaining := 1 - star_total
+		# This specific card can add up to star_remaining more copies
+		# (but also limited by ownership and can't exceed 1 of this specific card)
+		return mini(owned, this_card_in_deck + maxi(star_remaining, 0))
+
+	# Everything else: 4 copies per name group
+	var group_total : int = deck_name_counts.get(group_key, 0)
+	var this_card_in_deck : int = deck_cards.get(card_id, 0)
+	# How many more of this name group can be added?
+	var group_remaining := MAX_COPIES - group_total
+	# This specific card can add up to group_remaining more
+	return mini(owned, this_card_in_deck + maxi(group_remaining, 0))
+
+
+## Rebuilds deck_name_counts from scratch based on the current deck_cards.
+## Call this after loading a deck or making bulk changes (empty, load, etc.).
+func _rebuild_deck_name_counts() -> void:
+	deck_name_counts.clear()
+	for card_id in deck_cards:
+		var count : int = deck_cards[card_id]
+		var group_key := _get_name_group(card_id)
+		deck_name_counts[group_key] = deck_name_counts.get(group_key, 0) + count
 
 
 # ─── Energy style management ────────────────────────────────────────────────
@@ -445,6 +596,12 @@ func _on_change_energy_style_pressed() -> void:
 	energy_picker_active = true
 	_set_ui_visibility(false)
 
+	# If the picker was previously built and just hidden, re-show it
+	# instantly — no need to reload all 36 card images again.
+	if energy_picker_overlay != null:
+		energy_picker_overlay.visible = true
+		return
+
 	# Build the overlay as a regular Control (NOT a CanvasLayer).
 	# CanvasLayer creates a separate rendering layer that ignores the
 	# normal scene tree's z_index entirely — meaning the top_and_right_border
@@ -479,8 +636,6 @@ func _on_change_energy_style_pressed() -> void:
 	energy_picker_overlay.add_child(title)
 
 	# Track which style is currently selected in the picker.
-	# Using a Dictionary as a mutable container so lambdas can share it
-	# (same pattern as the load deck popup).
 	var picker_selection := {"style": current_energy_style}
 
 	# ── Card size for the picker grid ──
@@ -490,18 +645,12 @@ func _on_change_energy_style_pressed() -> void:
 	# We'll store references to each row's card nodes so we can animate
 	# the selected row.  Key = style name, value = array of TextureRects.
 	var row_cards : Dictionary = {}
-	# Also store tweens per style so we can kill them when selection changes
 	var row_tweens : Dictionary = {}
 
 	# Get the list of styles the player has unlocked from player_progress.json
 	var available_styles := _get_unlocked_energy_styles()
 
 	# ── Build a ScrollContainer + GridContainer for the card grid ──
-	# ScrollContainer lets the player scroll vertically if there are more
-	# rows than fit on screen.  The GridContainer inside handles the 6-column
-	# layout automatically — we just add children and it wraps them.
-	# Position and size match the available blank space on screen (1675×965)
-	# starting from just below the title bar area.
 	var picker_scroll := ScrollContainer.new()
 	picker_scroll.position = Vector2(70, 140)
 	picker_scroll.size = Vector2(1605, 905)
@@ -517,11 +666,6 @@ func _on_change_energy_style_pressed() -> void:
 	picker_grid.add_theme_constant_override("v_separation", 14)
 	picker_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
-	# Wrap the grid in a MarginContainer to add internal padding.
-	# Without this, cards sit flush against the ScrollContainer's clip
-	# boundary — so when the selected row's grow animation scales them
-	# up ~5%, the left/top edges get clipped.  The margin gives breathing
-	# room on all sides.
 	var margin_container := MarginContainer.new()
 	margin_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	margin_container.add_theme_constant_override("margin_left", 15)
@@ -531,65 +675,8 @@ func _on_change_energy_style_pressed() -> void:
 	picker_scroll.add_child(margin_container)
 	margin_container.add_child(picker_grid)
 
-	# Dimmed colour for non-selected but unlocked rows — 20% darker than white
-	var dimmed_modulate := Color(0.8, 0.8, 0.8, 1.0)
-	# Blacked-out colour for locked styles — matches the unowned card look
-	var locked_modulate := Color(0.08, 0.08, 0.08, 1.0)
-
-	for style_name in ENERGY_STYLES.keys():
-		var is_unlocked : bool = style_name in available_styles
-		var card_ids : Array = ENERGY_STYLES[style_name]
-
-		# ── 6 energy cards for this row ──
-		var cards_in_row : Array = []
-		for col in range(6):
-			var card_id : String = card_ids[col]
-			var card_set := card_id.split("-")[0]
-			var image_path := "res://cardimages/" + card_set + "/Large/" + card_id + ".png"
-			var tex = load(image_path)
-
-			var card_rect := TextureRect.new()
-			if tex:
-				card_rect.texture = tex
-			card_rect.custom_minimum_size = picker_card_size
-			card_rect.size = picker_card_size
-			# EXPAND_IGNORE_SIZE tells the TextureRect to report
-			# custom_minimum_size to the GridContainer for layout,
-			# rather than the texture's full native pixel dimensions.
-			# Without this the cards render at their original huge size.
-			card_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			card_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			card_rect.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-			card_rect.size_flags_vertical   = Control.SIZE_SHRINK_BEGIN
-			card_rect.pivot_offset = picker_card_size / 2.0
-
-			if not is_unlocked:
-				# Locked style — black out the cards and ignore mouse input
-				# so they can't be clicked, same visual as unowned cards
-				card_rect.modulate = locked_modulate
-				card_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			else:
-				# Unlocked but not the current selection — dim slightly
-				# so the selected row stands out.  The selected row's
-				# modulate gets overridden to full white by the animation.
-				card_rect.modulate = dimmed_modulate
-				card_rect.mouse_filter = Control.MOUSE_FILTER_STOP
-				card_rect.gui_input.connect(
-					_on_picker_card_clicked.bind(style_name, picker_selection, row_cards, row_tweens)
-				)
-
-			picker_grid.add_child(card_rect)
-			cards_in_row.append(card_rect)
-
-		row_cards[style_name] = cards_in_row
-
-	# Apply the glow animation to the currently selected style's row
-	if row_cards.has(current_energy_style):
-		_animate_picker_row(current_energy_style, row_cards, row_tweens)
-
 	# ── Save and Cancel buttons on the right side ──
-	# Position them in the same area as the normal save/cancel buttons.
-	# z_index 55 keeps them above the border (50) so they're always visible.
+	# These appear immediately along with the backdrop and title.
 	var picker_save_btn := Button.new()
 	picker_save_btn.text = "save style"
 	picker_save_btn.custom_minimum_size = Vector2(226, 63)
@@ -616,6 +703,71 @@ func _on_change_energy_style_pressed() -> void:
 	picker_cancel_btn.add_theme_font_size_override("font_size", 23)
 	picker_cancel_btn.pressed.connect(_on_energy_picker_cancel)
 	energy_picker_overlay.add_child(picker_cancel_btn)
+
+	# ── Let the UI shell render before loading card images ──
+	# Everything above (backdrop, title, scroll container, buttons) appears
+	# on screen instantly.  The await gives Godot a frame to paint it all
+	# before we start the heavier image-loading loop below.
+	await get_tree().process_frame
+
+	# Dimmed colour for non-selected but unlocked rows — 20% darker than white
+	var dimmed_modulate := Color(0.8, 0.8, 0.8, 1.0)
+	# Blacked-out colour for locked styles — matches the unowned card look
+	var locked_modulate := Color(0.08, 0.08, 0.08, 1.0)
+
+	# ── Progressive card loading — one card per frame ──
+	# Each card image is loaded and added to the grid one at a time, with
+	# an await between each so the player sees them appear rather than
+	# experiencing a freeze while all 36 images load at once.
+	for style_name in ENERGY_STYLES.keys():
+		var is_unlocked : bool = style_name in available_styles
+		var card_ids : Array = ENERGY_STYLES[style_name]
+
+		var cards_in_row : Array = []
+		for col in range(6):
+			# If the picker was closed mid-load (save/cancel), abort
+			if not energy_picker_active:
+				return
+
+			var card_id : String = card_ids[col]
+			var card_set := card_id.split("-")[0]
+			var image_path := "res://cardimages/" + card_set + "/Large/" + card_id + ".png"
+			var tex = load(image_path)
+
+			var card_rect := TextureRect.new()
+			if tex:
+				card_rect.texture = tex
+			card_rect.custom_minimum_size = picker_card_size
+			card_rect.size = picker_card_size
+			card_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			card_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			card_rect.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			card_rect.size_flags_vertical   = Control.SIZE_SHRINK_BEGIN
+			card_rect.pivot_offset = picker_card_size / 2.0
+
+			if not is_unlocked:
+				card_rect.modulate = locked_modulate
+				card_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			else:
+				card_rect.modulate = dimmed_modulate
+				card_rect.mouse_filter = Control.MOUSE_FILTER_STOP
+				card_rect.gui_input.connect(
+					_on_picker_card_clicked.bind(style_name, picker_selection, row_cards, row_tweens)
+				)
+
+			picker_grid.add_child(card_rect)
+			cards_in_row.append(card_rect)
+
+			# Yield one frame so the card appears on screen before the next loads
+			await get_tree().process_frame
+
+		row_cards[style_name] = cards_in_row
+
+		# Apply the glow animation to the selected row as soon as its
+		# cards are all loaded, so the player sees it highlight immediately
+		# rather than waiting for every row to finish
+		if style_name == current_energy_style:
+			_animate_picker_row(style_name, row_cards, row_tweens)
 
 
 ## Reads player_progress.json and returns the array of unlocked energy style
@@ -717,13 +869,29 @@ func _on_energy_picker_save(new_style: String) -> void:
 
 	current_energy_style = new_style
 
+	# Rebuild name-group tracking after the card ID swap
+	_rebuild_deck_name_counts()
+
 	# Save to player_data.json
 	_save_energy_style_to_player_data(new_style)
 
+	# Write the updated deck to disk so the swapped energy card IDs persist.
+	# Without this, the in-memory deck_cards has the new IDs but the .json
+	# file on disk still has the old ones — closing the scene without using
+	# the main "save deck" button would lose the swap.
+	if current_deck_name != "":
+		_save_deck_file(current_deck_name)
+
 	SoundManagerScript.play_sfx(SoundManagerScript.SFX_gamemode_select)
 
-	# Close picker and return to normal view
+	# Close picker and return to normal view.
+	# Destroy the overlay entirely (not just hide) because the style
+	# changed — the cached glow animation would be on the wrong row.
+	# It will rebuild with progressive loading next time.
 	_close_energy_picker()
+	if energy_picker_overlay != null:
+		energy_picker_overlay.queue_free()
+		energy_picker_overlay = null
 
 	# Update the energy icons to show the new style's images
 	_update_energy_icons()
@@ -736,13 +904,14 @@ func _on_energy_picker_cancel() -> void:
 	_close_energy_picker()
 
 
-## Removes the energy picker overlay and restores all normal UI.
+## Hides the energy picker overlay and restores all normal UI.
+## The overlay is hidden rather than freed so that reopening it is
+## instant — the card images are already loaded in memory.
 func _close_energy_picker() -> void:
 	energy_picker_active = false
 
 	if energy_picker_overlay != null:
-		energy_picker_overlay.queue_free()
-		energy_picker_overlay = null
+		energy_picker_overlay.visible = false
 
 	_set_ui_visibility(true)
 
@@ -822,6 +991,10 @@ func _display_current_set() -> void:
 	# Load this set's owned-cards data
 	var owned_cards := _load_owned_cards_for_set(set_id)
 
+	# Pre-load the card metadata (names, subtypes) for this set so the
+	# name-based copy limit checks work immediately when cards are clicked
+	_ensure_set_metadata_loaded(set_id)
+
 	# Store which set we're currently loading so we can detect if the player
 	# switches set mid-load and abort the old load gracefully
 	_loading_set_id = set_id
@@ -831,11 +1004,6 @@ func _display_current_set() -> void:
 		# If the player switched sets while we were still loading, stop
 		if _loading_set_id != set_id:
 			return
-
-		# Skip basic energy cards — these are managed via the energy icons
-		# on the right side of the screen, not the main card grid
-		if card_data.get("is_basic_energy", false):
-			continue
 
 		_add_card_to_grid(card_data)
 		await get_tree().process_frame
@@ -855,16 +1023,11 @@ func _clear_grid() -> void:
 
 
 ## Creates a single card entry in the grid.
-## card_data is a dictionary: {card_id, owned, is_basic_energy}
+## card_data is a dictionary: {card_id, owned}
 func _add_card_to_grid(card_data: Dictionary) -> void:
 	var card_id   : String = card_data["card_id"]
 	var owned     : int    = int(card_data["owned"])
-	var is_energy : bool   = card_data.get("is_basic_energy", false)
 	var in_deck   : int    = deck_cards.get(card_id, 0)
-
-	# Track basic energy IDs globally so click handlers can check
-	if is_energy:
-		basic_energy_ids[card_id] = true
 
 	# ── Card image ──
 	# TextureRect is added directly to the grid — no wrapper Control needed.
@@ -927,7 +1090,6 @@ func _add_card_to_grid(card_data: Dictionary) -> void:
 	card_rect.set_meta("card_id",         card_id)
 	card_rect.set_meta("owned",           owned)
 	card_rect.set_meta("in_deck",         in_deck)
-	card_rect.set_meta("is_basic_energy", is_energy)
 	card_rect.set_meta("card_rect",       card_rect)
 	card_rect.set_meta("count_label",     count_label)
 
@@ -961,18 +1123,11 @@ func _on_card_gui_input(event: InputEvent, card_node: Control) -> void:
 	var card_id   : String     = card_node.get_meta("card_id")
 	var owned     : int        = card_node.get_meta("owned")
 	var in_deck   : int        = card_node.get_meta("in_deck")
-	var is_energy : bool       = card_node.get_meta("is_basic_energy")
 	var card_rect : TextureRect = card_node.get_meta("card_rect")
 	var label     : Label      = card_node.get_meta("count_label")
 
-	# Determine the max copies allowed for this specific card
-	var max_allowed : int
-	if is_energy:
-		# Basic energies: only limited by how many the player owns
-		max_allowed = owned
-	else:
-		# Everything else (Pokémon, Trainers, Special Energy): 4-copy rule
-		max_allowed = mini(owned, MAX_COPIES)
+	# Determine the max copies allowed using name-based group limits
+	var max_allowed : int = _get_max_for_card(card_id, owned)
 
 	if event.button_index == MOUSE_BUTTON_LEFT:
 		# ── Add a copy ──
@@ -982,6 +1137,11 @@ func _on_card_gui_input(event: InputEvent, card_node: Control) -> void:
 		in_deck += 1
 		total_deck_count += 1
 		deck_cards[card_id] = in_deck
+
+		# Update the name-group counter
+		var group_key := _get_name_group(card_id)
+		deck_name_counts[group_key] = deck_name_counts.get(group_key, 0) + 1
+
 		card_node.set_meta("in_deck", in_deck)
 
 		SoundManagerScript.play_sfx(SoundManagerScript.SFX_plus_select)
@@ -997,6 +1157,10 @@ func _on_card_gui_input(event: InputEvent, card_node: Control) -> void:
 
 		in_deck -= 1
 		total_deck_count -= 1
+
+		# Update the name-group counter
+		var group_key := _get_name_group(card_id)
+		deck_name_counts[group_key] = maxi(deck_name_counts.get(group_key, 0) - 1, 0)
 
 		if in_deck == 0:
 			deck_cards.erase(card_id)
@@ -1086,6 +1250,7 @@ func _reset_scroll_position() -> void:
 ## Clears the entire deck — resets all in-deck counts to 0.
 func _on_empty_deck_pressed() -> void:
 	deck_cards.clear()
+	deck_name_counts.clear()
 	total_deck_count = 0
 	deck_name_edit.text = ""
 	_update_deck_count_label()
@@ -1126,7 +1291,23 @@ func _on_save_pressed() -> void:
 
 	SoundManagerScript.play_sfx(SoundManagerScript.SFX_gamemode_select)
 
-	# Build the deck array in the same format as existing deck files
+	# Write the deck file
+	_save_deck_file(file_name)
+
+	# Update player_data.json with the new deck name and last set loaded
+	_save_player_data(file_name)
+
+	current_deck_name = file_name
+	SoundManagerScript.play_sfx(SoundManagerScript.SFX_gamemode_select)
+
+	# Disable save button after saving
+	_refresh_save_button()
+
+
+## Writes the current deck_cards dictionary to a JSON file in the
+## playerdecks folder.  Used both by the main "save deck" button and
+## by the energy style picker when it swaps energy card IDs.
+func _save_deck_file(file_name: String) -> void:
 	var deck_array : Array = []
 	for card_id in deck_cards:
 		deck_array.append({
@@ -1137,7 +1318,6 @@ func _on_save_pressed() -> void:
 	# Sort by card ID for consistent file output
 	deck_array.sort_custom(func(a, b): return a["id"] < b["id"])
 
-	# Write the deck file
 	var deck_path := PLAYER_DECKS_FOLDER + file_name + ".json"
 	var deck_file := FileAccess.open(deck_path, FileAccess.WRITE)
 	if deck_file == null:
@@ -1145,15 +1325,6 @@ func _on_save_pressed() -> void:
 		return
 	deck_file.store_string(JSON.stringify(deck_array, "\t"))
 	deck_file.close()
-
-	# Update player_data.json with the new deck name and last set loaded
-	_save_player_data(file_name)
-
-	current_deck_name = file_name
-	SoundManagerScript.play_sfx(SoundManagerScript.SFX_gamemode_select)
-
-	# Disable save button after saving
-	_refresh_save_button()
 
 
 ## Updates player_data.json — writes the active deck name and last set viewed.
@@ -1244,6 +1415,12 @@ func _input(event: InputEvent) -> void:
 			if deck_name_edit.has_focus():
 				return
 			var card = _get_hovered_card()
+			# If hover returns null (common right after releasing zoom because
+			# Godot hasn't recalculated hover until the mouse moves), fall
+			# back to the last card we zoomed — lets the player re-press
+			# spacebar immediately without moving the mouse
+			if card == null and last_zoomed_card != null and is_instance_valid(last_zoomed_card):
+				card = last_zoomed_card
 			if card != null:
 				_show_zoom(card)
 		elif not event.pressed:
@@ -1293,6 +1470,7 @@ func _show_zoom(card_rect: TextureRect) -> void:
 		return
 
 	is_zoomed = true
+	last_zoomed_card = card_rect
 
 	# Hide all UI elements except backgrounds
 	_set_ui_visibility(false)
