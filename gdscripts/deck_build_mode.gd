@@ -7,12 +7,30 @@ const SET_DICT_PATH        := "C:/pkm-tcg-gdt/playerdata/set_dictionary.json"
 const OWNED_CARDS_FOLDER   := "C:/pkm-tcg-gdt/playerdata/playerownedcards/"
 const PLAYER_DECKS_FOLDER  := "C:/pkm-tcg-gdt/playerdata/playerdecks/"
 
+const PLAYER_PROGRESS_PATH := "C:/pkm-tcg-gdt/playerdata/player_progress.json"
+
 const CARD_SIZE     := Vector2(183, 254)
 const CARD_H_SEP    := 2
 const CARD_V_SEP    := 2
 const COLUMNS       := 9
 const MAX_COPIES    := 4
 const DECK_SIZE     := 60
+
+# ─── Energy style data ──────────────────────────────────────────────────────
+# Each style maps to 6 card IDs in a fixed order: grass, fire, water,
+# lightning, psychic, fighting.  The order matters because each set has
+# different numbering — we can't just loop through sequentially.
+
+const ENERGY_TYPES := ["grass", "fire", "water", "lightning", "psychic", "fighting"]
+
+const ENERGY_STYLES : Dictionary = {
+	"Base1":  ["base1-99",  "base1-98",  "base1-102", "base1-100", "base1-101", "base1-97"],
+	"Ecard1": ["ecard1-162","ecard1-161","ecard1-165","ecard1-163","ecard1-164","ecard1-160"],
+	"ex1":    ["ex1-104",   "ex1-108",   "ex1-106",   "ex1-109",   "ex1-107",   "ex1-105"],
+	"ex9":    ["ex9-101",   "ex9-102",   "ex9-103",   "ex9-104",   "ex9-105",   "ex9-106"],
+	"ex13":   ["ex13-105",  "ex13-106",  "ex13-107",  "ex13-108",  "ex13-109",  "ex13-110"],
+	"ex16":   ["ex16-103",  "ex16-104",  "ex16-105",  "ex16-106",  "ex16-107",  "ex16-108"],
+}
 
 # ─── State ───────────────────────────────────────────────────────────────────
 
@@ -35,6 +53,23 @@ var current_deck_name : String = ""
 
 # Reference to the load-deck popup so we can free it later
 var load_popup       : CanvasLayer = null
+
+# The player's current energy style key (e.g. "ex13")
+var current_energy_style : String = "Base1"
+
+# Whether the energy style picker overlay is currently visible
+var energy_picker_active : bool = false
+
+# Reference to the energy picker Control so we can free it
+var energy_picker_overlay : Control = null
+
+# Holds references to the 6 energy icon TextureRects from the scene tree,
+# keyed by type name: "grass", "fire", "water", "lightning", "psychic", "fighting"
+var energy_icons   : Dictionary = {}
+# Matching count labels for each energy type
+var energy_labels  : Dictionary = {}
+# Tweens for the energy icon glow animation, keyed by type name
+var energy_tweens  : Dictionary = {}
 
 # Tracks which set is currently being loaded — used to abort a progressive
 # load if the player switches sets before the previous one finishes
@@ -60,6 +95,25 @@ var is_zoomed : bool = false
 @onready var deck_name_edit   : LineEdit      = $deck_name
 @onready var deck_count_label : Label         = $deck_count_label
 
+# Energy icon TextureRects in the scene — these show the current style's images
+@onready var grass_energy_icon     : TextureRect = $grass_energy_icon
+@onready var fire_energy_icon      : TextureRect = $fire_energy_icon
+@onready var water_energy_icon     : TextureRect = $water_energy_icon
+@onready var lightning_energy_icon : TextureRect = $lightning_energy_icon
+@onready var psychic_energy_icon   : TextureRect = $psychic_energy_icon
+@onready var fighting_energy_icon  : TextureRect = $fighting_energy_icon
+
+# Count labels overlaid on top of each energy icon
+@onready var grass_energy_count     : Label = $grass_energy_count_label
+@onready var fire_energy_count      : Label = $fire_energy_count_label
+@onready var water_energy_count     : Label = $water_energy_count_label
+@onready var lightning_energy_count : Label = $lightning_energy_count_label
+@onready var psychic_energy_count   : Label = $psychic_energy_count_label
+@onready var fighting_energy_count  : Label = $figthing_energy_count_label
+
+# The button that opens the energy style picker overlay
+@onready var change_energy_btn : Button = $change_energy_style_button
+
 # ─── Lifecycle ───────────────────────────────────────────────────────────────
 
 func _ready() -> void:
@@ -79,6 +133,7 @@ func _ready() -> void:
 	load_btn.pressed.connect(_on_load_deck_pressed)
 	next_btn.pressed.connect(_on_next_set)
 	prev_btn.pressed.connect(_on_prev_set)
+	change_energy_btn.pressed.connect(_on_change_energy_style_pressed)
 
 	# Limit deck name to 20 characters — LineEdit.max_length natively
 	# blocks further typing once the limit is reached
@@ -92,6 +147,37 @@ func _ready() -> void:
 
 	# Load the player's current deck
 	_load_deck(current_deck_name)
+
+	# ── Energy icon setup ──
+	# Build the convenience dictionaries that map type name → node.
+	# This lets the rest of the code work with energy types by string
+	# name ("grass", "fire", etc.) instead of individual variable names.
+	energy_icons = {
+		"grass": grass_energy_icon, "fire": fire_energy_icon,
+		"water": water_energy_icon, "lightning": lightning_energy_icon,
+		"psychic": psychic_energy_icon, "fighting": fighting_energy_icon,
+	}
+	energy_labels = {
+		"grass": grass_energy_count, "fire": fire_energy_count,
+		"water": water_energy_count, "lightning": lightning_energy_count,
+		"psychic": psychic_energy_count, "fighting": fighting_energy_count,
+	}
+
+	# Load the saved energy style from player_data.json and update the icons
+	_load_energy_style()
+	_update_energy_icons()
+
+	# Wire up click handling on each energy icon.  gui_input is the signal
+	# Godot fires on any Control when the mouse interacts with it.
+	# We set mouse_filter to STOP so the icon consumes the click rather
+	# than letting it pass through to nodes behind it.
+	for energy_type in ENERGY_TYPES:
+		var icon : TextureRect = energy_icons[energy_type]
+		icon.mouse_filter = Control.MOUSE_FILTER_STOP
+		icon.gui_input.connect(_on_energy_icon_gui_input.bind(energy_type))
+
+	# Refresh energy icon labels and animations from deck state
+	_refresh_energy_icons_from_deck()
 
 	# Initial UI state
 	_update_deck_count_label()
@@ -209,6 +295,481 @@ func _load_owned_cards_for_set(set_id: String) -> Array:
 	return []
 
 
+# ─── Energy style management ────────────────────────────────────────────────
+
+## Reads the energy_style field from player_data.json and stores it.
+## Falls back to "Base1" if the field is missing.
+func _load_energy_style() -> void:
+	var file := FileAccess.open(PLAYER_DATA_PATH, FileAccess.READ)
+	if file == null:
+		return
+	var data = JSON.parse_string(file.get_as_text())
+	file.close()
+	if data is Dictionary:
+		current_energy_style = data.get("energy_style", "Base1")
+
+
+## Updates the 6 energy icon TextureRects to show images from the
+## currently selected energy style.  Each icon loads the "Small" version
+## of its card image from the cardimages folder.
+func _update_energy_icons() -> void:
+	if not ENERGY_STYLES.has(current_energy_style):
+		current_energy_style = "Base1"
+
+	var card_ids : Array = ENERGY_STYLES[current_energy_style]
+	# card_ids is ordered: grass, fire, water, lightning, psychic, fighting
+	# ENERGY_TYPES is in the same order, so index i lines up
+	for i in range(ENERGY_TYPES.size()):
+		var energy_type : String = ENERGY_TYPES[i]
+		var card_id     : String = card_ids[i]
+		var card_set := card_id.split("-")[0]
+		var image_path := "res://cardimages/" + card_set + "/Small/" + card_id + ".png"
+		var tex = load(image_path)
+		if tex != null:
+			energy_icons[energy_type].texture = tex
+
+
+## Refreshes the count labels and glow animations on all 6 energy icons
+## based on the current deck contents.  Called at startup and whenever the
+## deck changes (load, empty, etc.).
+func _refresh_energy_icons_from_deck() -> void:
+	if not ENERGY_STYLES.has(current_energy_style):
+		return
+
+	var card_ids : Array = ENERGY_STYLES[current_energy_style]
+	for i in range(ENERGY_TYPES.size()):
+		var energy_type : String = ENERGY_TYPES[i]
+		var card_id     : String = card_ids[i]
+		var in_deck     : int    = deck_cards.get(card_id, 0)
+		var label       : Label  = energy_labels[energy_type]
+		label.text = str(in_deck)
+
+		var icon : TextureRect = energy_icons[energy_type]
+		if in_deck > 0:
+			_apply_energy_icon_animation(energy_type, icon)
+		else:
+			_remove_energy_icon_animation(energy_type, icon)
+
+
+## Starts the glow + grow loop on an energy icon (same visual feel as
+## the main grid cards).  The icon's pivot_offset must be set to its
+## centre so it scales from the middle rather than the top-left corner.
+func _apply_energy_icon_animation(energy_type: String, icon: TextureRect) -> void:
+	# Kill any existing tween first to avoid stacking animations
+	if energy_tweens.has(energy_type) and energy_tweens[energy_type] != null:
+		energy_tweens[energy_type].kill()
+
+	icon.pivot_offset = icon.size / 2.0
+	icon.modulate = Color.WHITE
+
+	var tw := create_tween()
+	tw.set_loops()
+	energy_tweens[energy_type] = tw
+
+	tw.tween_property(icon, "modulate", Color.WHITE * 1.4, 0.5)
+	tw.parallel().tween_property(icon, "scale", Vector2(1.06, 1.06), 0.5)
+	tw.tween_property(icon, "modulate", Color.WHITE * 1.0, 0.5)
+	tw.parallel().tween_property(icon, "scale", Vector2(1.0, 1.0), 0.5)
+
+
+## Stops the glow animation and resets an energy icon to normal.
+func _remove_energy_icon_animation(energy_type: String, icon: TextureRect) -> void:
+	if energy_tweens.has(energy_type) and energy_tweens[energy_type] != null:
+		energy_tweens[energy_type].kill()
+		energy_tweens[energy_type] = null
+	icon.modulate = Color.WHITE
+	icon.scale = Vector2(1.0, 1.0)
+
+
+## Handles left/right click on an energy icon.
+## Left click  = add one of that energy to the deck
+## Right click = remove one of that energy from the deck
+## The card_id used comes from the current energy style, so switching
+## styles later will use different set-specific IDs.
+func _on_energy_icon_gui_input(event: InputEvent, energy_type: String) -> void:
+	if not event is InputEventMouseButton or not event.pressed:
+		return
+
+	# Look up which card_id this energy type maps to in the current style
+	var type_index := ENERGY_TYPES.find(energy_type)
+	if type_index == -1:
+		return
+	var card_id : String = ENERGY_STYLES[current_energy_style][type_index]
+	var in_deck : int    = deck_cards.get(card_id, 0)
+	var icon    : TextureRect = energy_icons[energy_type]
+	var label   : Label  = energy_labels[energy_type]
+
+	if event.button_index == MOUSE_BUTTON_LEFT:
+		# Energies have no copy cap — add freely
+		in_deck += 1
+		total_deck_count += 1
+		deck_cards[card_id] = in_deck
+		SoundManagerScript.play_sfx(SoundManagerScript.SFX_plus_select)
+
+		if in_deck == 1:
+			_apply_energy_icon_animation(energy_type, icon)
+
+	elif event.button_index == MOUSE_BUTTON_RIGHT:
+		if in_deck <= 0:
+			return
+		in_deck -= 1
+		total_deck_count -= 1
+
+		if in_deck == 0:
+			deck_cards.erase(card_id)
+			_remove_energy_icon_animation(energy_type, icon)
+		else:
+			deck_cards[card_id] = in_deck
+
+		SoundManagerScript.play_sfx(SoundManagerScript.SFX_minus_select)
+	else:
+		return
+
+	label.text = str(in_deck)
+	_update_deck_count_label()
+	_refresh_save_button()
+
+
+# ─── Energy style picker overlay ────────────────────────────────────────────
+# When the player clicks "Change Energy Style", we hide all normal UI and
+# show a grid of 6 rows × 6 columns of energy cards.  Each row represents
+# one set's energy style.  Clicking any card in a row selects that entire
+# row (i.e. that style).  Save/Cancel buttons appear on the right.
+
+## Called when the "Change Energy Style" button is pressed.
+## Hides all normal deck-builder UI and shows the energy picker overlay.
+func _on_change_energy_style_pressed() -> void:
+	if energy_picker_active:
+		return
+
+	energy_picker_active = true
+	_set_ui_visibility(false)
+
+	# Build the overlay as a regular Control (NOT a CanvasLayer).
+	# CanvasLayer creates a separate rendering layer that ignores the
+	# normal scene tree's z_index entirely — meaning the top_and_right_border
+	# could never render on top of it.  By using a plain Control with a
+	# z_index between the background and the border, the energy cards
+	# scroll behind the border naturally.
+	energy_picker_overlay = Control.new()
+	energy_picker_overlay.z_index = 10   # above background (-10), below border (50)
+	energy_picker_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(energy_picker_overlay)
+
+	# ── Semi-transparent backdrop ──
+	var backdrop := ColorRect.new()
+	backdrop.color = Color(0, 0, 0, 0.55)
+	backdrop.anchor_right  = 1.0
+	backdrop.anchor_bottom = 1.0
+	backdrop.z_index = 55   # above the border so the dimming covers everything
+	energy_picker_overlay.add_child(backdrop)
+
+	# ── Title label ──
+	var title := Label.new()
+	var kenney_theme = load("res://uiresources/kenneyUI.tres")
+	if kenney_theme:
+		title.theme = kenney_theme
+	title.text = "Select Energy Card Style"
+	title.add_theme_font_size_override("font_size", 32)
+	title.add_theme_color_override("font_color", Color.WHITE)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.position = Vector2(200, 20)
+	title.size = Vector2(1200, 50)
+	title.z_index = 55
+	energy_picker_overlay.add_child(title)
+
+	# Track which style is currently selected in the picker.
+	# Using a Dictionary as a mutable container so lambdas can share it
+	# (same pattern as the load deck popup).
+	var picker_selection := {"style": current_energy_style}
+
+	# ── Card size for the picker grid ──
+	# 20% larger than the standard deck build card size (183×254)
+	var picker_card_size := CARD_SIZE * 1.2   # → ~220 × 305
+
+	# We'll store references to each row's card nodes so we can animate
+	# the selected row.  Key = style name, value = array of TextureRects.
+	var row_cards : Dictionary = {}
+	# Also store tweens per style so we can kill them when selection changes
+	var row_tweens : Dictionary = {}
+
+	# Get the list of styles the player has unlocked from player_progress.json
+	var available_styles := _get_unlocked_energy_styles()
+
+	# ── Build a ScrollContainer + GridContainer for the card grid ──
+	# ScrollContainer lets the player scroll vertically if there are more
+	# rows than fit on screen.  The GridContainer inside handles the 6-column
+	# layout automatically — we just add children and it wraps them.
+	# Position and size match the available blank space on screen (1675×965)
+	# starting from just below the title bar area.
+	var picker_scroll := ScrollContainer.new()
+	picker_scroll.position = Vector2(70, 140)
+	picker_scroll.size = Vector2(1605, 905)
+	picker_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	picker_scroll.vertical_scroll_mode   = ScrollContainer.SCROLL_MODE_AUTO
+	picker_scroll.z_index = 0
+	picker_scroll.clip_contents = true
+	energy_picker_overlay.add_child(picker_scroll)
+
+	var picker_grid := GridContainer.new()
+	picker_grid.columns = 6
+	picker_grid.add_theme_constant_override("h_separation", 28)
+	picker_grid.add_theme_constant_override("v_separation", 14)
+	picker_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	# Wrap the grid in a MarginContainer to add internal padding.
+	# Without this, cards sit flush against the ScrollContainer's clip
+	# boundary — so when the selected row's grow animation scales them
+	# up ~5%, the left/top edges get clipped.  The margin gives breathing
+	# room on all sides.
+	var margin_container := MarginContainer.new()
+	margin_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margin_container.add_theme_constant_override("margin_left", 15)
+	margin_container.add_theme_constant_override("margin_right", 15)
+	margin_container.add_theme_constant_override("margin_top", 10)
+	margin_container.add_theme_constant_override("margin_bottom", 10)
+	picker_scroll.add_child(margin_container)
+	margin_container.add_child(picker_grid)
+
+	# Dimmed colour for non-selected but unlocked rows — 20% darker than white
+	var dimmed_modulate := Color(0.8, 0.8, 0.8, 1.0)
+	# Blacked-out colour for locked styles — matches the unowned card look
+	var locked_modulate := Color(0.08, 0.08, 0.08, 1.0)
+
+	for style_name in ENERGY_STYLES.keys():
+		var is_unlocked : bool = style_name in available_styles
+		var card_ids : Array = ENERGY_STYLES[style_name]
+
+		# ── 6 energy cards for this row ──
+		var cards_in_row : Array = []
+		for col in range(6):
+			var card_id : String = card_ids[col]
+			var card_set := card_id.split("-")[0]
+			var image_path := "res://cardimages/" + card_set + "/Large/" + card_id + ".png"
+			var tex = load(image_path)
+
+			var card_rect := TextureRect.new()
+			if tex:
+				card_rect.texture = tex
+			card_rect.custom_minimum_size = picker_card_size
+			card_rect.size = picker_card_size
+			# EXPAND_IGNORE_SIZE tells the TextureRect to report
+			# custom_minimum_size to the GridContainer for layout,
+			# rather than the texture's full native pixel dimensions.
+			# Without this the cards render at their original huge size.
+			card_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			card_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			card_rect.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			card_rect.size_flags_vertical   = Control.SIZE_SHRINK_BEGIN
+			card_rect.pivot_offset = picker_card_size / 2.0
+
+			if not is_unlocked:
+				# Locked style — black out the cards and ignore mouse input
+				# so they can't be clicked, same visual as unowned cards
+				card_rect.modulate = locked_modulate
+				card_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			else:
+				# Unlocked but not the current selection — dim slightly
+				# so the selected row stands out.  The selected row's
+				# modulate gets overridden to full white by the animation.
+				card_rect.modulate = dimmed_modulate
+				card_rect.mouse_filter = Control.MOUSE_FILTER_STOP
+				card_rect.gui_input.connect(
+					_on_picker_card_clicked.bind(style_name, picker_selection, row_cards, row_tweens)
+				)
+
+			picker_grid.add_child(card_rect)
+			cards_in_row.append(card_rect)
+
+		row_cards[style_name] = cards_in_row
+
+	# Apply the glow animation to the currently selected style's row
+	if row_cards.has(current_energy_style):
+		_animate_picker_row(current_energy_style, row_cards, row_tweens)
+
+	# ── Save and Cancel buttons on the right side ──
+	# Position them in the same area as the normal save/cancel buttons.
+	# z_index 55 keeps them above the border (50) so they're always visible.
+	var picker_save_btn := Button.new()
+	picker_save_btn.text = "save style"
+	picker_save_btn.custom_minimum_size = Vector2(226, 63)
+	picker_save_btn.position = Vector2(1689, 902)
+	picker_save_btn.z_index = 55
+	var green_theme = load("res://uiresources/kenneyUI-green.tres")
+	if green_theme:
+		picker_save_btn.theme = green_theme
+	picker_save_btn.add_theme_font_size_override("font_size", 23)
+	picker_save_btn.pressed.connect(
+		func():
+			_on_energy_picker_save(picker_selection["style"])
+	)
+	energy_picker_overlay.add_child(picker_save_btn)
+
+	var picker_cancel_btn := Button.new()
+	picker_cancel_btn.text = "cancel"
+	picker_cancel_btn.custom_minimum_size = Vector2(224, 63)
+	picker_cancel_btn.position = Vector2(1690, 986)
+	picker_cancel_btn.z_index = 55
+	var red_theme = load("res://uiresources/kenneyUI-red.tres")
+	if red_theme:
+		picker_cancel_btn.theme = red_theme
+	picker_cancel_btn.add_theme_font_size_override("font_size", 23)
+	picker_cancel_btn.pressed.connect(_on_energy_picker_cancel)
+	energy_picker_overlay.add_child(picker_cancel_btn)
+
+
+## Reads player_progress.json and returns the array of unlocked energy style
+## names.  This determines which rows appear in the picker.
+func _get_unlocked_energy_styles() -> Array:
+	var file := FileAccess.open(PLAYER_PROGRESS_PATH, FileAccess.READ)
+	if file == null:
+		return ["Base1"]
+	var data = JSON.parse_string(file.get_as_text())
+	file.close()
+	if data is Dictionary and data.has("energy_styles"):
+		return data["energy_styles"]
+	return ["Base1"]
+
+
+## Called when any card in the picker grid is clicked.
+## Selects that row's style — removes animation from the old selection
+## and applies it to the new one.
+func _on_picker_card_clicked(event: InputEvent, style_name: String,
+		picker_selection: Dictionary, row_cards: Dictionary,
+		row_tweens: Dictionary) -> void:
+	if not event is InputEventMouseButton or not event.pressed:
+		return
+	if event.button_index != MOUSE_BUTTON_LEFT:
+		return
+
+	var old_style : String = picker_selection["style"]
+
+	# If clicking the already-selected style, do nothing
+	if old_style == style_name:
+		return
+
+	SoundManagerScript.play_sfx(SoundManagerScript.SFX_plus_select)
+
+	# Remove animation from old selection
+	if row_cards.has(old_style):
+		_stop_picker_row_animation(old_style, row_cards, row_tweens)
+
+	# Apply animation to new selection
+	picker_selection["style"] = style_name
+	_animate_picker_row(style_name, row_cards, row_tweens)
+
+
+## Starts the glow + grow loop on all 6 cards in a picker row.
+## Each card gets its own tween so they all pulse together.
+func _animate_picker_row(style_name: String, row_cards: Dictionary,
+		row_tweens: Dictionary) -> void:
+	# Kill any existing tweens for this row first
+	_stop_picker_row_animation(style_name, row_cards, row_tweens)
+
+	var tweens_for_row : Array = []
+	for card_rect in row_cards[style_name]:
+		var tw := create_tween()
+		tw.set_loops()
+		tw.tween_property(card_rect, "modulate", Color.WHITE * 1.4, 0.5)
+		tw.parallel().tween_property(card_rect, "scale", Vector2(1.05, 1.05), 0.5)
+		tw.tween_property(card_rect, "modulate", Color.WHITE * 1.0, 0.5)
+		tw.parallel().tween_property(card_rect, "scale", Vector2(1.0, 1.0), 0.5)
+		tweens_for_row.append(tw)
+	row_tweens[style_name] = tweens_for_row
+
+
+## Stops all glow/grow animations on a picker row and resets the cards
+## to the dimmed state (20% darker) so the selected row stands out.
+func _stop_picker_row_animation(style_name: String, row_cards: Dictionary,
+		row_tweens: Dictionary) -> void:
+	if row_tweens.has(style_name) and row_tweens[style_name] != null:
+		for tw in row_tweens[style_name]:
+			if tw != null:
+				tw.kill()
+		row_tweens[style_name] = null
+
+	if row_cards.has(style_name):
+		for card_rect in row_cards[style_name]:
+			card_rect.modulate = Color(0.8, 0.8, 0.8, 1.0)
+			card_rect.scale = Vector2(1.0, 1.0)
+
+
+## Called when the picker's "save style" button is pressed.
+## Saves the newly selected style to player_data.json, then swaps any
+## energy cards already in the deck from the old style to the new style,
+## updates the icons, and closes the picker.
+func _on_energy_picker_save(new_style: String) -> void:
+	var old_style := current_energy_style
+
+	# ── Swap energy cards in the deck from old style → new style ──
+	# If the player had e.g. 10 × base1-99 (Base1 grass) in their deck,
+	# and they switch to ex13, we need to replace those with ex13-105.
+	if old_style != new_style and ENERGY_STYLES.has(old_style) and ENERGY_STYLES.has(new_style):
+		var old_ids : Array = ENERGY_STYLES[old_style]
+		var new_ids : Array = ENERGY_STYLES[new_style]
+		for i in range(6):
+			var old_id : String = old_ids[i]
+			var new_id : String = new_ids[i]
+			if deck_cards.has(old_id):
+				var count : int = deck_cards[old_id]
+				deck_cards.erase(old_id)
+				deck_cards[new_id] = count
+
+	current_energy_style = new_style
+
+	# Save to player_data.json
+	_save_energy_style_to_player_data(new_style)
+
+	SoundManagerScript.play_sfx(SoundManagerScript.SFX_gamemode_select)
+
+	# Close picker and return to normal view
+	_close_energy_picker()
+
+	# Update the energy icons to show the new style's images
+	_update_energy_icons()
+	_refresh_energy_icons_from_deck()
+
+
+## Called when the picker's "cancel" button is pressed.
+## Closes the picker without saving — the original style is preserved.
+func _on_energy_picker_cancel() -> void:
+	_close_energy_picker()
+
+
+## Removes the energy picker overlay and restores all normal UI.
+func _close_energy_picker() -> void:
+	energy_picker_active = false
+
+	if energy_picker_overlay != null:
+		energy_picker_overlay.queue_free()
+		energy_picker_overlay = null
+
+	_set_ui_visibility(true)
+
+
+## Writes the energy_style field to player_data.json without touching
+## any other fields.
+func _save_energy_style_to_player_data(style_name: String) -> void:
+	var file := FileAccess.open(PLAYER_DATA_PATH, FileAccess.READ)
+	if file == null:
+		push_error("DeckBuild: cannot read " + PLAYER_DATA_PATH)
+		return
+	var data = JSON.parse_string(file.get_as_text())
+	file.close()
+
+	if not data is Dictionary:
+		return
+
+	data["energy_style"] = style_name
+
+	var write_file := FileAccess.open(PLAYER_DATA_PATH, FileAccess.WRITE)
+	if write_file == null:
+		push_error("DeckBuild: cannot write " + PLAYER_DATA_PATH)
+		return
+	write_file.store_string(JSON.stringify(data, "\t"))
+	write_file.close()
+
+
 # ─── Scroll container ───────────────────────────────────────────────────────
 
 ## Wraps the GridContainer inside a ScrollContainer so the card grid
@@ -270,6 +831,12 @@ func _display_current_set() -> void:
 		# If the player switched sets while we were still loading, stop
 		if _loading_set_id != set_id:
 			return
+
+		# Skip basic energy cards — these are managed via the energy icons
+		# on the right side of the screen, not the main card grid
+		if card_data.get("is_basic_energy", false):
+			continue
+
 		_add_card_to_grid(card_data)
 		await get_tree().process_frame
 
@@ -540,6 +1107,9 @@ func _on_empty_deck_pressed() -> void:
 			_remove_selected_animation(card_rect)
 		# Unowned cards keep their darkened modulate untouched
 
+	# Also reset the energy icon labels and animations
+	_refresh_energy_icons_from_deck()
+
 
 # ─── Save ────────────────────────────────────────────────────────────────────
 
@@ -656,14 +1226,20 @@ func _input(event: InputEvent) -> void:
 		if is_zoomed:
 			_hide_zoom()
 			return
+		# If the energy picker is open, close it (same as pressing cancel)
+		if energy_picker_active:
+			_on_energy_picker_cancel()
+			return
 		_on_cancel_pressed()
 
 	# ── Spacebar hold-to-zoom ──
 	if event.keycode == KEY_SPACE:
 		if event.pressed and not event.is_echo():
 			# Key just went down (not a held-key repeat) — try to zoom
-			# Don't zoom if a popup is open or the deck name field has focus
+			# Don't zoom if a popup or picker is open, or the deck name field has focus
 			if load_popup != null:
+				return
+			if energy_picker_active:
 				return
 			if deck_name_edit.has_focus():
 				return
@@ -777,7 +1353,14 @@ func _set_ui_visibility(visible_flag: bool) -> void:
 		set_label,
 		deck_name_edit,
 		deck_count_label,
+		change_energy_btn,
 	]
+
+	# Add all 6 energy icons and their count labels to the toggle list
+	for energy_type in ENERGY_TYPES:
+		nodes_to_toggle.append(energy_icons[energy_type])
+		nodes_to_toggle.append(energy_labels[energy_type])
+
 	for node in nodes_to_toggle:
 		if node != null and is_instance_valid(node):
 			node.visible = visible_flag
@@ -944,6 +1527,7 @@ func _on_load_deck_pressed() -> void:
 				_load_deck(chosen_name)
 				_update_deck_count_label()
 				_refresh_save_button()
+				_refresh_energy_icons_from_deck()
 				_display_current_set()
 	)
 	btn_row.add_child(load_confirm_btn)

@@ -2,7 +2,8 @@
 	"battle_sprite": "1dawnplatinum",
 	"coin": "coin_energy_blue",
 	"deck": "Delta_Species_Destruction",
-	"last_set_loaded": "ecard3",
+	"energy_style": "ex16",
+	"last_set_loaded": "ex16",
 	"name": "APINKSHRIMP",
 	"overworld_sprite": "1dawnplatinum",
 	"sprite": "1dawnplatinum"
