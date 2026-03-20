@@ -65,6 +65,12 @@ var deck_name_counts : Dictionary = {}
 # Reference to the load-deck popup so we can free it later
 var load_popup       : CanvasLayer = null
 
+# Snapshot of deck_cards taken after a save or load — used to detect
+# whether the player has made any changes.  If the current deck_cards
+# matches this snapshot exactly, the save button stays disabled.
+var _saved_deck_snapshot : Dictionary = {}
+var _saved_deck_name     : String = ""
+
 # The player's current energy style key (e.g. "ex13")
 var current_energy_style : String = "Base1"
 
@@ -113,23 +119,23 @@ var last_zoomed_card : TextureRect = null
 @onready var deck_count_label : Label         = $deck_count_label
 
 # Energy icon TextureRects in the scene — these show the current style's images
-@onready var grass_energy_icon     : TextureRect = $grass_energy_icon
-@onready var fire_energy_icon      : TextureRect = $fire_energy_icon
-@onready var water_energy_icon     : TextureRect = $water_energy_icon
-@onready var lightning_energy_icon : TextureRect = $lightning_energy_icon
-@onready var psychic_energy_icon   : TextureRect = $psychic_energy_icon
-@onready var fighting_energy_icon  : TextureRect = $fighting_energy_icon
+@onready var grass_energy_icon     : TextureRect = $"ENERGY SECTION"/"ENERGY ICONS"/grass_energy_icon
+@onready var fire_energy_icon      : TextureRect = $"ENERGY SECTION"/"ENERGY ICONS"/fire_energy_icon
+@onready var water_energy_icon     : TextureRect = $"ENERGY SECTION"/"ENERGY ICONS"/water_energy_icon
+@onready var lightning_energy_icon : TextureRect = $"ENERGY SECTION"/"ENERGY ICONS"/lightning_energy_icon
+@onready var psychic_energy_icon   : TextureRect = $"ENERGY SECTION"/"ENERGY ICONS"/psychic_energy_icon
+@onready var fighting_energy_icon  : TextureRect = $"ENERGY SECTION"/"ENERGY ICONS"/fighting_energy_icon
 
 # Count labels overlaid on top of each energy icon
-@onready var grass_energy_count     : Label = $grass_energy_count_label
-@onready var fire_energy_count      : Label = $fire_energy_count_label
-@onready var water_energy_count     : Label = $water_energy_count_label
-@onready var lightning_energy_count : Label = $lightning_energy_count_label
-@onready var psychic_energy_count   : Label = $psychic_energy_count_label
-@onready var fighting_energy_count  : Label = $figthing_energy_count_label
+@onready var grass_energy_count     : Label = $"ENERGY SECTION"/"ENERGY LABELS"/grass_energy_count_label
+@onready var fire_energy_count      : Label = $"ENERGY SECTION"/"ENERGY LABELS"/fire_energy_count_label
+@onready var water_energy_count     : Label = $"ENERGY SECTION"/"ENERGY LABELS"/water_energy_count_label
+@onready var lightning_energy_count : Label = $"ENERGY SECTION"/"ENERGY LABELS"/lightning_energy_count_label
+@onready var psychic_energy_count   : Label = $"ENERGY SECTION"/"ENERGY LABELS"/psychic_energy_count_label
+@onready var fighting_energy_count  : Label = $"ENERGY SECTION"/"ENERGY LABELS"/fighting_energy_count_label
 
 # The button that opens the energy style picker overlay
-@onready var change_energy_btn : Button = $change_energy_style_button
+@onready var change_energy_btn : Button = $"ENERGY SECTION"/change_energy_style_button
 
 # ─── Lifecycle ───────────────────────────────────────────────────────────────
 
@@ -196,7 +202,8 @@ func _ready() -> void:
 	# Refresh energy icon labels and animations from deck state
 	_refresh_energy_icons_from_deck()
 
-	# Initial UI state
+	# Initial UI state — snapshot the deck so dirty-tracking starts clean
+	_snapshot_deck_state()
 	_update_deck_count_label()
 	_refresh_save_button()
 
@@ -444,6 +451,44 @@ func _rebuild_deck_name_counts() -> void:
 		var count : int = deck_cards[card_id]
 		var group_key := _get_name_group(card_id)
 		deck_name_counts[group_key] = deck_name_counts.get(group_key, 0) + count
+
+
+## Detects which energy style the current deck uses by checking if any
+## of the deck's card IDs match a known energy style's card IDs.
+## Returns the style name (e.g. "Base1", "ex13") or "" if none found.
+func _detect_energy_style_from_deck() -> String:
+	for style_name in ENERGY_STYLES.keys():
+		var card_ids : Array = ENERGY_STYLES[style_name]
+		for cid in card_ids:
+			if deck_cards.has(cid):
+				return style_name
+	return ""
+
+
+## Takes a snapshot of the current deck state.  Call after saving or
+## loading a deck.  _is_deck_dirty() compares the live state against
+## this snapshot to decide whether the save button should be enabled.
+func _snapshot_deck_state() -> void:
+	_saved_deck_snapshot = deck_cards.duplicate()
+	_saved_deck_name = deck_name_edit.text.strip_edges()
+
+
+## Returns true if the deck has changed since the last snapshot.
+## Checks both the card contents and the deck name field.
+func _is_deck_dirty() -> bool:
+	# Name changed?
+	if deck_name_edit.text.strip_edges() != _saved_deck_name:
+		return true
+	# Different number of unique cards?
+	if deck_cards.size() != _saved_deck_snapshot.size():
+		return true
+	# Any card count changed or new card added?
+	for card_id in deck_cards:
+		if not _saved_deck_snapshot.has(card_id):
+			return true
+		if deck_cards[card_id] != _saved_deck_snapshot[card_id]:
+			return true
+	return false
 
 
 # ─── Energy style management ────────────────────────────────────────────────
@@ -882,6 +927,9 @@ func _on_energy_picker_save(new_style: String) -> void:
 	if current_deck_name != "":
 		_save_deck_file(current_deck_name)
 
+	# Snapshot so dirty-tracking knows the deck is clean after the swap
+	_snapshot_deck_state()
+
 	SoundManagerScript.play_sfx(SoundManagerScript.SFX_gamemode_select)
 
 	# Close picker and return to normal view.
@@ -1300,7 +1348,10 @@ func _on_save_pressed() -> void:
 	current_deck_name = file_name
 	SoundManagerScript.play_sfx(SoundManagerScript.SFX_gamemode_select)
 
-	# Disable save button after saving
+	# Snapshot the deck so dirty-tracking knows this is the saved state
+	_snapshot_deck_state()
+
+	# Disable save button after saving (dirty check will return false)
 	_refresh_save_button()
 
 
@@ -1354,7 +1405,8 @@ func _save_player_data(deck_file_name: String) -> void:
 
 # ─── Cancel ──────────────────────────────────────────────────────────────────
 
-## Saves the last set viewed to player_data and returns to the main menu.
+## Returns to the main menu. The last set viewed is saved so the player
+## returns to the same set next time they open the deck builder.
 func _on_cancel_pressed() -> void:
 	_save_last_set_loaded()
 	SoundManagerScript.stop_bgm()
@@ -1562,7 +1614,13 @@ func _on_deck_name_changed(_new_text: String) -> void:
 ## and a deck name has been entered.
 func _refresh_save_button() -> void:
 	var name_ok := deck_name_edit.text.strip_edges() != ""
-	if total_deck_count == DECK_SIZE and name_ok:
+	var is_dirty := _is_deck_dirty()
+
+	# Enable the save button only when:
+	# 1) The deck has exactly 60 cards
+	# 2) A deck name has been entered
+	# 3) Something has actually changed since the last save/load
+	if total_deck_count == DECK_SIZE and name_ok and is_dirty:
 		save_btn.disabled = false
 		var green_theme = load("res://uiresources/kenneyUI-green.tres")
 		if green_theme:
@@ -1704,9 +1762,28 @@ func _on_load_deck_pressed() -> void:
 				deck_name_edit.text = chosen_name.replace("_", " ")
 				_load_deck(chosen_name)
 				_update_deck_count_label()
-				_refresh_save_button()
+
+				# Detect which energy style this deck uses by checking
+				# if any of its card IDs match a known energy style.
+				# E.g. if the deck contains base1-99, switch to "Base1";
+				# if it contains ex13-105, switch to "ex13".
+				var detected_style := _detect_energy_style_from_deck()
+				if detected_style != "":
+					current_energy_style = detected_style
+					_save_energy_style_to_player_data(detected_style)
+					_update_energy_icons()
+
 				_refresh_energy_icons_from_deck()
 				_display_current_set()
+
+				# Treat the loaded deck as already saved and active —
+				# write it as the player's active deck in player_data.json
+				_save_player_data(chosen_name)
+
+				# Snapshot for dirty-tracking so save button stays disabled
+				# until the player actually makes a change
+				_snapshot_deck_state()
+				_refresh_save_button()
 	)
 	btn_row.add_child(load_confirm_btn)
 

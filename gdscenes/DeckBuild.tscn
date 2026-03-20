@@ -124,19 +124,6 @@ theme = ExtResource("9_jrvq0")
 theme_override_font_sizes/font_size = 23
 text = "Load deck"
 
-[node name="change_energy_style_button" type="Button" parent="."]
-z_index = 100
-layout_mode = 0
-offset_left = 1692.0
-offset_top = 479.749
-offset_right = 1912.0
-offset_bottom = 558.0
-theme = ExtResource("9_jrvq0")
-theme_override_constants/line_spacing = 4
-theme_override_font_sizes/font_size = 21
-text = "change
-energy style"
-
 [node name="next_set" type="Button" parent="."]
 z_index = 300
 layout_mode = 0
@@ -185,7 +172,32 @@ theme_override_font_sizes/font_size = 34
 text = "57/60"
 horizontal_alignment = 1
 
-[node name="fighting_energy_icon" type="TextureRect" parent="."]
+[node name="ENERGY SECTION" type="Control" parent="."]
+anchors_preset = 0
+offset_left = -2.0
+offset_top = -146.0
+offset_right = 38.0
+offset_bottom = -106.0
+
+[node name="change_energy_style_button" type="Button" parent="ENERGY SECTION"]
+z_index = 100
+layout_mode = 0
+offset_left = 1692.0
+offset_top = 479.749
+offset_right = 1912.0
+offset_bottom = 558.0
+theme = ExtResource("9_jrvq0")
+theme_override_constants/line_spacing = 4
+theme_override_font_sizes/font_size = 21
+text = "change
+energy style"
+
+[node name="ENERGY ICONS" type="Control" parent="ENERGY SECTION"]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="fighting_energy_icon" type="TextureRect" parent="ENERGY SECTION/ENERGY ICONS"]
 z_index = 200
 layout_mode = 0
 offset_left = 1693.0
@@ -196,7 +208,7 @@ texture = ExtResource("11_pt50q")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="fire_energy_icon" type="TextureRect" parent="."]
+[node name="fire_energy_icon" type="TextureRect" parent="ENERGY SECTION/ENERGY ICONS"]
 z_index = 200
 layout_mode = 0
 offset_left = 1768.0
@@ -207,7 +219,7 @@ texture = ExtResource("12_nb5df")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="grass_energy_icon" type="TextureRect" parent="."]
+[node name="grass_energy_icon" type="TextureRect" parent="ENERGY SECTION/ENERGY ICONS"]
 z_index = 200
 layout_mode = 0
 offset_left = 1843.0
@@ -218,7 +230,7 @@ texture = ExtResource("13_v4gxw")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="lightning_energy_icon" type="TextureRect" parent="."]
+[node name="lightning_energy_icon" type="TextureRect" parent="ENERGY SECTION/ENERGY ICONS"]
 z_index = 200
 layout_mode = 0
 offset_left = 1693.0
@@ -229,7 +241,7 @@ texture = ExtResource("14_aanao")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="psychic_energy_icon" type="TextureRect" parent="."]
+[node name="psychic_energy_icon" type="TextureRect" parent="ENERGY SECTION/ENERGY ICONS"]
 z_index = 200
 layout_mode = 0
 offset_left = 1768.0
@@ -240,7 +252,7 @@ texture = ExtResource("15_j0blx")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="water_energy_icon" type="TextureRect" parent="."]
+[node name="water_energy_icon" type="TextureRect" parent="ENERGY SECTION/ENERGY ICONS"]
 z_index = 200
 layout_mode = 0
 offset_left = 1843.0
@@ -251,7 +263,12 @@ texture = ExtResource("16_mqn1m")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="figthing_energy_count_label" type="Label" parent="."]
+[node name="ENERGY LABELS" type="Control" parent="ENERGY SECTION"]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="fighting_energy_count_label" type="Label" parent="ENERGY SECTION/ENERGY LABELS"]
 z_index = 210
 layout_mode = 0
 offset_left = 1704.0
@@ -265,7 +282,7 @@ theme_override_font_sizes/font_size = 33
 text = "0"
 horizontal_alignment = 1
 
-[node name="fire_energy_count_label" type="Label" parent="."]
+[node name="fire_energy_count_label" type="Label" parent="ENERGY SECTION/ENERGY LABELS"]
 z_index = 210
 layout_mode = 0
 offset_left = 1776.0
@@ -279,7 +296,7 @@ theme_override_font_sizes/font_size = 33
 text = "0"
 horizontal_alignment = 1
 
-[node name="grass_energy_count_label" type="Label" parent="."]
+[node name="grass_energy_count_label" type="Label" parent="ENERGY SECTION/ENERGY LABELS"]
 z_index = 210
 layout_mode = 0
 offset_left = 1848.0
@@ -293,7 +310,7 @@ theme_override_font_sizes/font_size = 33
 text = "15"
 horizontal_alignment = 1
 
-[node name="lightning_energy_count_label" type="Label" parent="."]
+[node name="lightning_energy_count_label" type="Label" parent="ENERGY SECTION/ENERGY LABELS"]
 z_index = 210
 layout_mode = 0
 offset_left = 1703.0
@@ -307,7 +324,7 @@ theme_override_font_sizes/font_size = 33
 text = "0"
 horizontal_alignment = 1
 
-[node name="psychic_energy_count_label" type="Label" parent="."]
+[node name="psychic_energy_count_label" type="Label" parent="ENERGY SECTION/ENERGY LABELS"]
 z_index = 210
 layout_mode = 0
 offset_left = 1779.0
@@ -321,7 +338,7 @@ theme_override_font_sizes/font_size = 33
 text = "12"
 horizontal_alignment = 1
 
-[node name="water_energy_count_label" type="Label" parent="."]
+[node name="water_energy_count_label" type="Label" parent="ENERGY SECTION/ENERGY LABELS"]
 z_index = 210
 layout_mode = 0
 offset_left = 1851.0

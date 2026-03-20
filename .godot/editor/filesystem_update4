@@ -12,3 +12,5 @@ res://gdscenes/Options.tscn
 res://gdscenes/MainMenu.tscn
 res://gdscripts/options.gd
 res://gdscripts/trainer_card_script.gd
+res://gdscripts/deck_build_mode.gd
+res://gdscenes/DeckBuild.tscn
