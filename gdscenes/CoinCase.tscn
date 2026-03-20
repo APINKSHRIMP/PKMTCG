@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://b7wloi1e7ici0"]
+[gd_scene load_steps=11 format=3 uid="uid://b7wloi1e7ici0"]
 
 [ext_resource type="Script" uid="uid://qneea1dv6lmq" path="res://gdscripts/coin_case_script.gd" id="1_shnqs"]
 [ext_resource type="Shader" uid="uid://ccm481fk14lc8" path="res://gdscenes/backgroundscrollrighttopborder.gdshader" id="2_dp4bi"]
@@ -7,6 +7,7 @@
 [ext_resource type="Theme" uid="uid://6shp5ck1tnja" path="res://uiresources/kenneyUI.tres" id="4_ui6o0"]
 [ext_resource type="Texture2D" uid="uid://he803mdt247f" path="res://gameimageassets/backgrounds/background5.png" id="5_4246g"]
 [ext_resource type="Theme" uid="uid://mbsg4xqnedxi" path="res://uiresources/kenneyUI-red.tres" id="5_krh4r"]
+[ext_resource type="Theme" uid="uid://bb6vwl0h1flws" path="res://uiresources/kenneyUI-blue.tres" id="8_4246g"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_ui6o0"]
 shader = ExtResource("2_dp4bi")
@@ -87,3 +88,22 @@ offset_right = 1279.0
 offset_bottom = 1061.0
 theme = ExtResource("5_krh4r")
 text = "cancel"
+
+[node name="large_header_text_label" type="Label" parent="."]
+z_index = 999
+layout_mode = 0
+offset_left = -40.0
+offset_top = 17.0
+offset_right = 1960.0
+offset_bottom = 89.0
+theme = ExtResource("8_4246g")
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_shadow_color = Color(1.0187511, 1.0187511, 1.0187511, 1)
+theme_override_constants/line_spacing = 3
+theme_override_constants/shadow_offset_x = 0
+theme_override_constants/shadow_offset_y = 0
+theme_override_constants/shadow_outline_size = 20
+theme_override_font_sizes/font_size = 61
+text = "Coin case"
+horizontal_alignment = 1
+vertical_alignment = 1

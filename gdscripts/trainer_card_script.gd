@@ -4,7 +4,7 @@ extends Node
 
 const SPRITE_FOLDER      := "res://gameimageassets/charactersprites/in_battle"
 const SPRITE_SIZE        := Vector2(100, 200)
-const SPRITE_SEPARATION  := 0
+const SPRITE_SEPARATION  := -4
 # At 250px + 10px gap = 260px per cell across 1920px usable width → 7 columns
 const COLUMNS            := 9
 const MAX_NAME_LENGTH    := 15

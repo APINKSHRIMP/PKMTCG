@@ -1,7 +1,8 @@
-Label
 TextureRect
-Button
+TextureButton
 Control
+Button
+Label
 CanvasLayer
 AnimatedSprite2D
 Sprite2D
@@ -11,4 +12,3 @@ Timer
 CharacterBody2D
 Area2D
 Node2D
-LineEdit
